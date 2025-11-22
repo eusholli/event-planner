@@ -1,26 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  body {
+    @apply bg-zinc-50 text-zinc-900 antialiased selection:bg-indigo-100 selection:text-indigo-900;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply px-5 py-2.5 bg-zinc-900 text-white rounded-full hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-medium shadow-lg shadow-zinc-900/10 text-sm tracking-wide;
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 bg-white text-zinc-700 border border-zinc-200 rounded-full hover:bg-zinc-50 hover:border-zinc-300 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-medium shadow-sm text-sm tracking-wide;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-zinc-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all duration-200 text-sm placeholder:text-zinc-400 shadow-sm hover:border-zinc-300;
+  }
+
+  .card {
+    @apply bg-white p-8 rounded-3xl border border-zinc-100/50 transition-shadow duration-300;
+    box-shadow: 0 8px 30px rgb(0, 0, 0, 0.04);
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 30px rgb(0, 0, 0, 0.08);
+  }
 }

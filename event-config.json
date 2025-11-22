@@ -1,0 +1,55 @@
+{
+    "event": {
+        "name": "Annual Executive Summit 2025",
+        "startDate": "2025-11-24T09:00:00.000Z",
+        "endDate": "2025-11-26T17:00:00.000Z"
+    },
+    "attendees": [
+        {
+            "name": "Alice Executive",
+            "email": "alice@example.com",
+            "bio": "CEO with 20 years of experience in tech.",
+            "company": "TechCorp",
+            "companyDescription": "Leading provider of enterprise software."
+        },
+        {
+            "name": "Bob Partner",
+            "email": "bob@example.com",
+            "bio": "Managing Partner at VentureFirm.",
+            "company": "VentureFirm",
+            "companyDescription": "Global venture capital firm."
+        },
+        {
+            "name": "Charlie CTO",
+            "email": "charlie@example.com",
+            "bio": "Chief Technology Officer.",
+            "company": "TechCorp",
+            "companyDescription": "Leading provider of enterprise software."
+        },
+        {
+            "name": "Diana Director",
+            "email": "diana@example.com",
+            "bio": "Director of Marketing.",
+            "company": "MarketingPro",
+            "companyDescription": "Creative marketing agency."
+        }
+    ],
+    "rooms": [
+        {
+            "name": "Boardroom A",
+            "capacity": 20
+        },
+        {
+            "name": "Conference Room B",
+            "capacity": 10
+        },
+        {
+            "name": "Huddle Room C",
+            "capacity": 4
+        },
+        {
+            "name": "Auditorium",
+            "capacity": 100
+        }
+    ]
+}

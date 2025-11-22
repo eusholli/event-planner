@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model EventSettings {
+  id        String   @id @default(cuid())
+  name      String   @default("My Event")
+  startDate DateTime @default(now())
+  endDate   DateTime @default(now())
+}
+
+model Attendee {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  bio                String?
+  company            String?
+  companyDescription String?
+  linkedin           String?
+  meetings           Meeting[] @relation("AttendeeMeetings")
+}
+
+model Room {
+  id       String    @id @default(cuid())
+  name     String
+  capacity Int
+  meetings Meeting[]
+}
+
+model Meeting {
+  id          String     @id @default(cuid())
+  title       String
+  purpose     String?
+  startTime   DateTime
+  endTime     DateTime
+  roomId      String?
+  room        Room?      @relation(fields: [roomId], references: [id])
+  attendees   Attendee[] @relation("AttendeeMeetings")
+  sequence    Int        @default(0)
+}
