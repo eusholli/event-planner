@@ -27,7 +27,7 @@ export default function SchedulePage() {
         purpose: '',
         date: '',
         startTime: '',
-        endTime: '',
+        duration: '30', // Default 30 minutes
         attendeeIds: [] as string[],
         roomId: ''
     })
@@ -43,6 +43,12 @@ export default function SchedulePage() {
             setAttendees(attendeesData)
             setRooms(roomsData)
             setEventSettings(settingsData)
+            if (settingsData?.startDate) {
+                setFormData(prev => ({
+                    ...prev,
+                    date: new Date(settingsData.startDate).toISOString().split('T')[0]
+                }))
+            }
         })
     }, [])
 
@@ -61,19 +67,15 @@ export default function SchedulePage() {
         setLoading(true)
 
         const startDateTime = new Date(`${formData.date}T${formData.startTime}`)
-        const endDateTime = new Date(`${formData.date}T${formData.endTime}`)
-
-        if (startDateTime >= endDateTime) {
-            setError('End time must be after start time')
-            setLoading(false)
-            return
-        }
+        const durationMinutes = parseInt(formData.duration)
+        const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000)
 
         // Validate against event settings
         if (eventSettings) {
             const eventStart = new Date(eventSettings.startDate)
             const eventEnd = new Date(eventSettings.endDate)
 
+            // Reset hours for date comparison if needed, but here we compare exact times
             if (startDateTime < eventStart || endDateTime > eventEnd) {
                 setError(`Meeting must be within event dates: ${eventStart.toLocaleDateString()} - ${eventEnd.toLocaleDateString()}`)
                 setLoading(false)
@@ -111,90 +113,106 @@ export default function SchedulePage() {
 
     return (
         <div className="max-w-3xl mx-auto space-y-8">
-            <h1 className="text-3xl font-bold text-slate-900">Schedule Meeting</h1>
+            <div>
+                <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Schedule Meeting</h1>
+                <p className="mt-2 text-zinc-500">Book a room and invite attendees.</p>
+            </div>
 
             <div className="card">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
-                        <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
+                        <div className="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-sm font-medium">
                             {error}
                         </div>
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="col-span-full">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Meeting Title</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Title</label>
                             <input
                                 type="text"
                                 required
                                 className="input-field"
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                placeholder="e.g. Project Kickoff"
+                                data-lpignore="true"
                             />
                         </div>
 
                         <div className="col-span-full">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Purpose / Agenda</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Purpose / Agenda</label>
                             <textarea
                                 className="input-field h-24 resize-none"
                                 value={formData.purpose}
                                 onChange={e => setFormData({ ...formData, purpose: e.target.value })}
+                                placeholder="Brief description of the meeting..."
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Date</label>
                             <input
                                 type="date"
                                 required
                                 className="input-field"
                                 value={formData.date}
                                 onChange={e => setFormData({ ...formData, date: e.target.value })}
+                                data-lpignore="true"
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Start Time</label>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Start Time</label>
                                 <input
                                     type="time"
                                     required
                                     className="input-field"
                                     value={formData.startTime}
                                     onChange={e => setFormData({ ...formData, startTime: e.target.value })}
+                                    data-lpignore="true"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">End Time</label>
-                                <input
-                                    type="time"
-                                    required
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Duration</label>
+                                <select
                                     className="input-field"
-                                    value={formData.endTime}
-                                    onChange={e => setFormData({ ...formData, endTime: e.target.value })}
-                                />
+                                    value={formData.duration}
+                                    onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                                    data-lpignore="true"
+                                >
+                                    <option value="15">15m</option>
+                                    <option value="30">30m</option>
+                                    <option value="45">45m</option>
+                                    <option value="60">1h</option>
+                                    <option value="90">1.5h</option>
+                                    <option value="120">2h</option>
+                                    <option value="180">3h</option>
+                                    <option value="240">4h</option>
+                                </select>
                             </div>
                         </div>
 
                         <div className="col-span-full">
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Select Attendees</label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-lg">
+                            <label className="block text-sm font-medium text-zinc-700 mb-2">Select Attendees</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
                                 {attendees.map(attendee => (
-                                    <label key={attendee.id} className="flex items-center space-x-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
+                                    <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
                                         <input
                                             type="checkbox"
                                             checked={formData.attendeeIds.includes(attendee.id)}
                                             onChange={() => toggleAttendee(attendee.id)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500"
+                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
                                         />
-                                        <span className="text-sm text-slate-700">{attendee.name} <span className="text-slate-400">({attendee.company})</span></span>
+                                        <span className="text-sm text-zinc-700">{attendee.name} <span className="text-zinc-400 text-xs">({attendee.company})</span></span>
                                     </label>
                                 ))}
                             </div>
                         </div>
 
                         <div className="col-span-full">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Select Room</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Select Room</label>
                             <select
                                 required
                                 className="input-field"
@@ -211,11 +229,11 @@ export default function SchedulePage() {
                         </div>
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-end pt-6">
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full md:w-auto"
+                            className="btn-primary w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? 'Booking...' : 'Book Meeting'}
                         </button>

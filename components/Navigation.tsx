@@ -26,7 +26,7 @@ export default function Navigation() {
                     <div className="flex">
                         <div className="flex-shrink-0 flex items-center">
                             <Link href="/" className="text-xl font-bold tracking-tight text-zinc-900">
-                                EventPlanner
+                                AI Event Planner
                             </Link>
                         </div>
                         <div className="hidden sm:ml-10 sm:flex sm:space-x-8">
@@ -35,8 +35,8 @@ export default function Navigation() {
                                     key={link.href}
                                     href={link.href}
                                     className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${isActive(link.href)
-                                            ? 'border-zinc-900 text-zinc-900'
-                                            : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300'
+                                        ? 'border-zinc-900 text-zinc-900'
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300'
                                         }`}
                                 >
                                     {link.label}
@@ -76,8 +76,8 @@ export default function Navigation() {
                             href={link.href}
                             onClick={() => setIsOpen(false)}
                             className={`block pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${isActive(link.href)
-                                    ? 'bg-zinc-100 text-zinc-900'
-                                    : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                ? 'bg-zinc-100 text-zinc-900'
+                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
                                 }`}
                         >
                             {link.label}
