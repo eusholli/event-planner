@@ -15,16 +15,19 @@ model EventSettings {
   name      String   @default("My Event")
   startDate DateTime @default(now())
   endDate   DateTime @default(now())
+  geminiApiKey String?
 }
 
 model Attendee {
   id                 String    @id @default(cuid())
   name               String
+  title              String?
   email              String    @unique
   bio                String?
   company            String?
   companyDescription String?
   linkedin           String?
+  imageUrl           String?
   meetings           Meeting[] @relation("AttendeeMeetings")
 }
 

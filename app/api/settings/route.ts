@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { name, startDate, endDate } = body
+        const { name, startDate, endDate, geminiApiKey } = body
 
         // Upsert ensures we only have one settings record (or updates the first one found)
         const firstSettings = await prisma.eventSettings.findFirst()
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
                     name,
                     startDate: new Date(startDate),
                     endDate: new Date(endDate),
+                    geminiApiKey,
                 },
             })
         } else {
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
                     name,
                     startDate: new Date(startDate),
                     endDate: new Date(endDate),
+                    geminiApiKey,
                 },
             })
         }

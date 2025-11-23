@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Event Planner
+
+A comprehensive web application for managing events, attendees, and schedules. Built with Next.js, Prisma, and Tailwind CSS.
+
+## 📖 User Manual
+
+For a detailed guide on how to use the application features, please refer to the **[User Manual](USER_MANUAL.md)**.
+
+## Features
+
+- **Dashboard**: Real-time overview of event statistics.
+- **Attendee Management**: Add, edit, and track event attendees.
+- **AI-Powered Auto Complete**: Use Google Gemini to automatically populate attendee professional details.
+- **Schedule Management**: Drag-and-drop interface for organizing meetings and sessions.
+- **Data Management**: Import, Export, and Reset database capabilities.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js (v18 or higher)
+- PostgreSQL database
+- Google Gemini API Key (optional, for Auto Complete feature)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1.  **Clone the repository**:
+    ```bash
+    git clone <repository-url>
+    cd event-planner
+    ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-## Learn More
+3.  **Configure Environment**:
+    Create a `.env` file in the root directory and add your database connection string:
+    ```env
+    DATABASE_URL="postgresql://user:password@localhost:5432/event_planner?schema=public"
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+4.  **Initialize Database**:
+    Run the Prisma migrations to set up your database schema:
+    ```bash
+    npx prisma migrate dev
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Deploy on Vercel
+## Development
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Database Management
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **View Database**: Run `npx prisma studio` to open a web interface for your database.
+- **Update Schema**: After modifying `prisma/schema.prisma`, run `npx prisma migrate dev` to apply changes.
+
+### Project Structure
+
+- `app/`: Next.js App Router pages and API routes.
+- `components/`: Reusable React components.
+- `lib/`: Utility functions and Prisma client instance.
+- `prisma/`: Database schema and migrations.
+- `public/`: Static assets.
+
+## Technologies
+
+- [Next.js](https://nextjs.org/) - React Framework
+- [Prisma](https://www.prisma.io/) - ORM
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Google Gemini API](https://ai.google.dev/) - AI Integration

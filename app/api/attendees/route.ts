@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        let { name, email, bio, company, companyDescription, linkedin } = body
+        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl } = body
 
         // Auto-enrichment Logic
         if (!linkedin && name && company) {
@@ -35,11 +35,13 @@ export async function POST(request: Request) {
         const attendee = await prisma.attendee.create({
             data: {
                 name,
+                title,
                 email,
                 bio,
                 company,
                 companyDescription,
                 linkedin,
+                imageUrl,
             },
         })
         return NextResponse.json(attendee)

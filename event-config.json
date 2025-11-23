@@ -2,36 +2,45 @@
     "event": {
         "name": "MWC BCN 2026",
         "startDate": "2025-03-02T09:00:00.000Z",
-        "endDate": "2025-03-05T17:00:00.000Z"
+        "endDate": "2025-03-05T17:00:00.000Z",
+        "geminiApiKey": ""
     },
     "attendees": [
         {
             "name": "Alice Executive",
+            "title": "CEO",
             "email": "alice@example.com",
             "bio": "CEO with 20 years of experience in tech.",
             "company": "TechCorp",
-            "companyDescription": "Leading provider of enterprise software."
+            "companyDescription": "Leading provider of enterprise software.",
+            "imageUrl": ""
         },
         {
             "name": "Bob Partner",
+            "title": "Managing Partner",
             "email": "bob@example.com",
             "bio": "Managing Partner at VentureFirm.",
             "company": "VentureFirm",
-            "companyDescription": "Global venture capital firm."
+            "companyDescription": "Global venture capital firm.",
+            "imageUrl": ""
         },
         {
             "name": "Charlie CTO",
+            "title": "Chief Technology Officer",
             "email": "charlie@example.com",
             "bio": "Chief Technology Officer.",
             "company": "TechCorp",
-            "companyDescription": "Leading provider of enterprise software."
+            "companyDescription": "Leading provider of enterprise software.",
+            "imageUrl": ""
         },
         {
             "name": "Diana Director",
+            "title": "Director of Marketing",
             "email": "diana@example.com",
             "bio": "Director of Marketing.",
             "company": "MarketingPro",
-            "companyDescription": "Creative marketing agency."
+            "companyDescription": "Creative marketing agency.",
+            "imageUrl": ""
         }
     ],
     "rooms": [
@@ -50,6 +59,18 @@
         {
             "name": "Auditorium",
             "capacity": 100
+        }
+    ],
+    "meetings": [
+        {
+            "title": "Opening Keynote",
+            "startTime": "2025-03-02T09:00:00.000Z",
+            "endTime": "2025-03-02T10:00:00.000Z",
+            "room": "Auditorium",
+            "attendees": [
+                "alice@example.com",
+                "charlie@example.com"
+            ]
         }
     ]
 }
