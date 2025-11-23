@@ -22,7 +22,7 @@ async function main() {
         const result = await model.generateContent("Hello");
         console.log("gemini-1.5-flash works:", await result.response.text());
     } catch (e) {
-        console.error("Error:", e.message);
+        console.error("Error:", (e as any).message);
     }
 }
 
