@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
+import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@/components/auth'
 
 export default function Navigation() {
     const [isOpen, setIsOpen] = useState(false)

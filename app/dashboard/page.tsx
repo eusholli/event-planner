@@ -62,8 +62,8 @@ export default function DashboardPage() {
                     <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Dashboard</h1>
                     <p className="mt-2 text-zinc-500">Overview of your scheduled events.</p>
                 </div>
-                <Link href="/schedule" className="btn-primary">
-                    Schedule Meeting
+                <Link href="/new-meeting" className="btn-primary">
+                    New Meeting
                 </Link>
             </div>
 

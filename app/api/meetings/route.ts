@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { title, purpose, startTime, endTime, roomId, attendeeIds, status = 'STARTED' } = body
+        const { title, purpose, startTime, endTime, roomId, attendeeIds, status = 'STARTED', tags } = body
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
@@ -109,6 +109,7 @@ export async function POST(request: Request) {
             title,
             purpose,
             status,
+            tags,
         }
 
         // Only add times if provided, otherwise explicitly null

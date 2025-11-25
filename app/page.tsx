@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { SignInButton, SignUpButton, SignedIn, SignedOut } from '@clerk/nextjs'
+import { SignInButton, SignUpButton, SignedIn, SignedOut } from '@/components/auth'
 
 export default function LandingPage() {
   return (

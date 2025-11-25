@@ -30,6 +30,7 @@ interface Meeting {
     attendees: { id: string, name: string }[]
     purpose: string
     status: string
+    tags: string[]
 }
 
 export default function CalendarPage() {
@@ -43,6 +44,7 @@ export default function CalendarPage() {
     const [conflicts, setConflicts] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
     const [error, setError] = useState('')
+    const [availableTags, setAvailableTags] = useState<string[]>([])
 
     const [date, setDate] = useState(new Date())
     const [view, setView] = useState<View>(Views.DAY)
@@ -63,16 +65,22 @@ export default function CalendarPage() {
                 resourceId: m.roomId,
                 attendees: m.attendees,
                 purpose: m.purpose,
-                status: m.status || 'STARTED'
+                status: m.status || 'STARTED',
+                tags: m.tags || []
             }))
             setEvents(formattedEvents)
             setRooms(roomsData)
             setAllAttendees(attendeesData)
 
             // Set calendar range based on settings
-            if (settingsData && settingsData.startDate) {
-                setEventSettings(settingsData)
-                setDate(new Date(settingsData.startDate))
+            if (settingsData) {
+                if (settingsData.startDate) {
+                    setEventSettings(settingsData)
+                    setDate(new Date(settingsData.startDate))
+                }
+                if (settingsData.tags) {
+                    setAvailableTags(settingsData.tags)
+                }
             }
             setLoading(false)
         })
@@ -120,7 +128,8 @@ export default function CalendarPage() {
                     startTime: start.toISOString(),
                     endTime: end.toISOString(),
                     roomId: resourceId,
-                    attendeeIds: event.attendees.map((a: any) => a.id)
+                    attendeeIds: event.attendees.map((a: any) => a.id),
+                    tags: event.tags
                 })
             })
 
@@ -150,7 +159,8 @@ export default function CalendarPage() {
             end: endDate,
             resourceId: resourceId || rooms[0]?.id,
             attendees: [],
-            status: 'STARTED'
+            status: 'STARTED',
+            tags: []
         })
         setIsCreating(true)
         setIsModalOpen(true)
@@ -230,7 +240,8 @@ export default function CalendarPage() {
         const requestBody: any = {
             title: selectedEvent.title,
             purpose: selectedEvent.purpose,
-            status: selectedEvent.status
+            status: selectedEvent.status,
+            tags: selectedEvent.tags
         }
 
         // Only add times if they exist and are valid
@@ -269,7 +280,8 @@ export default function CalendarPage() {
                     resourceId: savedEvent.roomId,
                     attendees: savedEvent.attendees,
                     purpose: savedEvent.purpose,
-                    status: savedEvent.status || 'STARTED'
+                    status: savedEvent.status || 'STARTED',
+                    tags: savedEvent.tags || []
                 }
 
                 if (isCreating) {
@@ -576,6 +588,30 @@ export default function CalendarPage() {
                                     placeholder="Meeting agenda or description..."
                                 />
                             </div>
+                            {availableTags.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-2">Tags</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
+                                        {availableTags.map(tag => (
+                                            <label key={tag} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedEvent.tags?.includes(tag) || false}
+                                                    onChange={() => {
+                                                        const currentTags = selectedEvent.tags || []
+                                                        const newTags = currentTags.includes(tag)
+                                                            ? currentTags.filter(t => t !== tag)
+                                                            : [...currentTags, tag]
+                                                        setSelectedEvent({ ...selectedEvent, tags: newTags })
+                                                    }}
+                                                    className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                />
+                                                <span className="text-sm text-zinc-700">{tag}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
                                 <select

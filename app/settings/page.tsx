@@ -9,6 +9,7 @@ export default function SettingsPage() {
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const [geminiApiKey, setGeminiApiKey] = useState('')
+    const [tags, setTags] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
@@ -20,6 +21,7 @@ export default function SettingsPage() {
                 setStartDate(new Date(data.startDate).toISOString().slice(0, 16))
                 setEndDate(new Date(data.endDate).toISOString().slice(0, 16))
                 setGeminiApiKey(data.geminiApiKey || '')
+                setTags(data.tags ? data.tags.join(', ') : '')
                 setLoading(false)
             })
     }, [])
@@ -37,6 +39,7 @@ export default function SettingsPage() {
                     startDate: new Date(startDate).toISOString(),
                     endDate: new Date(endDate).toISOString(),
                     geminiApiKey,
+                    tags: tags.split(',').map(t => t.trim()).filter(t => t !== ''),
                 }),
             })
 
@@ -107,6 +110,18 @@ export default function SettingsPage() {
                             placeholder="Enter your Gemini API Key"
                         />
                         <p className="mt-1 text-sm text-slate-500">Required for Auto Complete features.</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tags (comma separated)</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            value={tags}
+                            onChange={e => setTags(e.target.value)}
+                            placeholder="e.g. Urgent, Work, Personal"
+                        />
+                        <p className="mt-1 text-sm text-slate-500">Define tags that can be assigned to meetings.</p>
                     </div>
 
                     <div className="pt-4 flex justify-end">

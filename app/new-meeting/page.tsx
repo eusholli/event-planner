@@ -32,10 +32,12 @@ export default function SchedulePage() {
         duration: '30', // Default 30 minutes
         attendeeIds: [] as string[],
         roomId: '',
-        status: 'STARTED' // Default status
+        status: 'STARTED', // Default status
+        tags: [] as string[]
     })
 
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
+    const [availableTags, setAvailableTags] = useState<string[]>([])
 
     useEffect(() => {
         Promise.all([
@@ -46,6 +48,9 @@ export default function SchedulePage() {
             setAttendees(attendeesData)
             setRooms(roomsData)
             setEventSettings(settingsData)
+            if (settingsData?.tags) {
+                setAvailableTags(settingsData.tags)
+            }
             if (settingsData?.startDate) {
                 setFormData(prev => ({
                     ...prev,
@@ -76,7 +81,8 @@ export default function SchedulePage() {
             purpose: formData.purpose,
             roomId: formData.roomId || undefined,
             attendeeIds: formData.attendeeIds,
-            status: formData.status
+            status: formData.status,
+            tags: formData.tags
         }
 
         // Validation based on status
@@ -146,7 +152,8 @@ export default function SchedulePage() {
                     duration: '30',
                     attendeeIds: [],
                     roomId: '',
-                    status: 'STARTED'
+                    status: 'STARTED',
+                    tags: []
                 })
                 // Scroll to top
                 window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -160,6 +167,15 @@ export default function SchedulePage() {
 
     const handleNewAttendee = (newAttendee: Attendee) => {
         setAttendees(prev => [...prev, newAttendee].sort((a, b) => a.name.localeCompare(b.name)))
+    }
+
+    const toggleTag = (tag: string) => {
+        setFormData(prev => {
+            const newTags = prev.tags.includes(tag)
+                ? prev.tags.filter(t => t !== tag)
+                : [...prev.tags, tag]
+            return { ...prev, tags: newTags }
+        })
     }
 
     return (
@@ -211,6 +227,25 @@ export default function SchedulePage() {
                                         placeholder="Brief description of the meeting..."
                                     />
                                 </div>
+
+                                {availableTags.length > 0 && (
+                                    <div className="col-span-full">
+                                        <label className="block text-sm font-medium text-zinc-700 mb-2">Tags</label>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
+                                            {availableTags.map(tag => (
+                                                <label key={tag} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.tags.includes(tag)}
+                                                        onChange={() => toggleTag(tag)}
+                                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-sm text-zinc-700">{tag}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-medium text-zinc-700 mb-1.5">Date</label>

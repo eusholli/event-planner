@@ -8,7 +8,7 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
-        const { title, purpose, startTime, endTime, roomId, attendeeIds, status } = body
+        const { title, purpose, startTime, endTime, roomId, attendeeIds, status, tags } = body
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
@@ -127,6 +127,11 @@ export async function PUT(
         // Only update status if provided
         if (status !== undefined) {
             updateData.status = status
+        }
+
+        // Only update tags if provided
+        if (tags !== undefined) {
+            updateData.tags = tags
         }
 
         const meeting = await prisma.meeting.update({

@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 export async function GET() {
     try {
         let settings = await prisma.eventSettings.findFirst()
+        console.log('GET /api/settings', settings)
 
         if (!settings) {
             // Create default settings if none exist
@@ -25,7 +26,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { name, startDate, endDate, geminiApiKey } = body
+        const { name, startDate, endDate, geminiApiKey, tags } = body
 
         // Upsert ensures we only have one settings record (or updates the first one found)
         const firstSettings = await prisma.eventSettings.findFirst()
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
                     startDate: new Date(startDate),
                     endDate: new Date(endDate),
                     geminiApiKey,
+                    tags: tags ? tags.sort() : [],
                 },
             })
         } else {
@@ -48,12 +50,14 @@ export async function POST(request: Request) {
                     startDate: new Date(startDate),
                     endDate: new Date(endDate),
                     geminiApiKey,
+                    tags: tags ? tags.sort() : [],
                 },
             })
         }
 
         return NextResponse.json(settings)
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
+    } catch (error: any) {
+        console.error('Error updating settings:', error)
+        return NextResponse.json({ error: 'Failed to update settings', details: error.message }, { status: 500 })
     }
 }

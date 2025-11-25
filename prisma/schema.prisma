@@ -16,6 +16,7 @@ model EventSettings {
   startDate DateTime @default(now())
   endDate   DateTime @default(now())
   geminiApiKey String?
+  tags      String[] @default([])
 }
 
 model Attendee {
@@ -55,4 +56,5 @@ model Meeting {
   attendees   Attendee[]    @relation("AttendeeMeetings")
   sequence    Int           @default(0)
   status      MeetingStatus @default(STARTED)
+  tags        String[]      @default([])
 }
