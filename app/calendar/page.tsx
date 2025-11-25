@@ -29,6 +29,7 @@ interface Meeting {
     resourceId: string // Room ID
     attendees: { id: string, name: string }[]
     purpose: string
+    status: string
 }
 
 export default function CalendarPage() {
@@ -61,7 +62,8 @@ export default function CalendarPage() {
                 end: new Date(m.endTime),
                 resourceId: m.roomId,
                 attendees: m.attendees,
-                purpose: m.purpose
+                purpose: m.purpose,
+                status: m.status || 'STARTED'
             }))
             setEvents(formattedEvents)
             setRooms(roomsData)
@@ -147,7 +149,8 @@ export default function CalendarPage() {
             start,
             end: endDate,
             resourceId: resourceId || rooms[0]?.id,
-            attendees: []
+            attendees: [],
+            status: 'STARTED'
         })
         setIsCreating(true)
         setIsModalOpen(true)
@@ -197,21 +200,63 @@ export default function CalendarPage() {
         e.preventDefault()
         if (!selectedEvent) return
 
+        // Client-side validation for COMPLETED status
+        if (selectedEvent.status === 'COMPLETED') {
+            if (!selectedEvent.title || selectedEvent.title.trim() === '') {
+                setError('Title is required for completed meetings')
+                return
+            }
+            if (!selectedEvent.start || !selectedEvent.end) {
+                setError('Date and time are required for completed meetings')
+                return
+            }
+            if (!selectedEvent.resourceId) {
+                setError('Room is required for completed meetings')
+                return
+            }
+            if (!selectedEvent.attendees || selectedEvent.attendees.length === 0) {
+                setError('At least one attendee is required for completed meetings')
+                return
+            }
+        }
+
+        // Clear any previous errors
+        setError('')
+
         const method = isCreating ? 'POST' : 'PUT'
         const url = isCreating ? '/api/meetings' : `/api/meetings/${selectedEvent.id}`
+
+        // Prepare request body
+        const requestBody: any = {
+            title: selectedEvent.title,
+            purpose: selectedEvent.purpose,
+            status: selectedEvent.status
+        }
+
+        // Only add times if they exist and are valid
+        if (selectedEvent.start && !isNaN(selectedEvent.start.getTime())) {
+            requestBody.startTime = selectedEvent.start.toISOString()
+        } else if (selectedEvent.start === null) {
+            requestBody.startTime = null
+        }
+
+        if (selectedEvent.end && !isNaN(selectedEvent.end.getTime())) {
+            requestBody.endTime = selectedEvent.end.toISOString()
+        } else if (selectedEvent.end === null) {
+            requestBody.endTime = null
+        }
+
+        // Always include roomId - send null if empty to clear the room
+        requestBody.roomId = selectedEvent.resourceId || null
+
+        // Always include attendeeIds (can be empty array)
+        requestBody.attendeeIds = selectedEvent.attendees?.map(a => a.id) || []
 
         try {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: selectedEvent.title,
-                    purpose: selectedEvent.purpose,
-                    startTime: selectedEvent.start!.toISOString(),
-                    endTime: selectedEvent.end!.toISOString(),
-                    roomId: selectedEvent.resourceId,
-                    attendeeIds: selectedEvent.attendees?.map(a => a.id) || []
-                })
+                body: JSON.stringify(requestBody)
             })
 
             if (res.ok) {
@@ -223,7 +268,8 @@ export default function CalendarPage() {
                     end: new Date(savedEvent.endTime),
                     resourceId: savedEvent.roomId,
                     attendees: savedEvent.attendees,
-                    purpose: savedEvent.purpose
+                    purpose: savedEvent.purpose,
+                    status: savedEvent.status || 'STARTED'
                 }
 
                 if (isCreating) {
@@ -233,13 +279,14 @@ export default function CalendarPage() {
                 }
                 setIsModalOpen(false)
                 setSelectedEvent(null)
+                setError('')
             } else {
                 const data = await res.json()
-                alert(data.error)
+                setError(data.error)
             }
         } catch (err) {
             console.error(err)
-            alert('Failed to save meeting')
+            setError('Failed to save meeting')
         }
     }
 
@@ -313,8 +360,8 @@ export default function CalendarPage() {
 
             {/* Edit Modal */}
             {isModalOpen && selectedEvent && (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white p-8 rounded-3xl w-full h-full md:h-auto md:max-w-lg overflow-y-auto shadow-2xl">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div className="bg-white p-8 rounded-3xl w-full md:max-w-lg my-8 shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto">
                         <h2 className="text-2xl font-bold tracking-tight text-zinc-900 mb-6">{isCreating ? 'Add Meeting' : 'Edit Meeting'}</h2>
 
                         {conflicts.length > 0 && (
@@ -357,9 +404,17 @@ export default function CalendarPage() {
                             </div>
                         )}
 
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 font-medium">
+                                {error}
+                            </div>
+                        )}
+
                         <form onSubmit={handleSaveEvent} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Title</label>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                    Title<span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -373,14 +428,25 @@ export default function CalendarPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Date</label>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                        Date{selectedEvent.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                    </label>
                                     <input
                                         type="date"
-                                        required
+                                        required={selectedEvent.status === 'COMPLETED'}
                                         className="input-field"
                                         value={selectedEvent.start ? moment(selectedEvent.start).format('YYYY-MM-DD') : ''}
                                         onChange={e => {
+                                            if (!e.target.value) {
+                                                // If cleared, set to null if allowed (status != COMPLETED)
+                                                if (selectedEvent.status !== 'COMPLETED') {
+                                                    setSelectedEvent({ ...selectedEvent, start: null as any, end: null as any })
+                                                }
+                                                return
+                                            }
                                             const newDate = new Date(e.target.value)
+                                            if (isNaN(newDate.getTime())) return // Invalid date
+
                                             const currentStart = selectedEvent.start || new Date()
                                             const currentEnd = selectedEvent.end || new Date()
 
@@ -398,13 +464,21 @@ export default function CalendarPage() {
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Start Time</label>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                        Start Time{selectedEvent.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                    </label>
                                     <input
                                         type="time"
-                                        required
+                                        required={selectedEvent.status === 'COMPLETED'}
                                         className="input-field"
                                         value={selectedEvent.start ? moment(selectedEvent.start).format('HH:mm') : ''}
                                         onChange={e => {
+                                            if (!e.target.value) {
+                                                if (selectedEvent.status !== 'COMPLETED') {
+                                                    setSelectedEvent({ ...selectedEvent, start: null as any, end: null as any })
+                                                }
+                                                return
+                                            }
                                             const [hours, minutes] = e.target.value.split(':').map(Number)
                                             const currentStart = selectedEvent.start || new Date()
                                             const currentEnd = selectedEvent.end || new Date()
@@ -447,9 +521,12 @@ export default function CalendarPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Room</label>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                    Room{selectedEvent.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                </label>
                                 <select
                                     className="input-field"
+                                    required={selectedEvent.status === 'COMPLETED'}
                                     value={selectedEvent.resourceId || ''}
                                     onChange={e => setSelectedEvent({ ...selectedEvent, resourceId: e.target.value })}
                                 >
@@ -460,7 +537,9 @@ export default function CalendarPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Attendees</label>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                    Attendees{selectedEvent.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                </label>
                                 <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-2 bg-zinc-50/50">
                                     {allAttendees.map(attendee => (
                                         <label key={attendee.id} className="flex items-center space-x-3 p-1 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer">
@@ -496,6 +575,18 @@ export default function CalendarPage() {
                                     onChange={e => setSelectedEvent({ ...selectedEvent, purpose: e.target.value })}
                                     placeholder="Meeting agenda or description..."
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
+                                <select
+                                    className="input-field"
+                                    value={selectedEvent.status || 'STARTED'}
+                                    onChange={e => setSelectedEvent({ ...selectedEvent, status: e.target.value })}
+                                >
+                                    <option value="STARTED">Started</option>
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="CANCELED">Canceled</option>
+                                </select>
                             </div>
                             <div className="flex justify-between pt-4 items-center">
                                 {!isCreating && (

@@ -8,13 +8,43 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
-        const { title, purpose, startTime, endTime, roomId, attendeeIds } = body
+        const { title, purpose, startTime, endTime, roomId, attendeeIds, status } = body
 
-        const start = new Date(startTime)
-        const end = new Date(endTime)
+        // Basic title validation for all meetings
+        if (!title || title.trim() === '') {
+            return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+        }
 
-        // 1. Check Room Availability (excluding current meeting)
-        if (roomId) {
+        // Validate COMPLETED status requirements
+        if (status === 'COMPLETED') {
+            if (!startTime || !endTime) {
+                return NextResponse.json({ error: 'Start time and end time are required for completed meetings' }, { status: 400 })
+            }
+            if (!roomId) {
+                return NextResponse.json({ error: 'Room is required for completed meetings' }, { status: 400 })
+            }
+            if (!attendeeIds || attendeeIds.length === 0) {
+                return NextResponse.json({ error: 'At least one attendee is required for completed meetings' }, { status: 400 })
+            }
+        }
+
+        // Only validate times if they are provided
+        let start, end
+        if (startTime && endTime) {
+            start = new Date(startTime)
+            end = new Date(endTime)
+
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return NextResponse.json({ error: 'Invalid start or end time' }, { status: 400 })
+            }
+
+            if (start >= end) {
+                return NextResponse.json({ error: 'End time must be after start time' }, { status: 400 })
+            }
+        }
+
+        // 1. Check Room Availability (excluding current meeting, only if room and times provided)
+        if (roomId && start && end) {
             const roomConflicts = await prisma.meeting.findMany({
                 where: {
                     roomId,
@@ -30,8 +60,8 @@ export async function PUT(
             }
         }
 
-        // 2. Check Attendee Availability (excluding current meeting)
-        if (attendeeIds && attendeeIds.length > 0) {
+        // 2. Check Attendee Availability (excluding current meeting, only if attendees and times provided)
+        if (attendeeIds && attendeeIds.length > 0 && start && end) {
             const attendeeConflicts = await prisma.meeting.findMany({
                 where: {
                     id: { not: id }, // Exclude current meeting
@@ -65,20 +95,43 @@ export async function PUT(
             }
         }
 
-        // Update the meeting
+        // Prepare update data
+        const updateData: any = {
+            title,
+            purpose,
+        }
+
+        // Only add times if provided
+        if (start && end) {
+            updateData.startTime = start
+            updateData.endTime = end
+        } else {
+            // Check if explicitly set to null to clear them
+            if (startTime === null) updateData.startTime = null
+            if (endTime === null) updateData.endTime = null
+        }
+
+        // Only add room if provided
+        if (roomId !== undefined) {
+            updateData.roomId = roomId
+        }
+
+        // Only add attendees if provided
+        if (attendeeIds !== undefined) {
+            updateData.attendees = {
+                set: [], // Clear existing
+                connect: attendeeIds.length > 0 ? attendeeIds.map((id: string) => ({ id })) : [],
+            }
+        }
+
+        // Only update status if provided
+        if (status !== undefined) {
+            updateData.status = status
+        }
+
         const meeting = await prisma.meeting.update({
             where: { id },
-            data: {
-                title,
-                purpose,
-                startTime: start,
-                endTime: end,
-                roomId,
-                attendees: {
-                    set: [], // Clear existing
-                    connect: attendeeIds.map((id: string) => ({ id })),
-                },
-            },
+            data: updateData,
             include: {
                 room: true,
                 attendees: true,

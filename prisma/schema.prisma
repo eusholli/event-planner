@@ -38,14 +38,21 @@ model Room {
   meetings Meeting[]
 }
 
+enum MeetingStatus {
+  STARTED
+  COMPLETED
+  CANCELED
+}
+
 model Meeting {
-  id          String     @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   purpose     String?
-  startTime   DateTime
-  endTime     DateTime
+  startTime   DateTime?
+  endTime     DateTime?
   roomId      String?
-  room        Room?      @relation(fields: [roomId], references: [id])
-  attendees   Attendee[] @relation("AttendeeMeetings")
-  sequence    Int        @default(0)
+  room        Room?         @relation(fields: [roomId], references: [id])
+  attendees   Attendee[]    @relation("AttendeeMeetings")
+  sequence    Int           @default(0)
+  status      MeetingStatus @default(STARTED)
 }

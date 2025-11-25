@@ -11,9 +11,9 @@ export default function Navigation() {
 
     const links = [
         { href: '/dashboard', label: 'Dashboard' },
+        { href: '/new-meeting', label: 'New Meeting' },
         { href: '/attendees', label: 'Attendees' },
         { href: '/rooms', label: 'Rooms' },
-        { href: '/schedule', label: 'Schedule' },
         { href: '/calendar', label: 'Calendar' },
         { href: '/settings', label: 'Settings' },
     ]

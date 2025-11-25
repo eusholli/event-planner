@@ -10,6 +10,7 @@ interface Meeting {
     endTime: string
     room: { name: string }
     attendees: { name: string; company: string }[]
+    status: string
 }
 
 export default function DashboardPage() {
@@ -38,6 +39,20 @@ export default function DashboardPage() {
             hour: 'numeric',
             minute: '2-digit',
         })
+    }
+
+    const getStatusBadge = (status: string) => {
+        const statusConfig: Record<string, { label: string; className: string }> = {
+            STARTED: { label: 'Started', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+            COMPLETED: { label: 'Completed', className: 'bg-green-50 text-green-700 border-green-200' },
+            CANCELED: { label: 'Canceled', className: 'bg-gray-50 text-gray-700 border-gray-200' },
+        }
+        const config = statusConfig[status] || statusConfig.STARTED
+        return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+                {config.label}
+            </span>
+        )
     }
 
     return (
@@ -78,6 +93,8 @@ export default function DashboardPage() {
                                                 </svg>
                                                 {meeting.room?.name || 'No Room'}
                                             </span>
+                                            <span className="text-zinc-300">•</span>
+                                            {getStatusBadge(meeting.status)}
                                         </div>
                                         <h3 className="text-xl font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors">{meeting.title}</h3>
                                         <div className="mt-3 flex flex-wrap gap-2">

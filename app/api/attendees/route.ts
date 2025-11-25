@@ -4,7 +4,11 @@ import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
 
 export async function GET() {
     try {
-        const attendees = await prisma.attendee.findMany()
+        const attendees = await prisma.attendee.findMany({
+            orderBy: {
+                name: 'asc'
+            }
+        })
         return NextResponse.json(attendees)
     } catch (error) {
         console.error('Error fetching attendees:', error)
