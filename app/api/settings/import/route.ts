@@ -24,7 +24,7 @@ export async function POST(request: Request) {
                         startDate: new Date(config.event.startDate),
                         endDate: new Date(config.event.endDate),
                         geminiApiKey: config.event.geminiApiKey,
-                        tags: config.event.tags || []
+                        tags: { set: config.event.tags || [] }
                     }
                 })
             } else {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
                         startDate: new Date(config.event.startDate),
                         endDate: new Date(config.event.endDate),
                         geminiApiKey: config.event.geminiApiKey,
-                        tags: config.event.tags || []
+                        tags: { set: config.event.tags || [] }
                     }
                 })
             }
@@ -90,32 +90,62 @@ export async function POST(request: Request) {
                     where: {
                         title: meeting.title,
                         // This is a loose check, but sufficient for import
-                        date: meeting.startTime ? new Date(meeting.startTime).toISOString().split('T')[0] : undefined
+                        date: (() => {
+                            if (!meeting.startTime) return undefined
+                            // Try parsing as ISO
+                            const d = new Date(meeting.startTime)
+                            if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+
+                            // If HH:mm format, use event start date
+                            if (/^\d{2}:\d{2}$/.test(meeting.startTime) && config.event?.startDate) {
+                                return new Date(config.event.startDate).toISOString().split('T')[0]
+                            }
+                            return undefined
+                        })()
                     }
                 })
 
                 if (!existing) {
                     // Parse date and time from ISO strings if present
-                    let date = null
-                    let startTime = null
-                    let endTime = null
+                    let date: string | undefined = undefined
+                    let startTime: string | undefined = undefined
+                    let endTime: string | undefined = undefined
 
                     if (meeting.startTime) {
-                        const start = new Date(meeting.startTime)
-                        date = start.toISOString().split('T')[0]
-                        startTime = start.toTimeString().slice(0, 5)
+                        // Check if it's already HH:mm
+                        if (/^\d{2}:\d{2}$/.test(meeting.startTime)) {
+                            startTime = meeting.startTime
+                            // Default date to event start date if available
+                            if (config.event?.startDate) {
+                                date = new Date(config.event.startDate).toISOString().split('T')[0]
+                            }
+                        } else {
+                            const start = new Date(meeting.startTime)
+                            if (!isNaN(start.getTime())) {
+                                date = start.toISOString().split('T')[0]
+                                startTime = start.toTimeString().slice(0, 5)
+                            }
+                        }
                     }
+
                     if (meeting.endTime) {
-                        const end = new Date(meeting.endTime)
-                        endTime = end.toTimeString().slice(0, 5)
+                        // Check if it's already HH:mm
+                        if (/^\d{2}:\d{2}$/.test(meeting.endTime)) {
+                            endTime = meeting.endTime
+                        } else {
+                            const end = new Date(meeting.endTime)
+                            if (!isNaN(end.getTime())) {
+                                endTime = end.toTimeString().slice(0, 5)
+                            }
+                        }
                     }
 
                     await prisma.meeting.create({
                         data: {
                             title: meeting.title,
-                            date,
-                            startTime,
-                            endTime,
+                            date: (date || null) as any,
+                            startTime: (startTime || null) as any,
+                            endTime: (endTime || null) as any,
                             roomId: roomId,
                             attendees: {
                                 connect: attendees

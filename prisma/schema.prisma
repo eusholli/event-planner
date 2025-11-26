@@ -58,4 +58,10 @@ model Meeting {
   sequence    Int           @default(0)
   status      MeetingStatus @default(STARTED)
   tags        String[]      @default([])
+  createdBy   String?
+  requesterEmail String?
+  meetingType String?
+  otherDetails String?
+  isApproved  Boolean       @default(false)
+  calendarInviteSent Boolean @default(false)
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUser } from '@/components/auth'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
 
 interface Attendee {
@@ -18,6 +19,7 @@ interface Room {
 
 export default function SchedulePage() {
     const router = useRouter()
+    const { user } = useUser()
     const [attendees, setAttendees] = useState<Attendee[]>([])
     const [rooms, setRooms] = useState<Room[]>([])
     const [loading, setLoading] = useState(false)
@@ -33,7 +35,12 @@ export default function SchedulePage() {
         attendeeIds: [] as string[],
         roomId: '',
         status: 'STARTED', // Default status
-        tags: [] as string[]
+        tags: [] as string[],
+        requesterEmail: '',
+        meetingType: '',
+        otherDetails: '',
+        isApproved: false,
+        calendarInviteSent: false
     })
 
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
@@ -77,7 +84,12 @@ export default function SchedulePage() {
             roomId: formData.roomId || undefined,
             attendeeIds: formData.attendeeIds,
             status: formData.status,
-            tags: formData.tags
+            tags: formData.tags,
+            requesterEmail: formData.requesterEmail,
+            meetingType: formData.meetingType,
+            otherDetails: formData.otherDetails,
+            isApproved: formData.isApproved,
+            calendarInviteSent: formData.calendarInviteSent
         }
 
         // Validation based on status
@@ -157,7 +169,12 @@ export default function SchedulePage() {
                     attendeeIds: [],
                     roomId: '',
                     status: 'STARTED',
-                    tags: []
+                    tags: [],
+                    requesterEmail: '',
+                    meetingType: '',
+                    otherDetails: '',
+                    isApproved: false,
+                    calendarInviteSent: false
                 })
                 // Scroll to top
                 window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -210,6 +227,16 @@ export default function SchedulePage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Created By</label>
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        className="input-field bg-zinc-100 text-zinc-500"
+                                        value={user?.primaryEmailAddress?.emailAddress || ''}
+                                    />
+                                </div>
+
+                                <div className="col-span-full">
                                     <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Title</label>
                                     <input
                                         type="text"
@@ -223,12 +250,50 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Requester Email</label>
+                                    <input
+                                        type="email"
+                                        className="input-field"
+                                        value={formData.requesterEmail}
+                                        onChange={e => setFormData({ ...formData, requesterEmail: e.target.value })}
+                                        placeholder="requester@example.com"
+                                    />
+                                </div>
+
+                                <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
+                                    <select
+                                        className="input-field"
+                                        value={formData.meetingType}
+                                        onChange={e => setFormData({ ...formData, meetingType: e.target.value })}
+                                    >
+                                        <option value="">Select Type...</option>
+                                        <option value="Sales/Customer">Sales/Customer</option>
+                                        <option value="Vendor Partner">Vendor Partner</option>
+                                        <option value="Technology Partner">Technology Partner</option>
+                                        <option value="PR Engagement">PR Engagement</option>
+                                        <option value="Gov't">Gov't</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-span-full">
                                     <label className="block text-sm font-medium text-zinc-700 mb-1.5">Purpose / Agenda</label>
                                     <textarea
                                         className="input-field h-24 resize-none"
                                         value={formData.purpose}
                                         onChange={e => setFormData({ ...formData, purpose: e.target.value })}
                                         placeholder="Brief description of the meeting..."
+                                    />
+                                </div>
+
+                                <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Other Details</label>
+                                    <textarea
+                                        className="input-field h-24 resize-none"
+                                        value={formData.otherDetails}
+                                        onChange={e => setFormData({ ...formData, otherDetails: e.target.value })}
+                                        placeholder="Any other details..."
                                     />
                                 </div>
 
@@ -337,6 +402,28 @@ export default function SchedulePage() {
                                         <option value="COMPLETED">Completed</option>
                                         <option value="CANCELED">Canceled</option>
                                     </select>
+                                </div>
+
+                                <div className="col-span-full flex space-x-6">
+                                    <label className="flex items-center space-x-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                            checked={formData.isApproved}
+                                            onChange={e => setFormData({ ...formData, isApproved: e.target.checked })}
+                                        />
+                                        <span className="text-sm font-medium text-zinc-700">Approved</span>
+                                    </label>
+
+                                    <label className="flex items-center space-x-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                            checked={formData.calendarInviteSent}
+                                            onChange={e => setFormData({ ...formData, calendarInviteSent: e.target.checked })}
+                                        />
+                                        <span className="text-sm font-medium text-zinc-700">Calendar Invite Sent</span>
+                                    </label>
                                 </div>
                             </div>
 

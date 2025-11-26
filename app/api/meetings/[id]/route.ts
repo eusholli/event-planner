@@ -8,7 +8,22 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
-        const { title, purpose, date, startTime, endTime, roomId, attendeeIds, status, tags } = body
+        const {
+            title,
+            purpose,
+            date,
+            startTime,
+            endTime,
+            roomId,
+            attendeeIds,
+            status,
+            tags,
+            requesterEmail,
+            meetingType,
+            otherDetails,
+            isApproved,
+            calendarInviteSent
+        } = body
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
@@ -103,7 +118,12 @@ export async function PUT(
             purpose,
             date,
             startTime,
-            endTime
+            endTime,
+            requesterEmail,
+            meetingType,
+            otherDetails,
+            isApproved,
+            calendarInviteSent
         }
 
         // Only add room if provided

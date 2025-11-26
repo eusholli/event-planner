@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { currentUser } from '@clerk/nextjs/server'
+
 
 export async function GET() {
     try {
@@ -18,7 +20,25 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { title, purpose, date, startTime, endTime, roomId, attendeeIds, status = 'STARTED', tags } = body
+        const {
+            title,
+            purpose,
+            date,
+            startTime,
+            endTime,
+            roomId,
+            attendeeIds,
+            status = 'STARTED',
+            tags,
+            requesterEmail,
+            meetingType,
+            otherDetails,
+            isApproved,
+            calendarInviteSent
+        } = body
+
+        const user = await currentUser()
+        const createdBy = user?.emailAddresses[0]?.emailAddress
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
@@ -119,7 +139,13 @@ export async function POST(request: Request) {
             tags,
             date,
             startTime,
-            endTime
+            endTime,
+            createdBy,
+            requesterEmail,
+            meetingType,
+            otherDetails,
+            isApproved,
+            calendarInviteSent
         }
 
         // Only add room if provided

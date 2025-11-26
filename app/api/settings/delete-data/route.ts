@@ -7,9 +7,7 @@ export async function DELETE() {
         await prisma.meeting.deleteMany()
         await prisma.attendee.deleteMany()
         await prisma.room.deleteMany()
-
-        // Note: We keep EventSettings to avoid locking the user out of the event date range.
-        // They can overwrite it via Import if needed.
+        await prisma.eventSettings.deleteMany()
 
         return NextResponse.json({ success: true })
     } catch (error) {

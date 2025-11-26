@@ -19,6 +19,7 @@ interface Meeting {
     tags: string[]
     start?: Date | null
     end?: Date | null
+    meetingType?: string
 }
 
 interface Room {
@@ -45,6 +46,16 @@ export default function DashboardPage() {
     const [selectedAttendees, setSelectedAttendees] = useState<string[]>([])
     const [selectedDate, setSelectedDate] = useState('')
     const [selectedRoomId, setSelectedRoomId] = useState('')
+    const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
+
+    const meetingTypes = [
+        "Sales/Customer",
+        "Vendor Partner",
+        "Technology Partner",
+        "PR Engagement",
+        "Gov't",
+        "Other"
+    ]
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -90,7 +101,8 @@ export default function DashboardPage() {
                     tags: m.tags || [],
                     date: m.date,
                     startTime: m.startTime,
-                    endTime: m.endTime
+                    endTime: m.endTime,
+                    meetingType: m.meetingType
                 }
             })
             setMeetings(formattedEvents)
@@ -128,7 +140,11 @@ export default function DashboardPage() {
             // Room
             const matchesRoom = !selectedRoomId || meeting.resourceId === selectedRoomId
 
-            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom
+            // Meeting Type
+            const matchesMeetingType = selectedMeetingTypes.length === 0 ||
+                (meeting.meetingType && selectedMeetingTypes.includes(meeting.meetingType))
+
+            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType
         }).sort((a, b) => {
             if (!a.start && !b.start) return 0
             if (!a.start) return 1
@@ -194,7 +210,8 @@ export default function DashboardPage() {
                     roomId: editingMeeting.resourceId,
                     attendeeIds: editingMeeting.attendees?.map(a => a.id),
                     status: editingMeeting.status,
-                    tags: editingMeeting.tags
+                    tags: editingMeeting.tags,
+                    meetingType: editingMeeting.meetingType
                 })
             })
 
@@ -212,7 +229,8 @@ export default function DashboardPage() {
                     tags: savedData.tags || [],
                     date: savedData.date,
                     startTime: savedData.startTime,
-                    endTime: savedData.endTime
+                    endTime: savedData.endTime,
+                    meetingType: savedData.meetingType
                 }
                 setMeetings(prev => prev.map(m => m.id === formattedSaved.id ? formattedSaved : m))
                 setIsModalOpen(false)
@@ -375,6 +393,29 @@ export default function DashboardPage() {
                             </select>
                         </div>
 
+                        {/* Meeting Type */}
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Meeting Type</label>
+                            <div className="flex flex-wrap gap-2">
+                                {meetingTypes.map(type => (
+                                    <button
+                                        key={type}
+                                        onClick={() => {
+                                            setSelectedMeetingTypes(prev =>
+                                                prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+                                            )
+                                        }}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedMeetingTypes.includes(type)
+                                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                            : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                                            }`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Tags */}
                         {availableTags.length > 0 && (
                             <div>
@@ -432,6 +473,7 @@ export default function DashboardPage() {
                                 setSelectedAttendees([])
                                 setSelectedDate('')
                                 setSelectedRoomId('')
+                                setSelectedMeetingTypes([])
                             }}
                             className="w-full py-2 text-sm text-zinc-500 hover:text-zinc-700 font-medium border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors"
                         >

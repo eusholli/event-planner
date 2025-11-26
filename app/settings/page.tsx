@@ -204,7 +204,7 @@ export default function SettingsPage() {
                         <p className="text-sm text-slate-500">Permanently delete all data.</p>
                         <button
                             onClick={async () => {
-                                if (confirm('WARNING: This will delete ALL Attendees, Rooms, and Meetings. This action cannot be undone. Are you sure?')) {
+                                if (confirm('WARNING: This will delete ALL Attendees, Rooms, Meetings, and Event Settings. This action cannot be undone. Are you sure?')) {
                                     try {
                                         const res = await fetch('/api/settings/delete-data', { method: 'DELETE' })
                                         if (res.ok) {

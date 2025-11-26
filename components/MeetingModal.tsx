@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import moment from 'moment'
+import { useUser } from '@/components/auth'
 
 interface Room {
     id: string
@@ -25,6 +26,12 @@ export interface Meeting {
     purpose: string
     status: string
     tags: string[]
+    createdBy?: string
+    requesterEmail?: string
+    meetingType?: string
+    otherDetails?: string
+    isApproved?: boolean
+    calendarInviteSent?: boolean
 }
 
 interface MeetingModalProps {
@@ -59,6 +66,7 @@ export default function MeetingModal({
     error
 }: MeetingModalProps) {
     const [localError, setLocalError] = useState('')
+    const { user } = useUser()
 
     useEffect(() => {
         setLocalError('')
@@ -161,6 +169,44 @@ export default function MeetingModal({
                             data-lpignore="true"
                             placeholder="Meeting Title"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Created By</label>
+                        <input
+                            type="text"
+                            readOnly
+                            className="input-field bg-zinc-100 text-zinc-500"
+                            value={event.createdBy || user?.primaryEmailAddress?.emailAddress || ''}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Requester Email</label>
+                        <input
+                            type="email"
+                            className="input-field"
+                            value={event.requesterEmail || ''}
+                            onChange={e => onEventChange({ ...event, requesterEmail: e.target.value })}
+                            placeholder="requester@example.com"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
+                        <select
+                            className="input-field"
+                            value={event.meetingType || ''}
+                            onChange={e => onEventChange({ ...event, meetingType: e.target.value })}
+                        >
+                            <option value="">Select Type...</option>
+                            <option value="Sales/Customer">Sales/Customer</option>
+                            <option value="Vendor Partner">Vendor Partner</option>
+                            <option value="Technology Partner">Technology Partner</option>
+                            <option value="PR Engagement">PR Engagement</option>
+                            <option value="Gov't">Gov't</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -309,6 +355,16 @@ export default function MeetingModal({
                             placeholder="Meeting agenda or description..."
                         />
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Other Details</label>
+                        <textarea
+                            className="input-field h-24 resize-none"
+                            value={event.otherDetails || ''}
+                            onChange={e => onEventChange({ ...event, otherDetails: e.target.value })}
+                            placeholder="Any other details..."
+                        />
+                    </div>
                     {availableTags.length > 0 && (
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-2">Tags</label>
@@ -344,6 +400,28 @@ export default function MeetingModal({
                             <option value="COMPLETED">Completed</option>
                             <option value="CANCELED">Canceled</option>
                         </select>
+                    </div>
+
+                    <div className="flex space-x-6">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                checked={event.isApproved || false}
+                                onChange={e => onEventChange({ ...event, isApproved: e.target.checked })}
+                            />
+                            <span className="text-sm font-medium text-zinc-700">Approved</span>
+                        </label>
+
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                checked={event.calendarInviteSent || false}
+                                onChange={e => onEventChange({ ...event, calendarInviteSent: e.target.checked })}
+                            />
+                            <span className="text-sm font-medium text-zinc-700">Calendar Invite Sent</span>
+                        </label>
                     </div>
                     <div className="flex justify-between pt-4 items-center">
                         {!isCreating && (

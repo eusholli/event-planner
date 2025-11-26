@@ -23,12 +23,17 @@ interface Attendee {
 
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 
+interface CalendarEvent extends Meeting {
+    start: Date
+    end: Date
+}
+
 export default function CalendarPage() {
-    const [events, setEvents] = useState<Meeting[]>([])
+    const [events, setEvents] = useState<CalendarEvent[]>([])
     const [rooms, setRooms] = useState<Room[]>([])
     const [allAttendees, setAllAttendees] = useState<Attendee[]>([])
     const [loading, setLoading] = useState(true)
-    const [selectedEvent, setSelectedEvent] = useState<Partial<Meeting> | null>(null)
+    const [selectedEvent, setSelectedEvent] = useState<Partial<CalendarEvent> | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [conflicts, setConflicts] = useState<string[]>([])
@@ -79,7 +84,13 @@ export default function CalendarPage() {
                         attendees: meeting.attendees,
                         purpose: meeting.purpose,
                         status: meeting.status,
-                        tags: meeting.tags
+                        tags: meeting.tags,
+                        createdBy: meeting.createdBy,
+                        requesterEmail: meeting.requesterEmail,
+                        meetingType: meeting.meetingType,
+                        otherDetails: meeting.otherDetails,
+                        isApproved: meeting.isApproved,
+                        calendarInviteSent: meeting.calendarInviteSent
                     }
                 })
                 setEvents(formattedEvents)
@@ -137,9 +148,12 @@ export default function CalendarPage() {
         setDate(newDate)
     }, [eventSettings])
 
-    const handleEventUpdate = useCallback(async (updatedEvent: Partial<Meeting>) => {
+    const handleEventUpdate = useCallback(async (updatedEvent: Partial<CalendarEvent>) => {
+        const originalEvent = events.find(e => e.id === updatedEvent.id)
+        if (!originalEvent) return
+
         // Optimistic update
-        setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } as Meeting : e))
+        setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } as CalendarEvent : e))
         setError('')
 
         try {
@@ -155,20 +169,25 @@ export default function CalendarPage() {
                     roomId: updatedEvent.resourceId,
                     attendeeIds: updatedEvent.attendees?.map(a => a.id),
                     status: updatedEvent.status,
-                    tags: updatedEvent.tags
+                    tags: updatedEvent.tags,
+                    requesterEmail: updatedEvent.requesterEmail,
+                    meetingType: updatedEvent.meetingType,
+                    otherDetails: updatedEvent.otherDetails,
+                    isApproved: updatedEvent.isApproved,
+                    calendarInviteSent: updatedEvent.calendarInviteSent
                 }),
             })
             if (!res.ok) {
                 const data = await res.json()
                 setError(data.error || 'Failed to update meeting')
-                // Revert UI - find the original event before the optimistic update
-                setEvents(prev => prev.map(ev => ev.id === updatedEvent.id ? events.find(e => e.id === updatedEvent.id) || ev : ev))
+                // Revert UI
+                setEvents(prev => prev.map(ev => ev.id === updatedEvent.id ? originalEvent : ev))
             }
         } catch (err) {
             setError('Failed to update meeting')
-            setEvents(prev => prev.map(ev => ev.id === event.id ? event : ev))
+            setEvents(prev => prev.map(ev => ev.id === updatedEvent.id ? originalEvent : ev))
         }
-    }, [])
+    }, [events])
 
     const handleSelectSlot = useCallback(({ start, end, resourceId }: any) => {
         // Default to 30 minutes for new slots if the selection is less than that
@@ -185,7 +204,12 @@ export default function CalendarPage() {
             resourceId: resourceId || rooms[0]?.id,
             attendees: [],
             status: 'STARTED',
-            tags: []
+            tags: [],
+            requesterEmail: '',
+            meetingType: '',
+            otherDetails: '',
+            isApproved: false,
+            calendarInviteSent: false
         })
         setIsCreating(true)
         setIsModalOpen(true)
@@ -199,7 +223,7 @@ export default function CalendarPage() {
         setIsModalOpen(true)
     }
 
-    const checkConflicts = useCallback(async (eventData: Partial<Meeting>) => {
+    const checkConflicts = useCallback(async (eventData: Partial<CalendarEvent>) => {
         if (!eventData.start || !eventData.end) return
 
         try {
@@ -267,7 +291,12 @@ export default function CalendarPage() {
             title: selectedEvent.title,
             purpose: selectedEvent.purpose,
             status: selectedEvent.status,
-            tags: selectedEvent.tags
+            tags: selectedEvent.tags,
+            requesterEmail: selectedEvent.requesterEmail,
+            meetingType: selectedEvent.meetingType,
+            otherDetails: selectedEvent.otherDetails,
+            isApproved: selectedEvent.isApproved,
+            calendarInviteSent: selectedEvent.calendarInviteSent
         }
 
         // Only add times if they exist and are valid
@@ -304,7 +333,16 @@ export default function CalendarPage() {
                     attendees: savedEvent.attendees,
                     purpose: savedEvent.purpose,
                     status: savedEvent.status || 'STARTED',
-                    tags: savedEvent.tags || []
+                    tags: savedEvent.tags || [],
+                    createdBy: savedEvent.createdBy,
+                    requesterEmail: savedEvent.requesterEmail,
+                    meetingType: savedEvent.meetingType,
+                    otherDetails: savedEvent.otherDetails,
+                    isApproved: savedEvent.isApproved,
+                    calendarInviteSent: savedEvent.calendarInviteSent,
+                    date: savedEvent.date,
+                    startTime: savedEvent.startTime,
+                    endTime: savedEvent.endTime
                 }
 
                 if (isCreating) {
@@ -375,7 +413,6 @@ export default function CalendarPage() {
                     resourceTitleAccessor={(resource: any) => resource.title}
                     onSelectSlot={handleSelectSlot}
                     selectable
-                    onEventDrop={handleEventDrop}
                     onDoubleClickEvent={(event: any) => handleDoubleClickEvent(event)}
                     resizable={false}
                     className="h-full font-sans text-zinc-600"
@@ -397,8 +434,8 @@ export default function CalendarPage() {
             <MeetingModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                event={selectedEvent}
-                onEventChange={setSelectedEvent}
+                event={selectedEvent as Partial<Meeting>}
+                onEventChange={(e) => setSelectedEvent(e as Partial<CalendarEvent>)}
                 rooms={rooms}
                 allAttendees={allAttendees}
                 availableTags={availableTags}
