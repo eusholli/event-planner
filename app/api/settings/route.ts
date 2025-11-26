@@ -40,7 +40,7 @@ export async function POST(request: Request) {
                     startDate: new Date(startDate),
                     endDate: new Date(endDate),
                     geminiApiKey,
-                    tags: tags ? Array.from(new Set(tags)).sort() : [],
+                    tags: tags ? Array.from(new Set(tags as string[])).sort() : [],
                 },
             })
         } else {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
                     startDate: new Date(startDate),
                     endDate: new Date(endDate),
                     geminiApiKey,
-                    tags: tags ? Array.from(new Set(tags)).sort() : [],
+                    tags: tags ? Array.from(new Set(tags as string[])).sort() : [],
                 },
             })
         }
