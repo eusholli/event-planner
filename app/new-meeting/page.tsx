@@ -106,12 +106,12 @@ export default function SchedulePage() {
 
         // Only add times if date and startTime are provided
         if (formData.date && formData.startTime) {
-            const startDateTime = new Date(`${formData.date}T${formData.startTime}`)
-            const durationMinutes = parseInt(formData.duration)
-            const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000)
-
             // Validate against event settings
             if (eventSettings) {
+                const startDateTime = new Date(`${formData.date}T${formData.startTime}`)
+                const durationMinutes = parseInt(formData.duration)
+                const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000)
+
                 const eventStart = new Date(eventSettings.startDate)
                 const eventEnd = new Date(eventSettings.endDate)
 
@@ -122,8 +122,17 @@ export default function SchedulePage() {
                 }
             }
 
-            requestBody.startTime = startDateTime.toISOString()
-            requestBody.endTime = endDateTime.toISOString()
+            requestBody.date = formData.date
+            requestBody.startTime = formData.startTime
+
+            // Calculate end time
+            const start = new Date(`${formData.date}T${formData.startTime}`)
+            const durationMinutes = parseInt(formData.duration)
+            const end = new Date(start.getTime() + durationMinutes * 60000)
+            requestBody.endTime = end.toTimeString().slice(0, 5)
+        } else if (formData.date) {
+            // Date only
+            requestBody.date = formData.date
         }
 
         try {

@@ -85,20 +85,37 @@ export async function POST(request: Request) {
                     }
                 }
 
-                // Check if meeting exists (by title and start time)
+                // Check if meeting exists (by title and date)
                 const existing = await prisma.meeting.findFirst({
                     where: {
                         title: meeting.title,
-                        startTime: new Date(meeting.startTime)
+                        // This is a loose check, but sufficient for import
+                        date: meeting.startTime ? new Date(meeting.startTime).toISOString().split('T')[0] : undefined
                     }
                 })
 
                 if (!existing) {
+                    // Parse date and time from ISO strings if present
+                    let date = null
+                    let startTime = null
+                    let endTime = null
+
+                    if (meeting.startTime) {
+                        const start = new Date(meeting.startTime)
+                        date = start.toISOString().split('T')[0]
+                        startTime = start.toTimeString().slice(0, 5)
+                    }
+                    if (meeting.endTime) {
+                        const end = new Date(meeting.endTime)
+                        endTime = end.toTimeString().slice(0, 5)
+                    }
+
                     await prisma.meeting.create({
                         data: {
                             title: meeting.title,
-                            startTime: new Date(meeting.startTime),
-                            endTime: new Date(meeting.endTime),
+                            date,
+                            startTime,
+                            endTime,
                             roomId: roomId,
                             attendees: {
                                 connect: attendees

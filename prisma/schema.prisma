@@ -49,8 +49,9 @@ model Meeting {
   id          String        @id @default(cuid())
   title       String
   purpose     String?
-  startTime   DateTime?
-  endTime     DateTime?
+  date        String?
+  startTime   String?
+  endTime     String?
   roomId      String?
   room        Room?         @relation(fields: [roomId], references: [id])
   attendees   Attendee[]    @relation("AttendeeMeetings")

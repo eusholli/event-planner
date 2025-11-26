@@ -3,7 +3,23 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import moment from 'moment'
-import MeetingModal, { Meeting } from '@/components/MeetingModal'
+import MeetingModal from '@/components/MeetingModal'
+
+interface Meeting {
+    id: string
+    title: string
+    date: string | null
+    startTime: string | null
+    endTime: string | null
+    resourceId: string
+    attendees: { id: string, name: string }[]
+    purpose: string
+    status: string
+    room?: { name: string }
+    tags: string[]
+    start?: Date | null
+    end?: Date | null
+}
 
 interface Room {
     id: string
@@ -44,17 +60,39 @@ export default function DashboardPage() {
             fetch('/api/attendees').then(res => res.json()),
             fetch('/api/settings').then(res => res.json())
         ]).then(([meetingsData, roomsData, attendeesData, settingsData]) => {
-            const formattedEvents = meetingsData.map((m: any) => ({
-                id: m.id,
-                title: m.title,
-                start: new Date(m.startTime),
-                end: new Date(m.endTime),
-                resourceId: m.roomId,
-                attendees: m.attendees,
-                purpose: m.purpose,
-                status: m.status || 'STARTED',
-                tags: m.tags || []
-            }))
+            if (!Array.isArray(meetingsData)) {
+                console.error('Failed to fetch meetings:', meetingsData)
+                setMeetings([])
+                setLoading(false)
+                return
+            }
+
+            const formattedEvents = meetingsData.map((m: any) => {
+                let start = null
+                let end = null
+
+                if (m.date && m.startTime && m.endTime) {
+                    start = new Date(`${m.date}T${m.startTime}`)
+                    end = new Date(`${m.date}T${m.endTime}`)
+                } else if (m.date) {
+                    start = new Date(m.date)
+                }
+
+                return {
+                    id: m.id,
+                    title: m.title,
+                    start,
+                    end,
+                    resourceId: m.roomId,
+                    attendees: m.attendees,
+                    purpose: m.purpose,
+                    status: m.status || 'STARTED',
+                    tags: m.tags || [],
+                    date: m.date,
+                    startTime: m.startTime,
+                    endTime: m.endTime
+                }
+            })
             setMeetings(formattedEvents)
             setRooms(roomsData)
             setAllAttendees(attendeesData)
@@ -85,13 +123,18 @@ export default function DashboardPage() {
 
             // Date
             const matchesDate = !selectedDate ||
-                moment(meeting.start).format('YYYY-MM-DD') === selectedDate
+                (meeting.start && moment(meeting.start).format('YYYY-MM-DD') === selectedDate)
 
             // Room
             const matchesRoom = !selectedRoomId || meeting.resourceId === selectedRoomId
 
             return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom
-        }).sort((a, b) => a.start.getTime() - b.start.getTime())
+        }).sort((a, b) => {
+            if (!a.start && !b.start) return 0
+            if (!a.start) return 1
+            if (!b.start) return -1
+            return a.start.getTime() - b.start.getTime()
+        })
     }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId])
 
     // Stats
@@ -123,22 +166,35 @@ export default function DashboardPage() {
         if (!selectedEvent) return
 
         // Optimistic Update
-        const updatedEvent = { ...selectedEvent } as Meeting
+        const editingMeeting = { ...selectedEvent } as Meeting
+        setMeetings(prev => prev.map(m => {
+            if (m.id === editingMeeting.id) {
+                return {
+                    ...m,
+                    ...editingMeeting,
+                    // Ensure we have the full objects for display if needed, though we mostly use strings now
+                    room: rooms.find(r => r.id === editingMeeting.resourceId) || m.room,
+                    attendees: editingMeeting.attendees || m.attendees
+                } as any
+            }
+            return m
+        }))
 
         // We need to actually save to API
         try {
-            const res = await fetch(`/api/meetings/${selectedEvent.id}`, {
+            const res = await fetch(`/api/meetings/${editingMeeting.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: selectedEvent.title,
-                    purpose: selectedEvent.purpose,
-                    startTime: selectedEvent.start?.toISOString(),
-                    endTime: selectedEvent.end?.toISOString(),
-                    roomId: selectedEvent.resourceId,
-                    attendeeIds: selectedEvent.attendees?.map(a => a.id) || [],
-                    status: selectedEvent.status,
-                    tags: selectedEvent.tags
+                    title: editingMeeting.title,
+                    purpose: editingMeeting.purpose,
+                    date: editingMeeting.date,
+                    startTime: editingMeeting.startTime,
+                    endTime: editingMeeting.endTime,
+                    roomId: editingMeeting.resourceId,
+                    attendeeIds: editingMeeting.attendees?.map(a => a.id),
+                    status: editingMeeting.status,
+                    tags: editingMeeting.tags
                 })
             })
 
@@ -147,13 +203,16 @@ export default function DashboardPage() {
                 const formattedSaved = {
                     id: savedData.id,
                     title: savedData.title,
-                    start: new Date(savedData.startTime),
-                    end: new Date(savedData.endTime),
+                    start: savedData.date && savedData.startTime ? new Date(`${savedData.date}T${savedData.startTime}`) : (savedData.date ? new Date(savedData.date) : null),
+                    end: savedData.date && savedData.endTime ? new Date(`${savedData.date}T${savedData.endTime}`) : null,
                     resourceId: savedData.roomId,
                     attendees: savedData.attendees,
                     purpose: savedData.purpose,
                     status: savedData.status || 'STARTED',
-                    tags: savedData.tags || []
+                    tags: savedData.tags || [],
+                    date: savedData.date,
+                    startTime: savedData.startTime,
+                    endTime: savedData.endTime
                 }
                 setMeetings(prev => prev.map(m => m.id === formattedSaved.id ? formattedSaved : m))
                 setIsModalOpen(false)
@@ -205,8 +264,9 @@ export default function DashboardPage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        startTime: selectedEvent.start.toISOString(),
-                        endTime: selectedEvent.end.toISOString(),
+                        date: moment(selectedEvent.start).format('YYYY-MM-DD'),
+                        startTime: moment(selectedEvent.start).format('HH:mm'),
+                        endTime: moment(selectedEvent.end).format('HH:mm'),
                         roomId: selectedEvent.resourceId,
                         attendeeIds: selectedEvent.attendees?.map(a => a.id) || [],
                         excludeMeetingId: selectedEvent.id
@@ -400,10 +460,14 @@ export default function DashboardPage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center flex-wrap gap-2 text-xs text-zinc-500 mb-2">
                                                 <span className="font-medium text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-md">
-                                                    {moment(meeting.start).format('ddd, MMM D')}
+                                                    {meeting.start ? moment(meeting.start).format('ddd, MMM D') : 'No Date'}
                                                 </span>
                                                 <span className="text-zinc-300">•</span>
-                                                <span>{moment(meeting.start).format('h:mm A')} - {moment(meeting.end).format('h:mm A')}</span>
+                                                <span>
+                                                    {meeting.start && meeting.end
+                                                        ? `${moment(meeting.start).format('h:mm A')} - ${moment(meeting.end).format('h:mm A')}`
+                                                        : 'No Time'}
+                                                </span>
                                                 <span className="text-zinc-300">•</span>
                                                 <span className="flex items-center text-zinc-600">
                                                     <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

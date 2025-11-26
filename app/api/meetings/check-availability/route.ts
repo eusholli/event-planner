@@ -4,10 +4,15 @@ import prisma from '@/lib/prisma'
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { startTime, endTime, roomId, attendeeIds, excludeMeetingId } = body
+        const { date, startTime, endTime, roomId, attendeeIds, excludeMeetingId } = body
 
-        const start = new Date(startTime)
-        const end = new Date(endTime)
+        // Validate required fields
+        if (!date || !startTime || !endTime) {
+            // If we don't have full time info, we can't check for conflicts effectively
+            // or we might check just the date? For now, assume we need all 3.
+            return NextResponse.json({ conflicts: [], suggestions: [] })
+        }
+
         const conflicts: string[] = []
 
         // 1. Check Room Availability
@@ -16,8 +21,9 @@ export async function POST(request: Request) {
                 where: {
                     roomId,
                     id: excludeMeetingId ? { not: excludeMeetingId } : undefined,
+                    date: date,
                     OR: [
-                        { startTime: { lt: end }, endTime: { gt: start } },
+                        { startTime: { lt: endTime }, endTime: { gt: startTime } },
                     ],
                 },
             })
@@ -37,8 +43,9 @@ export async function POST(request: Request) {
                             id: { in: attendeeIds },
                         },
                     },
+                    date: date,
                     OR: [
-                        { startTime: { lt: end }, endTime: { gt: start } },
+                        { startTime: { lt: endTime }, endTime: { gt: startTime } },
                     ],
                 },
                 include: {
@@ -71,7 +78,8 @@ export async function POST(request: Request) {
                 const allRooms = await prisma.room.findMany()
                 const busyRoomIds = await prisma.meeting.findMany({
                     where: {
-                        OR: [{ startTime: { lt: end }, endTime: { gt: start } }],
+                        date: date,
+                        OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }],
                         id: excludeMeetingId ? { not: excludeMeetingId } : undefined
                     },
                     select: { roomId: true }
@@ -90,22 +98,32 @@ export async function POST(request: Request) {
             // B. Suggest Alternative Times (if attendees or room are busy)
             // Simple algorithm: Check next 3 hour slots
             const checkSlots = [1, 2, 3]
+
+            // Helper to add hours to "HH:mm" string
+            const addHours = (timeStr: string, hours: number) => {
+                const [h, m] = timeStr.split(':').map(Number)
+                const date = new Date()
+                date.setHours(h + hours, m, 0, 0)
+                return date.toTimeString().slice(0, 5)
+            }
+
             for (const offset of checkSlots) {
-                const newStart = new Date(start.getTime() + offset * 60 * 60 * 1000)
-                const newEnd = new Date(end.getTime() + offset * 60 * 60 * 1000)
+                const newStartTime = addHours(startTime, offset)
+                const newEndTime = addHours(endTime, offset)
 
                 // Check if this slot works for everyone
                 const slotConflicts = await prisma.meeting.count({
                     where: {
                         id: excludeMeetingId ? { not: excludeMeetingId } : undefined,
+                        date: date,
                         OR: [
                             // Room busy?
-                            { roomId, startTime: { lt: newEnd }, endTime: { gt: newStart } },
+                            { roomId, startTime: { lt: newEndTime }, endTime: { gt: newStartTime } },
                             // Attendees busy?
                             {
                                 attendees: { some: { id: { in: attendeeIds } } },
-                                startTime: { lt: newEnd },
-                                endTime: { gt: newStart }
+                                startTime: { lt: newEndTime },
+                                endTime: { gt: newStartTime }
                             }
                         ]
                     }
@@ -114,8 +132,8 @@ export async function POST(request: Request) {
                 if (slotConflicts === 0) {
                     suggestions.push({
                         type: 'time',
-                        label: `Move to ${newStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-                        value: { start: newStart, end: newEnd }
+                        label: `Move to ${newStartTime}`,
+                        value: { startTime: newStartTime, endTime: newEndTime }
                     })
                     break // Found one, stop looking
                 }

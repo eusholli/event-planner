@@ -41,24 +41,60 @@ export default function CalendarPage() {
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
 
     useEffect(() => {
+        const fetchMeetings = async () => {
+            try {
+                const res = await fetch('/api/meetings')
+                const data = await res.json()
+
+                if (!Array.isArray(data)) {
+                    console.error('Failed to fetch meetings:', data)
+                    setEvents([])
+                    return
+                }
+
+                const formattedEvents = data.map((meeting: any) => {
+                    // Construct Date objects for the calendar view
+                    let start = new Date()
+                    let end = new Date()
+
+                    if (meeting.date && meeting.startTime && meeting.endTime) {
+                        start = new Date(`${meeting.date}T${meeting.startTime}`)
+                        end = new Date(`${meeting.date}T${meeting.endTime}`)
+                    } else if (meeting.date) {
+                        // All day event or date only
+                        start = new Date(meeting.date)
+                        end = new Date(meeting.date)
+                    }
+
+                    return {
+                        id: meeting.id,
+                        title: meeting.title,
+                        start,
+                        end,
+                        resourceId: meeting.roomId,
+                        // Keep original fields for the modal
+                        date: meeting.date,
+                        startTime: meeting.startTime,
+                        endTime: meeting.endTime,
+                        attendees: meeting.attendees,
+                        purpose: meeting.purpose,
+                        status: meeting.status,
+                        tags: meeting.tags
+                    }
+                })
+                setEvents(formattedEvents)
+            } catch (error) {
+                console.error('Failed to fetch meetings:', error)
+            }
+        }
+
         Promise.all([
-            fetch('/api/meetings').then(res => res.json()),
+            fetchMeetings(), // Call the new fetchMeetings function
             fetch('/api/rooms').then(res => res.json()),
             fetch('/api/attendees').then(res => res.json()),
             fetch('/api/settings').then(res => res.json())
-        ]).then(([meetingsData, roomsData, attendeesData, settingsData]) => {
-            const formattedEvents = meetingsData.map((m: any) => ({
-                id: m.id,
-                title: m.title,
-                start: new Date(m.startTime),
-                end: new Date(m.endTime),
-                resourceId: m.roomId,
-                attendees: m.attendees,
-                purpose: m.purpose,
-                status: m.status || 'STARTED',
-                tags: m.tags || []
-            }))
-            setEvents(formattedEvents)
+        ]).then(([_meetingsResult, roomsData, attendeesData, settingsData]) => {
+            // _meetingsResult is the result of fetchMeetings, which already updates state
             setRooms(roomsData)
             setAllAttendees(attendeesData)
 
@@ -101,33 +137,32 @@ export default function CalendarPage() {
         setDate(newDate)
     }, [eventSettings])
 
-    const handleEventDrop = useCallback(async ({ event, start, end, resourceId }: any) => {
-        const updatedEvent = { ...event, start, end, resourceId }
-
-        // Optimistic UI update
-        setEvents(prev => prev.map(ev => ev.id === event.id ? updatedEvent : ev))
+    const handleEventUpdate = useCallback(async (updatedEvent: Partial<Meeting>) => {
+        // Optimistic update
+        setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } as Meeting : e))
         setError('')
 
         try {
-            const res = await fetch(`/api/meetings/${event.id}`, {
+            const res = await fetch(`/api/meetings/${updatedEvent.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: event.title,
-                    purpose: event.purpose,
-                    startTime: start.toISOString(),
-                    endTime: end.toISOString(),
-                    roomId: resourceId,
-                    attendeeIds: event.attendees.map((a: any) => a.id),
-                    tags: event.tags
-                })
+                    title: updatedEvent.title,
+                    purpose: updatedEvent.purpose,
+                    date: updatedEvent.start ? moment(updatedEvent.start).format('YYYY-MM-DD') : updatedEvent.date,
+                    startTime: updatedEvent.start ? moment(updatedEvent.start).format('HH:mm') : updatedEvent.startTime,
+                    endTime: updatedEvent.end ? moment(updatedEvent.end).format('HH:mm') : updatedEvent.endTime,
+                    roomId: updatedEvent.resourceId,
+                    attendeeIds: updatedEvent.attendees?.map(a => a.id),
+                    status: updatedEvent.status,
+                    tags: updatedEvent.tags
+                }),
             })
-
             if (!res.ok) {
                 const data = await res.json()
-                setError(data.error || 'Failed to move meeting')
-                // Revert UI
-                setEvents(prev => prev.map(ev => ev.id === event.id ? event : ev))
+                setError(data.error || 'Failed to update meeting')
+                // Revert UI - find the original event before the optimistic update
+                setEvents(prev => prev.map(ev => ev.id === updatedEvent.id ? events.find(e => e.id === updatedEvent.id) || ev : ev))
             }
         } catch (err) {
             setError('Failed to update meeting')
@@ -172,8 +207,9 @@ export default function CalendarPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    startTime: eventData.start.toISOString(),
-                    endTime: eventData.end.toISOString(),
+                    date: moment(eventData.start).format('YYYY-MM-DD'),
+                    startTime: moment(eventData.start).format('HH:mm'),
+                    endTime: moment(eventData.end).format('HH:mm'),
                     roomId: eventData.resourceId,
                     attendeeIds: eventData.attendees?.map(a => a.id) || [],
                     excludeMeetingId: isCreating ? undefined : eventData.id
@@ -236,15 +272,12 @@ export default function CalendarPage() {
 
         // Only add times if they exist and are valid
         if (selectedEvent.start && !isNaN(selectedEvent.start.getTime())) {
-            requestBody.startTime = selectedEvent.start.toISOString()
-        } else if (selectedEvent.start === null) {
-            requestBody.startTime = null
+            requestBody.date = moment(selectedEvent.start).format('YYYY-MM-DD')
+            requestBody.startTime = moment(selectedEvent.start).format('HH:mm')
         }
 
         if (selectedEvent.end && !isNaN(selectedEvent.end.getTime())) {
-            requestBody.endTime = selectedEvent.end.toISOString()
-        } else if (selectedEvent.end === null) {
-            requestBody.endTime = null
+            requestBody.endTime = moment(selectedEvent.end).format('HH:mm')
         }
 
         // Always include roomId - send null if empty to clear the room

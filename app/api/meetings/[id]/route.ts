@@ -8,7 +8,7 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
-        const { title, purpose, startTime, endTime, roomId, attendeeIds, status, tags } = body
+        const { title, purpose, date, startTime, endTime, roomId, attendeeIds, status, tags } = body
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
@@ -17,8 +17,8 @@ export async function PUT(
 
         // Validate COMPLETED status requirements
         if (status === 'COMPLETED') {
-            if (!startTime || !endTime) {
-                return NextResponse.json({ error: 'Start time and end time are required for completed meetings' }, { status: 400 })
+            if (!date || !startTime || !endTime) {
+                return NextResponse.json({ error: 'Date, Start time, and End time are required for completed meetings' }, { status: 400 })
             }
             if (!roomId) {
                 return NextResponse.json({ error: 'Room is required for completed meetings' }, { status: 400 })
@@ -28,14 +28,14 @@ export async function PUT(
             }
         }
 
-        // Only validate times if they are provided
+        // Validate times if provided
         let start, end
-        if (startTime && endTime) {
-            start = new Date(startTime)
-            end = new Date(endTime)
+        if (date && startTime && endTime) {
+            start = new Date(`${date}T${startTime}`)
+            end = new Date(`${date}T${endTime}`)
 
             if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                return NextResponse.json({ error: 'Invalid start or end time' }, { status: 400 })
+                return NextResponse.json({ error: 'Invalid date or time' }, { status: 400 })
             }
 
             if (start >= end) {
@@ -43,14 +43,15 @@ export async function PUT(
             }
         }
 
-        // 1. Check Room Availability (excluding current meeting, only if room and times provided)
-        if (roomId && start && end) {
+        // 1. Check Room Availability (excluding current meeting, only if room, date, and times provided)
+        if (roomId && date && startTime && endTime) {
             const roomConflicts = await prisma.meeting.findMany({
                 where: {
                     roomId,
                     id: { not: id }, // Exclude current meeting
+                    date: date,
                     OR: [
-                        { startTime: { lt: end }, endTime: { gt: start } },
+                        { startTime: { lt: endTime }, endTime: { gt: startTime } },
                     ],
                 },
             })
@@ -60,8 +61,8 @@ export async function PUT(
             }
         }
 
-        // 2. Check Attendee Availability (excluding current meeting, only if attendees and times provided)
-        if (attendeeIds && attendeeIds.length > 0 && start && end) {
+        // 2. Check Attendee Availability (excluding current meeting, only if attendees, date, and times provided)
+        if (attendeeIds && attendeeIds.length > 0 && date && startTime && endTime) {
             const attendeeConflicts = await prisma.meeting.findMany({
                 where: {
                     id: { not: id }, // Exclude current meeting
@@ -70,8 +71,9 @@ export async function PUT(
                             id: { in: attendeeIds },
                         },
                     },
+                    date: date,
                     OR: [
-                        { startTime: { lt: end }, endTime: { gt: start } },
+                        { startTime: { lt: endTime }, endTime: { gt: startTime } },
                     ],
                 },
                 include: {
@@ -99,16 +101,9 @@ export async function PUT(
         const updateData: any = {
             title,
             purpose,
-        }
-
-        // Only add times if provided
-        if (start && end) {
-            updateData.startTime = start
-            updateData.endTime = end
-        } else {
-            // Check if explicitly set to null to clear them
-            if (startTime === null) updateData.startTime = null
-            if (endTime === null) updateData.endTime = null
+            date,
+            startTime,
+            endTime
         }
 
         // Only add room if provided
@@ -152,9 +147,8 @@ export async function PUT(
 
         // Send Calendar Updates
         try {
-            if (updatedMeeting.startTime && updatedMeeting.endTime) {
+            if (updatedMeeting.date && updatedMeeting.startTime && updatedMeeting.endTime) {
                 const { sendCalendarInvites } = await import('@/lib/calendar-sync')
-                // We've verified startTime and endTime are not null, so we can cast to satisfy the type
                 await sendCalendarInvites(updatedMeeting as any)
             }
         } catch (error) {
@@ -179,7 +173,7 @@ export async function DELETE(
             include: { room: true, attendees: true }
         })
 
-        if (meeting && meeting.startTime && meeting.endTime) {
+        if (meeting && meeting.date && meeting.startTime && meeting.endTime) {
             try {
                 const { sendCalendarInvites } = await import('@/lib/calendar-sync')
                 await sendCalendarInvites(meeting as any, 'CANCEL')

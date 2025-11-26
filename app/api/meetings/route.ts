@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { title, purpose, startTime, endTime, roomId, attendeeIds, status = 'STARTED', tags } = body
+        const { title, purpose, date, startTime, endTime, roomId, attendeeIds, status = 'STARTED', tags } = body
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
 
         // Validate COMPLETED status requirements
         if (status === 'COMPLETED') {
-            if (!startTime || !endTime) {
-                return NextResponse.json({ error: 'Start time and end time are required for completed meetings' }, { status: 400 })
+            if (!date || !startTime || !endTime) {
+                return NextResponse.json({ error: 'Date, Start time, and End time are required for completed meetings' }, { status: 400 })
             }
             if (!roomId) {
                 return NextResponse.json({ error: 'Room is required for completed meetings' }, { status: 400 })
@@ -38,14 +38,14 @@ export async function POST(request: Request) {
             }
         }
 
-        // Only validate times if they are provided
+        // Validate times if provided
         let start, end
-        if (startTime && endTime) {
-            start = new Date(startTime)
-            end = new Date(endTime)
+        if (date && startTime && endTime) {
+            start = new Date(`${date}T${startTime}`)
+            end = new Date(`${date}T${endTime}`)
 
             if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                return NextResponse.json({ error: 'Invalid start or end time' }, { status: 400 })
+                return NextResponse.json({ error: 'Invalid date or time' }, { status: 400 })
             }
 
             if (start >= end) {
@@ -53,13 +53,19 @@ export async function POST(request: Request) {
             }
         }
 
-        // 1. Check Room Availability (only if room and times are provided)
-        if (roomId && start && end) {
+        // 1. Check Room Availability (only if room, date, and times are provided)
+        if (roomId && date && startTime && endTime) {
+            // We need to check for overlaps. Since we store strings, we can compare them if date is same.
+            // But to be safe and handle potential cross-day events (though we only have one date field now),
+            // let's assume single-day events for now as implied by the schema.
+            // Actually, string comparison "HH:mm" works for time ranges on the same day.
+
             const roomConflicts = await prisma.meeting.findMany({
                 where: {
                     roomId,
+                    date: date,
                     OR: [
-                        { startTime: { lt: end }, endTime: { gt: start } },
+                        { startTime: { lt: endTime }, endTime: { gt: startTime } },
                     ],
                 },
             })
@@ -69,8 +75,8 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Check Attendee Availability (only if attendees and times are provided)
-        if (attendeeIds && attendeeIds.length > 0 && start && end) {
+        // 2. Check Attendee Availability (only if attendees, date, and times are provided)
+        if (attendeeIds && attendeeIds.length > 0 && date && startTime && endTime) {
             const attendeeConflicts = await prisma.meeting.findMany({
                 where: {
                     attendees: {
@@ -78,8 +84,9 @@ export async function POST(request: Request) {
                             id: { in: attendeeIds },
                         },
                     },
+                    date: date,
                     OR: [
-                        { startTime: { lt: end }, endTime: { gt: start } },
+                        { startTime: { lt: endTime }, endTime: { gt: startTime } },
                     ],
                 },
                 include: {
@@ -110,15 +117,9 @@ export async function POST(request: Request) {
             purpose,
             status,
             tags,
-        }
-
-        // Only add times if provided, otherwise explicitly null
-        if (start && end) {
-            meetingData.startTime = start
-            meetingData.endTime = end
-        } else {
-            meetingData.startTime = null
-            meetingData.endTime = null
+            date,
+            startTime,
+            endTime
         }
 
         // Only add room if provided
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
 
         // Send Calendar Invites
         try {
-            if (meeting.startTime && meeting.endTime) {
+            if (meeting.date && meeting.startTime && meeting.endTime) {
                 const { sendCalendarInvites } = await import('@/lib/calendar-sync')
                 await sendCalendarInvites(meeting as any)
             }
@@ -154,13 +155,6 @@ export async function POST(request: Request) {
         return NextResponse.json(meeting)
     } catch (error: any) {
         console.error('Create meeting error:', error)
-        // Log to file for debugging
-        try {
-            const fs = await import('fs')
-            fs.appendFileSync('error.log', `${new Date().toISOString()} - Create Meeting Error: ${error.message}\n${error.stack}\n`)
-        } catch (e) {
-            // Ignore file write error
-        }
         return NextResponse.json({ error: 'Failed to create meeting', details: error.message }, { status: 500 })
     }
 }

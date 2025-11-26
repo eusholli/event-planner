@@ -19,6 +19,24 @@
       "Open RAN MoU"
     ]
   },
+  "rooms": [
+    {
+      "name": "Boardroom A",
+      "capacity": 20
+    },
+    {
+      "name": "Conference Room B",
+      "capacity": 10
+    },
+    {
+      "name": "Huddle Room C",
+      "capacity": 4
+    },
+    {
+      "name": "Auditorium",
+      "capacity": 100
+    }
+  ],
   "attendees": [
     {
       "name": "Arun Nair",

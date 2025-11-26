@@ -4,16 +4,22 @@ export interface Meeting {
     id: string
     title: string
     purpose?: string | null
-    startTime: Date
-    endTime: Date
+    date?: string | null
+    startTime?: string | null
+    endTime?: string | null
     sequence: number
     room?: { name: string } | null
     attendees: { name: string, email: string }[]
 }
 
 export async function sendCalendarInvites(meeting: Meeting, method: 'REQUEST' | 'CANCEL' = 'REQUEST') {
-    const start = new Date(meeting.startTime)
-    const end = new Date(meeting.endTime)
+    if (!meeting.date || !meeting.startTime || !meeting.endTime) {
+        console.error('Cannot send calendar invite: Missing date or time')
+        return
+    }
+
+    const start = new Date(`${meeting.date}T${meeting.startTime}`)
+    const end = new Date(`${meeting.date}T${meeting.endTime}`)
 
     const event: EventAttributes = {
         start: [start.getFullYear(), start.getMonth() + 1, start.getDate(), start.getHours(), start.getMinutes()],

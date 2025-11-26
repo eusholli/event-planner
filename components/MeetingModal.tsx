@@ -17,8 +17,9 @@ interface Attendee {
 export interface Meeting {
     id: string
     title: string
-    start: Date
-    end: Date
+    date: string | null
+    startTime: string | null
+    endTime: string | null
     resourceId: string // Room ID
     attendees: { id: string, name: string }[]
     purpose: string
@@ -78,7 +79,7 @@ export default function MeetingModal({
                 setLocalError('Title is required for completed meetings')
                 return
             }
-            if (!event.start || !event.end) {
+            if (!event.date || !event.startTime || !event.endTime) {
                 setLocalError('Date and time are required for completed meetings')
                 return
             }
@@ -124,8 +125,8 @@ export default function MeetingModal({
                                                 } else if (s.type === 'time') {
                                                     onEventChange({
                                                         ...event,
-                                                        start: new Date(s.value.start),
-                                                        end: new Date(s.value.end)
+                                                        startTime: s.value.startTime,
+                                                        endTime: s.value.endTime
                                                     })
                                                 }
                                             }}
@@ -171,31 +172,8 @@ export default function MeetingModal({
                                 type="date"
                                 required={event.status === 'COMPLETED'}
                                 className="input-field"
-                                value={event.start ? moment(event.start).format('YYYY-MM-DD') : ''}
-                                onChange={e => {
-                                    if (!e.target.value) {
-                                        // If cleared, set to null if allowed (status != COMPLETED)
-                                        if (event.status !== 'COMPLETED') {
-                                            onEventChange({ ...event, start: null as any, end: null as any })
-                                        }
-                                        return
-                                    }
-                                    const newDate = new Date(e.target.value)
-                                    if (isNaN(newDate.getTime())) return // Invalid date
-
-                                    const currentStart = event.start || new Date()
-                                    const currentEnd = event.end || new Date()
-
-                                    // Update Start Date
-                                    const newStart = new Date(currentStart)
-                                    newStart.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate())
-
-                                    // Update End Date (preserve duration)
-                                    const duration = currentEnd.getTime() - currentStart.getTime()
-                                    const newEnd = new Date(newStart.getTime() + duration)
-
-                                    onEventChange({ ...event, start: newStart, end: newEnd })
-                                }}
+                                value={event.date || ''}
+                                onChange={e => onEventChange({ ...event, date: e.target.value || null })}
                                 data-lpignore="true"
                             />
                         </div>
@@ -207,27 +185,33 @@ export default function MeetingModal({
                                 type="time"
                                 required={event.status === 'COMPLETED'}
                                 className="input-field"
-                                value={event.start ? moment(event.start).format('HH:mm') : ''}
+                                value={event.startTime || ''}
                                 onChange={e => {
-                                    if (!e.target.value) {
-                                        if (event.status !== 'COMPLETED') {
-                                            onEventChange({ ...event, start: null as any, end: null as any })
+                                    const newStartTime = e.target.value
+                                    let newEndTime = event.endTime
+
+                                    // If we have a start time and an end time, try to preserve duration
+                                    // Or if we just set start time, default to 30 mins later
+                                    if (newStartTime) {
+                                        const [hours, minutes] = newStartTime.split(':').map(Number)
+                                        const startDate = new Date()
+                                        startDate.setHours(hours, minutes, 0, 0)
+
+                                        // Default 30 mins if no end time, or preserve duration if end time exists
+                                        let duration = 30 * 60 * 1000
+                                        if (event.startTime && event.endTime) {
+                                            const [endH, endM] = event.endTime.split(':').map(Number)
+                                            const [startH, startM] = event.startTime.split(':').map(Number)
+                                            const prevStart = new Date(); prevStart.setHours(startH, startM, 0, 0)
+                                            const prevEnd = new Date(); prevEnd.setHours(endH, endM, 0, 0)
+                                            duration = prevEnd.getTime() - prevStart.getTime()
                                         }
-                                        return
+
+                                        const endDate = new Date(startDate.getTime() + duration)
+                                        newEndTime = endDate.toTimeString().slice(0, 5)
                                     }
-                                    const [hours, minutes] = e.target.value.split(':').map(Number)
-                                    const currentStart = event.start || new Date()
-                                    const currentEnd = event.end || new Date()
 
-                                    // Update Start Time
-                                    const newStart = new Date(currentStart)
-                                    newStart.setHours(hours, minutes)
-
-                                    // Update End Time (preserve duration)
-                                    const duration = currentEnd.getTime() - currentStart.getTime()
-                                    const newEnd = new Date(newStart.getTime() + duration)
-
-                                    onEventChange({ ...event, start: newStart, end: newEnd })
+                                    onEventChange({ ...event, startTime: newStartTime || null, endTime: newEndTime || null })
                                 }}
                                 data-lpignore="true"
                             />
@@ -236,12 +220,25 @@ export default function MeetingModal({
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">Duration</label>
                             <select
                                 className="input-field"
-                                value={event.start && event.end ? (event.end.getTime() - event.start.getTime()) / (60 * 1000) : 30}
+                                value={(() => {
+                                    if (event.startTime && event.endTime) {
+                                        const [startH, startM] = event.startTime.split(':').map(Number)
+                                        const [endH, endM] = event.endTime.split(':').map(Number)
+                                        const start = new Date(); start.setHours(startH, startM, 0, 0)
+                                        const end = new Date(); end.setHours(endH, endM, 0, 0)
+                                        return (end.getTime() - start.getTime()) / (60 * 1000)
+                                    }
+                                    return 30
+                                })()}
                                 onChange={e => {
                                     const durationMinutes = parseInt(e.target.value)
-                                    const currentStart = event.start || new Date()
-                                    const newEnd = new Date(currentStart.getTime() + durationMinutes * 60 * 1000)
-                                    onEventChange({ ...event, end: newEnd })
+                                    if (event.startTime) {
+                                        const [startH, startM] = event.startTime.split(':').map(Number)
+                                        const start = new Date(); start.setHours(startH, startM, 0, 0)
+                                        const end = new Date(start.getTime() + durationMinutes * 60 * 1000)
+                                        const newEndTime = end.toTimeString().slice(0, 5)
+                                        onEventChange({ ...event, endTime: newEndTime })
+                                    }
                                 }}
                                 data-lpignore="true"
                             >
