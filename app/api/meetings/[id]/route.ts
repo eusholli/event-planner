@@ -152,8 +152,11 @@ export async function PUT(
 
         // Send Calendar Updates
         try {
-            const { sendCalendarInvites } = await import('@/lib/calendar-sync')
-            await sendCalendarInvites(updatedMeeting)
+            if (updatedMeeting.startTime && updatedMeeting.endTime) {
+                const { sendCalendarInvites } = await import('@/lib/calendar-sync')
+                // We've verified startTime and endTime are not null, so we can cast to satisfy the type
+                await sendCalendarInvites(updatedMeeting as any)
+            }
         } catch (error) {
             console.error('Failed to send calendar updates:', error)
         }
@@ -176,10 +179,10 @@ export async function DELETE(
             include: { room: true, attendees: true }
         })
 
-        if (meeting) {
+        if (meeting && meeting.startTime && meeting.endTime) {
             try {
                 const { sendCalendarInvites } = await import('@/lib/calendar-sync')
-                await sendCalendarInvites(meeting, 'CANCEL')
+                await sendCalendarInvites(meeting as any, 'CANCEL')
             } catch (error) {
                 console.error('Failed to send cancellation:', error)
             }

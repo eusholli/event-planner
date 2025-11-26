@@ -143,8 +143,10 @@ export async function POST(request: Request) {
 
         // Send Calendar Invites
         try {
-            const { sendCalendarInvites } = await import('@/lib/calendar-sync')
-            await sendCalendarInvites(meeting)
+            if (meeting.startTime && meeting.endTime) {
+                const { sendCalendarInvites } = await import('@/lib/calendar-sync')
+                await sendCalendarInvites(meeting as any)
+            }
         } catch (error) {
             console.error('Failed to send calendar invites:', error)
         }

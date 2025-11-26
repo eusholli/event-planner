@@ -1,6 +1,6 @@
 import { createEvent, EventAttributes } from 'ics'
 
-interface Meeting {
+export interface Meeting {
     id: string
     title: string
     purpose?: string | null
