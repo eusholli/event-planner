@@ -23,7 +23,8 @@ export async function POST(request: Request) {
                         name: config.event.name,
                         startDate: new Date(config.event.startDate),
                         endDate: new Date(config.event.endDate),
-                        geminiApiKey: config.event.geminiApiKey
+                        geminiApiKey: config.event.geminiApiKey,
+                        tags: config.event.tags || []
                     }
                 })
             } else {
@@ -32,7 +33,8 @@ export async function POST(request: Request) {
                         name: config.event.name,
                         startDate: new Date(config.event.startDate),
                         endDate: new Date(config.event.endDate),
-                        geminiApiKey: config.event.geminiApiKey
+                        geminiApiKey: config.event.geminiApiKey,
+                        tags: config.event.tags || []
                     }
                 })
             }
@@ -100,7 +102,9 @@ export async function POST(request: Request) {
                             roomId: roomId,
                             attendees: {
                                 connect: attendees
-                            }
+                            },
+                            status: meeting.status || 'STARTED',
+                            tags: meeting.tags || []
                         }
                     })
                 }

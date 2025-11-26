@@ -44,6 +44,13 @@ export default function SettingsPage() {
             })
 
             if (res.ok) {
+                const data = await res.json()
+                setName(data.name)
+                setStartDate(new Date(data.startDate).toISOString().slice(0, 16))
+                setEndDate(new Date(data.endDate).toISOString().slice(0, 16))
+                setGeminiApiKey(data.geminiApiKey || '')
+                setTags(data.tags ? data.tags.join(', ') : '')
+
                 alert('Settings saved successfully!')
                 router.refresh()
             } else {

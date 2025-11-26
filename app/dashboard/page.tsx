@@ -424,18 +424,12 @@ export default function DashboardPage() {
                                             )}
 
                                             <div className="mt-3 flex flex-wrap gap-2 items-center">
-                                                <div className="flex -space-x-2 overflow-hidden mr-2">
-                                                    {meeting.attendees.slice(0, 5).map((attendee, idx) => (
-                                                        <div key={idx} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-zinc-100 flex items-center justify-center text-[10px] font-medium text-zinc-600" title={attendee.name}>
-                                                            {attendee.name.charAt(0)}
-                                                        </div>
-                                                    ))}
-                                                    {meeting.attendees.length > 5 && (
-                                                        <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-zinc-50 flex items-center justify-center text-[10px] font-medium text-zinc-500">
-                                                            +{meeting.attendees.length - 5}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                {meeting.attendees.length > 0 && (
+                                                    <div className="text-sm text-zinc-600 mr-2">
+                                                        {meeting.attendees.slice(0, 3).map(a => a.name).join(', ')}
+                                                        {meeting.attendees.length > 3 && <span className="text-zinc-400 ml-1">+{meeting.attendees.length - 3} more</span>}
+                                                    </div>
+                                                )}
                                                 {meeting.tags && meeting.tags.map(tag => (
                                                     <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-50 text-zinc-600 border border-zinc-100">
                                                         {tag}
