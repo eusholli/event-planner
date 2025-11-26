@@ -30,7 +30,7 @@ export default function LandingPage() {
         <SignedIn>
           <Link href="/dashboard">
             <button className="px-8 py-4 bg-indigo-600 text-white rounded-full font-semibold text-lg hover:bg-indigo-500 transition-all hover:scale-105 shadow-lg shadow-indigo-200">
-              Go to Dashboard
+              Go to Meeting Tracker
             </button>
           </Link>
         </SignedIn>

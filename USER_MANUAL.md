@@ -3,7 +3,7 @@
 Welcome to the Event Planner application! This guide will help you navigate the features and manage your event effectively.
 
 ## Table of Contents
-1. [Dashboard](#dashboard)
+1. [Meeting Tracker](#meeting-tracker)
 2. [Managing Attendees](#managing-attendees)
 3. [Auto Complete Feature](#auto-complete-feature)
 4. [Scheduling Meetings](#scheduling-meetings)
@@ -11,8 +11,8 @@ Welcome to the Event Planner application! This guide will help you navigate the 
 
 ---
 
-## Dashboard
-The **Dashboard** is your landing page. It provides a quick overview of your event status, including:
+## Meeting Tracker
+The **Meeting Tracker** is your landing page. It provides a quick overview of your event status, including:
 - **Total Attendees**: The number of people registered.
 - **Total Meetings**: The number of scheduled sessions.
 - **Room Utilization**: How effectively your venue space is being used.
@@ -51,12 +51,16 @@ The application integrates with Google Gemini to help you quickly fill in profes
 Navigate to the **Schedule** page to organize your event agenda.
 
 ### Creating a Meeting
-1.  Click on a time slot in the calendar or the **Schedule Meeting** button.
+1.  Click **New Meeting** in the navigation or **Schedule Meeting** on the Meeting Tracker.
 2.  Enter a **Title** and **Purpose**.
-3.  Select a **Room**.
-4.  Choose **Attendees** from the list.
-5.  Set the **Start** and **End** times.
-6.  Click **Save**.
+3.  (Optional) Select **Tags** to categorize the meeting.
+4.  Select a **Room**.
+5.  Choose **Attendees** from the list.
+6.  Set the **Date**, **Start Time**, and **Duration**.
+7.  Select the **Status** (Started, Completed, Canceled).
+8.  Click **Book Meeting**.
+
+**Note**: After booking, you will stay on the page to easily book another meeting. A success message will appear at the top.
 
 ### Managing the Schedule
 - **Drag and Drop**: You can drag meetings around the calendar to reschedule them.
@@ -71,6 +75,7 @@ The **Settings** page is the control center for your event configuration.
 ### Event Configuration
 - **Event Name**: The title of your event.
 - **Date Range**: The start and end dates for the event.
+- **Meeting Tags**: Define tags (e.g., "Internal", "Client", "Urgent") to categorize meetings.
 - **Gemini API Key**: Enter your Google Gemini API key here to enable the Auto Complete feature.
 
 ### Data Management

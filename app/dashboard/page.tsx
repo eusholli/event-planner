@@ -243,7 +243,7 @@ export default function DashboardPage() {
         <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Dashboard</h1>
+                    <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Meeting Tracker</h1>
                     <p className="mt-2 text-zinc-500">Overview of your scheduled events.</p>
                 </div>
                 <Link href="/new-meeting" className="btn-primary">
@@ -329,8 +329,8 @@ export default function DashboardPage() {
                                                 )
                                             }}
                                             className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedTags.includes(tag)
-                                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                                : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
                                                 }`}
                                         >
                                             {tag}

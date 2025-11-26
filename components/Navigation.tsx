@@ -10,7 +10,7 @@ export default function Navigation() {
     const pathname = usePathname()
 
     const links = [
-        { href: '/dashboard', label: 'Dashboard' },
+        { href: '/dashboard', label: 'Meeting Tracker' },
         { href: '/new-meeting', label: 'New Meeting' },
         { href: '/attendees', label: 'Attendees' },
         { href: '/rooms', label: 'Rooms' },

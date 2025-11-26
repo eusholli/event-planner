@@ -51,12 +51,7 @@ export default function SchedulePage() {
             if (settingsData?.tags) {
                 setAvailableTags(settingsData.tags)
             }
-            if (settingsData?.startDate) {
-                setFormData(prev => ({
-                    ...prev,
-                    date: new Date(settingsData.startDate).toISOString().split('T')[0]
-                }))
-            }
+
         })
     }, [])
 

@@ -8,7 +8,8 @@ For a detailed guide on how to use the application features, please refer to the
 
 ## Features
 
-- **Dashboard**: Real-time overview of event statistics.
+- **Meeting Tracker**: Real-time overview of event statistics.
+- **Meeting Tags**: Categorize meetings with custom tags.
 - **Attendee Management**: Add, edit, and track event attendees.
 - **AI-Powered Auto Complete**: Use Google Gemini to automatically populate attendee professional details.
 - **Schedule Management**: Drag-and-drop interface for organizing meetings and sessions.
