@@ -21,8 +21,9 @@ export async function POST(request: Request) {
                     where: { id: existingSettings.id },
                     data: {
                         name: config.event.name,
-                        startDate: new Date(config.event.startDate),
-                        endDate: new Date(config.event.endDate),
+                        // Parse date strings (YYYY-MM-DD) and set to midnight UTC
+                        startDate: new Date(config.event.startDate + 'T00:00:00.000Z'),
+                        endDate: new Date(config.event.endDate + 'T00:00:00.000Z'),
                         geminiApiKey: config.event.geminiApiKey,
                         tags: { set: config.event.tags || [] }
                     }
@@ -31,8 +32,9 @@ export async function POST(request: Request) {
                 await prisma.eventSettings.create({
                     data: {
                         name: config.event.name,
-                        startDate: new Date(config.event.startDate),
-                        endDate: new Date(config.event.endDate),
+                        // Parse date strings (YYYY-MM-DD) and set to midnight UTC
+                        startDate: new Date(config.event.startDate + 'T00:00:00.000Z'),
+                        endDate: new Date(config.event.endDate + 'T00:00:00.000Z'),
                         geminiApiKey: config.event.geminiApiKey,
                         tags: { set: config.event.tags || [] }
                     }

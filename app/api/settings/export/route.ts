@@ -16,9 +16,10 @@ export async function GET() {
         const exportData = {
             event: settings ? {
                 name: settings.name,
-                startDate: settings.startDate,
-                endDate: settings.endDate,
-                geminiApiKey: settings.geminiApiKey
+                startDate: settings.startDate.toISOString().split('T')[0], // Export as YYYY-MM-DD
+                endDate: settings.endDate.toISOString().split('T')[0], // Export as YYYY-MM-DD
+                geminiApiKey: settings.geminiApiKey,
+                tags: settings.tags
             } : null,
             attendees: attendees.map(a => ({
                 name: a.name,
