@@ -8,16 +8,28 @@ export async function GET() {
 
         if (!settings) {
             // Create default settings if none exist
+            const today = new Date()
+            today.setUTCHours(0, 0, 0, 0)
+            const tomorrow = new Date(today)
+            tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+
             settings = await prisma.eventSettings.create({
                 data: {
                     name: 'My Event',
-                    startDate: new Date(),
-                    endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
+                    startDate: today,
+                    endDate: tomorrow,
                 },
             })
         }
 
-        return NextResponse.json(settings)
+        // Return dates in YYYY-MM-DD format
+        const response = {
+            ...settings,
+            startDate: settings.startDate.toISOString().split('T')[0],
+            endDate: settings.endDate.toISOString().split('T')[0],
+        }
+
+        return NextResponse.json(response)
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
     }
@@ -28,6 +40,10 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { name, startDate, endDate, geminiApiKey, tags } = body
 
+        // Parse date strings (YYYY-MM-DD) and set to midnight UTC
+        const startDateObj = new Date(startDate + 'T00:00:00.000Z')
+        const endDateObj = new Date(endDate + 'T00:00:00.000Z')
+
         // Upsert ensures we only have one settings record (or updates the first one found)
         const firstSettings = await prisma.eventSettings.findFirst()
 
@@ -37,8 +53,8 @@ export async function POST(request: Request) {
                 where: { id: firstSettings.id },
                 data: {
                     name,
-                    startDate: new Date(startDate),
-                    endDate: new Date(endDate),
+                    startDate: startDateObj,
+                    endDate: endDateObj,
                     geminiApiKey,
                     tags: tags ? Array.from(new Set(tags as string[])).sort() : [],
                 },
@@ -47,15 +63,22 @@ export async function POST(request: Request) {
             settings = await prisma.eventSettings.create({
                 data: {
                     name,
-                    startDate: new Date(startDate),
-                    endDate: new Date(endDate),
+                    startDate: startDateObj,
+                    endDate: endDateObj,
                     geminiApiKey,
                     tags: tags ? Array.from(new Set(tags as string[])).sort() : [],
                 },
             })
         }
 
-        return NextResponse.json(settings)
+        // Return dates in YYYY-MM-DD format
+        const response = {
+            ...settings,
+            startDate: settings.startDate.toISOString().split('T')[0],
+            endDate: settings.endDate.toISOString().split('T')[0],
+        }
+
+        return NextResponse.json(response)
     } catch (error: any) {
         console.error('Error updating settings:', error)
         return NextResponse.json({ error: 'Failed to update settings', details: error.message }, { status: 500 })

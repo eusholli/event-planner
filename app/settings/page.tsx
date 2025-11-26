@@ -18,8 +18,8 @@ export default function SettingsPage() {
             .then(res => res.json())
             .then(data => {
                 setName(data.name)
-                setStartDate(new Date(data.startDate).toISOString().slice(0, 16))
-                setEndDate(new Date(data.endDate).toISOString().slice(0, 16))
+                setStartDate(data.startDate) // Already in YYYY-MM-DD format
+                setEndDate(data.endDate) // Already in YYYY-MM-DD format
                 setGeminiApiKey(data.geminiApiKey || '')
                 setTags(data.tags ? data.tags.join(', ') : '')
                 setLoading(false)
@@ -36,8 +36,8 @@ export default function SettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name,
-                    startDate: new Date(startDate).toISOString(),
-                    endDate: new Date(endDate).toISOString(),
+                    startDate, // Send as YYYY-MM-DD string
+                    endDate, // Send as YYYY-MM-DD string
                     geminiApiKey,
                     tags: tags.split(',').map(t => t.trim()).filter(t => t !== ''),
                 }),
@@ -46,8 +46,8 @@ export default function SettingsPage() {
             if (res.ok) {
                 const data = await res.json()
                 setName(data.name)
-                setStartDate(new Date(data.startDate).toISOString().slice(0, 16))
-                setEndDate(new Date(data.endDate).toISOString().slice(0, 16))
+                setStartDate(data.startDate) // Already in YYYY-MM-DD format
+                setEndDate(data.endDate) // Already in YYYY-MM-DD format
                 setGeminiApiKey(data.geminiApiKey || '')
                 setTags(data.tags ? data.tags.join(', ') : '')
 
@@ -86,9 +86,9 @@ export default function SettingsPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1">Start Date & Time</label>
+                            <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
                             <input
-                                type="datetime-local"
+                                type="date"
                                 id="startDate"
                                 required
                                 className="input-field"
@@ -98,9 +98,9 @@ export default function SettingsPage() {
                         </div>
 
                         <div>
-                            <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1">End Date & Time</label>
+                            <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
                             <input
-                                type="datetime-local"
+                                type="date"
                                 id="endDate"
                                 required
                                 className="input-field"

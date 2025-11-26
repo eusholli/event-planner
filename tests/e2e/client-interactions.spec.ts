@@ -14,13 +14,12 @@ test.describe('E2E Client Interactions', () => {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + 7);
 
-            // Format for datetime-local input: YYYY-MM-DDTHH:mm
-            // Note: datetime-local inputs can be tricky with fill(), usually requires YYYY-MM-DDTHH:mm
-            const startStr = startDate.toISOString().slice(0, 16);
-            const endStr = endDate.toISOString().slice(0, 16);
+            // Format for date input: YYYY-MM-DD
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
 
-            await page.getByLabel('Start Date & Time').fill(startStr);
-            await page.getByLabel('End Date & Time').fill(endStr);
+            await page.getByLabel('Start Date').fill(startStr);
+            await page.getByLabel('End Date').fill(endStr);
 
             await page.getByLabel('Tags (comma separated)').fill('Urgent, Work, E2E');
 
@@ -154,8 +153,8 @@ test.describe('E2E Client Interactions', () => {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + 1); // 1 day event
 
-            await page.getByLabel('Start Date & Time').fill(startDate.toISOString().slice(0, 16));
-            await page.getByLabel('End Date & Time').fill(endDate.toISOString().slice(0, 16));
+            await page.getByLabel('Start Date').fill(startDate.toISOString().split('T')[0]);
+            await page.getByLabel('End Date').fill(endDate.toISOString().split('T')[0]);
 
             page.on('dialog', dialog => dialog.accept());
             await page.click('button:has-text("Save Configuration")');

@@ -120,15 +120,16 @@ export default function SchedulePage() {
         if (formData.date && formData.startTime) {
             // Validate against event settings
             if (eventSettings) {
-                const startDateTime = new Date(`${formData.date}T${formData.startTime}`)
-                const durationMinutes = parseInt(formData.duration)
-                const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000)
+                // Parse meeting date (YYYY-MM-DD)
+                const meetingDate = new Date(formData.date + 'T00:00:00.000Z')
 
-                const eventStart = new Date(eventSettings.startDate)
-                const eventEnd = new Date(eventSettings.endDate)
+                // Parse event dates (already in YYYY-MM-DD format from API)
+                const eventStart = new Date(eventSettings.startDate + 'T00:00:00.000Z')
+                const eventEnd = new Date(eventSettings.endDate + 'T00:00:00.000Z')
 
-                if (startDateTime < eventStart || endDateTime > eventEnd) {
-                    setError(`Meeting must be within event dates: ${eventStart.toLocaleDateString()} - ${eventEnd.toLocaleDateString()}`)
+                // Check if meeting date is within event date range (inclusive)
+                if (meetingDate < eventStart || meetingDate > eventEnd) {
+                    setError(`Meeting must be within event dates: ${eventSettings.startDate} - ${eventSettings.endDate}`)
                     setLoading(false)
                     return
                 }
