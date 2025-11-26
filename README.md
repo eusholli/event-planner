@@ -9,11 +9,11 @@ For a detailed guide on how to use the application features, please refer to the
 ## Features
 
 - **Meeting Tracker**: Real-time overview of event statistics.
-- **Meeting Tags**: Categorize meetings with custom tags.
+- **Meeting Tags**: Categorize meetings with custom tags (e.g., "Internal", "Client").
 - **Attendee Management**: Add, edit, and track event attendees.
 - **AI-Powered Auto Complete**: Use Google Gemini to automatically populate attendee professional details.
 - **Schedule Management**: Drag-and-drop interface for organizing meetings and sessions.
-- **Data Management**: Import, Export, and Reset database capabilities.
+- **Data Management**: Import, Export, Reset database, and Delete Event Settings capabilities.
 
 ## Getting Started
 

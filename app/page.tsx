@@ -33,6 +33,11 @@ export default function LandingPage() {
               Go to Meeting Tracker
             </button>
           </Link>
+          <Link href="/manual">
+            <button className="px-8 py-4 bg-white text-zinc-900 border border-zinc-200 rounded-full font-semibold text-lg hover:bg-zinc-50 transition-all hover:scale-105">
+              User Manual
+            </button>
+          </Link>
         </SignedIn>
       </div>
 
@@ -59,6 +64,6 @@ export default function LandingPage() {
           <p className="text-zinc-500">Full control over your data with easy import, export, and backup capabilities.</p>
         </div>
       </div>
-    </div>
+    </div >
   )
 }

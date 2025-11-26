@@ -60,6 +60,17 @@ Navigate to the **Schedule** page to organize your event agenda.
 7.  Select the **Status** (Started, Completed, Canceled).
 8.  Click **Book Meeting**.
 
+### Meeting Tags
+You can categorize your meetings using tags.
+- **Managing Tags**: Go to [Settings](#settings--data-management) to add or remove tags.
+- **Assigning Tags**: When creating or editing a meeting, select one or more tags from the dropdown.
+
+### Editing a Meeting
+1. Click on a meeting block in the calendar.
+2. A modal will appear with the meeting details.
+3. Click **Edit** to modify details or **Delete** to remove the meeting.
+4. If the meeting status is "Started", you only need to provide a title. For "Completed", all fields are required.
+
 **Note**: After booking, you will stay on the page to easily book another meeting. A success message will appear at the top.
 
 ### Managing the Schedule
@@ -88,4 +99,4 @@ Upload a JSON configuration file (e.g., `event-config.json`) to add new data or 
 Download a full backup of your current database as a JSON file. The filename will include a timestamp (e.g., `event-config-2025-11-23-10-00.json`) for easy versioning.
 
 #### Delete Database
-**Warning**: This action permanently removes all Attendees, Rooms, and Meetings from the database. Use this feature with caution, preferably after creating an [Export](#export-database).
+**Warning**: This action permanently removes all Attendees, Rooms, and Meetings from the database. It can also optionally delete Event Settings if configured. Use this feature with caution, preferably after creating an [Export](#export-database).
