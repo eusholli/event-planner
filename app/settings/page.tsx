@@ -73,9 +73,10 @@ export default function SettingsPage() {
             <div className="bg-white shadow-sm rounded-xl border border-slate-200 p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Event Name</label>
+                        <label htmlFor="eventName" className="block text-sm font-medium text-slate-700 mb-1">Event Name</label>
                         <input
                             type="text"
+                            id="eventName"
                             required
                             className="input-field"
                             value={name}
@@ -85,9 +86,10 @@ export default function SettingsPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Start Date & Time</label>
+                            <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1">Start Date & Time</label>
                             <input
                                 type="datetime-local"
+                                id="startDate"
                                 required
                                 className="input-field"
                                 value={startDate}
@@ -96,9 +98,10 @@ export default function SettingsPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">End Date & Time</label>
+                            <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1">End Date & Time</label>
                             <input
                                 type="datetime-local"
+                                id="endDate"
                                 required
                                 className="input-field"
                                 value={endDate}
@@ -108,9 +111,10 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Google Gemini API Key</label>
+                        <label htmlFor="geminiApiKey" className="block text-sm font-medium text-slate-700 mb-1">Google Gemini API Key</label>
                         <input
                             type="password"
+                            id="geminiApiKey"
                             className="input-field"
                             value={geminiApiKey}
                             onChange={e => setGeminiApiKey(e.target.value)}
@@ -120,9 +124,10 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tags (comma separated)</label>
+                        <label htmlFor="tags" className="block text-sm font-medium text-slate-700 mb-1">Tags (comma separated)</label>
                         <input
                             type="text"
+                            id="tags"
                             className="input-field"
                             value={tags}
                             onChange={e => setTags(e.target.value)}

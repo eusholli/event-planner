@@ -1,0 +1,258 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "AI Event Planner" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e8]:
+          - link "Meeting Tracker" [ref=e9] [cursor=pointer]:
+            - /url: /dashboard
+          - link "New Meeting" [ref=e10] [cursor=pointer]:
+            - /url: /new-meeting
+          - link "Attendees" [ref=e11] [cursor=pointer]:
+            - /url: /attendees
+          - link "Rooms" [ref=e12] [cursor=pointer]:
+            - /url: /rooms
+          - link "Calendar" [ref=e13] [cursor=pointer]:
+            - /url: /calendar
+          - link "Settings" [ref=e14] [cursor=pointer]:
+            - /url: /settings
+      - generic [ref=e16]: MU
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "New Meeting" [level=1] [ref=e20]
+        - paragraph [ref=e21]: Book a room and invite attendees.
+      - generic [ref=e22]:
+        - generic [ref=e24]:
+          - heading "Add Attendee" [level=2] [ref=e25]
+          - generic [ref=e26]:
+            - generic [ref=e28]:
+              - img [ref=e30]
+              - textbox "Photo URL" [ref=e32]
+            - generic [ref=e33]:
+              - generic [ref=e34]: Name
+              - textbox "Name" [ref=e35]
+            - generic [ref=e36]:
+              - generic [ref=e37]: Title
+              - textbox "Title" [ref=e38]
+            - generic [ref=e39]:
+              - generic [ref=e40]: Company
+              - textbox "Company" [ref=e41]
+            - generic [ref=e42]:
+              - generic [ref=e43]: Email
+              - textbox "Email" [ref=e44]
+            - generic [ref=e45]:
+              - generic [ref=e46]: LinkedIn URL
+              - textbox "LinkedIn URL" [ref=e47]:
+                - /placeholder: https://linkedin.com/in/...
+            - generic [ref=e48]:
+              - generic [ref=e49]: Bio
+              - textbox "Bio" [ref=e50]
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - button "Auto Complete" [disabled] [ref=e53]:
+                  - img [ref=e54]
+                  - generic [ref=e56]: Auto Complete
+                - generic: Gemini API Key required in Settings
+              - button "Add" [ref=e57]
+        - generic [ref=e60]:
+          - generic [ref=e61]: "Meeting must be within event dates: 11/26/2025 - 12/3/2025"
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e64]: Created By
+              - textbox [ref=e65]: mock@example.com
+            - generic [ref=e66]:
+              - generic [ref=e67]: Meeting Title
+              - textbox "Meeting Title" [ref=e68]:
+                - /placeholder: e.g. Project Kickoff
+                - text: Full Meeting 1764170883808
+            - generic [ref=e69]:
+              - generic [ref=e70]: Requester Email
+              - textbox "Requester Email" [ref=e71]:
+                - /placeholder: requester@example.com
+            - generic [ref=e72]:
+              - generic [ref=e73]: Meeting Type
+              - combobox "Meeting Type" [ref=e74]:
+                - option "Select Type..." [selected]
+                - option "Sales/Customer"
+                - option "Vendor Partner"
+                - option "Technology Partner"
+                - option "PR Engagement"
+                - option "Gov't"
+                - option "Other"
+            - generic [ref=e75]:
+              - generic [ref=e76]: Purpose / Agenda
+              - textbox "Purpose / Agenda" [ref=e77]:
+                - /placeholder: Brief description of the meeting...
+            - generic [ref=e78]:
+              - generic [ref=e79]: Other Details
+              - textbox "Other Details" [ref=e80]:
+                - /placeholder: Any other details...
+            - generic [ref=e81]:
+              - generic [ref=e82]: Tags
+              - generic [ref=e83]:
+                - generic [ref=e84] [cursor=pointer]:
+                  - checkbox "E2E" [ref=e85]
+                  - generic [ref=e86]: E2E
+                - generic [ref=e87] [cursor=pointer]:
+                  - checkbox "Urgent" [ref=e88]
+                  - generic [ref=e89]: Urgent
+                - generic [ref=e90] [cursor=pointer]:
+                  - checkbox "Work" [ref=e91]
+                  - generic [ref=e92]: Work
+            - generic [ref=e93]:
+              - generic [ref=e94]: Date
+              - textbox "Date" [ref=e95]: 2025-11-26
+            - generic [ref=e96]:
+              - generic [ref=e97]:
+                - generic [ref=e98]: Start Time
+                - textbox "Start Time" [ref=e99]: 15:00
+              - generic [ref=e100]:
+                - generic [ref=e101]: Duration
+                - combobox "Duration" [ref=e102]:
+                  - option "15m"
+                  - option "30m"
+                  - option "45m"
+                  - option "1h" [selected]
+                  - option "1.5h"
+                  - option "2h"
+                  - option "3h"
+                  - option "4h"
+            - generic [ref=e103]:
+              - generic [ref=e104]: Select Attendees
+              - generic [ref=e105]:
+                - generic [ref=e106] [cursor=pointer]:
+                  - checkbox "E2E User 1764167998712 (E2E Corp)" [ref=e107]
+                  - generic [ref=e108]:
+                    - text: E2E User 1764167998712
+                    - generic [ref=e109]: (E2E Corp)
+                - generic [ref=e110] [cursor=pointer]:
+                  - checkbox "E2E User 1764168062506 (E2E Corp)" [ref=e111]
+                  - generic [ref=e112]:
+                    - text: E2E User 1764168062506
+                    - generic [ref=e113]: (E2E Corp)
+                - generic [ref=e114] [cursor=pointer]:
+                  - checkbox "John Doe ()" [ref=e115]
+                  - generic [ref=e116]:
+                    - text: John Doe
+                    - generic [ref=e117]: ()
+                - generic [ref=e118] [cursor=pointer]:
+                  - checkbox "Meeting Attendee ()" [ref=e119]
+                  - generic [ref=e120]:
+                    - text: Meeting Attendee
+                    - generic [ref=e121]: ()
+                - generic [ref=e122] [cursor=pointer]:
+                  - checkbox "Meeting Attendee ()" [ref=e123]
+                  - generic [ref=e124]:
+                    - text: Meeting Attendee
+                    - generic [ref=e125]: ()
+                - generic [ref=e126] [cursor=pointer]:
+                  - checkbox "Meeting Attendee ()" [ref=e127]
+                  - generic [ref=e128]:
+                    - text: Meeting Attendee
+                    - generic [ref=e129]: ()
+                - generic [ref=e130] [cursor=pointer]:
+                  - checkbox "Test Attendee ()" [checked] [ref=e131]
+                  - generic [ref=e132]:
+                    - text: Test Attendee
+                    - generic [ref=e133]: ()
+            - generic [ref=e134]:
+              - generic [ref=e135]: Select Room
+              - combobox "Select Room" [ref=e136]:
+                - option "Select a room..."
+                - 'option "Room 1764167134287 (Capacity: 10)" [selected]'
+                - 'option "Meeting Room 1764167135091 (Capacity: 5)"'
+                - 'option "Meeting Room 1764167135601 (Capacity: 5)"'
+                - 'option "Meeting Room 1764167194537 (Capacity: 5)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+                - 'option "Test Room (Capacity: 10)"'
+            - generic [ref=e137]:
+              - generic [ref=e138]: Status
+              - combobox "Status" [ref=e139]:
+                - option "Started"
+                - option "Completed" [selected]
+                - option "Canceled"
+            - generic [ref=e140]:
+              - generic [ref=e141] [cursor=pointer]:
+                - checkbox "Approved" [ref=e142]
+                - generic [ref=e143]: Approved
+              - generic [ref=e144] [cursor=pointer]:
+                - checkbox "Calendar Invite Sent" [ref=e145]
+                - generic [ref=e146]: Calendar Invite Sent
+          - button "Book Meeting" [active] [ref=e148]
+  - button "Open Next.js Dev Tools" [ref=e154] [cursor=pointer]:
+    - img [ref=e155]
+  - alert [ref=e158]
+```

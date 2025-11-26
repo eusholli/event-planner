@@ -80,16 +80,16 @@ export default function SchedulePage() {
         // Prepare request body
         const requestBody: any = {
             title: formData.title,
-            purpose: formData.purpose,
-            roomId: formData.roomId || undefined,
-            attendeeIds: formData.attendeeIds,
+            purpose: formData.purpose || '',
+            roomId: formData.roomId || null,
+            attendeeIds: formData.attendeeIds || [],
             status: formData.status,
-            tags: formData.tags,
-            requesterEmail: formData.requesterEmail,
-            meetingType: formData.meetingType,
-            otherDetails: formData.otherDetails,
-            isApproved: formData.isApproved,
-            calendarInviteSent: formData.calendarInviteSent
+            tags: formData.tags || [],
+            requesterEmail: formData.requesterEmail || '',
+            meetingType: formData.meetingType || '',
+            otherDetails: formData.otherDetails || '',
+            isApproved: formData.isApproved || false,
+            calendarInviteSent: formData.calendarInviteSent || false
         }
 
         // Validation based on status
@@ -237,9 +237,10 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Title</label>
+                                    <label htmlFor="meeting-title" className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Title</label>
                                     <input
                                         type="text"
+                                        id="meeting-title"
                                         required
                                         className="input-field"
                                         value={formData.title}
@@ -250,9 +251,10 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Requester Email</label>
+                                    <label htmlFor="requesterEmail" className="block text-sm font-medium text-zinc-700 mb-1.5">Requester Email</label>
                                     <input
                                         type="email"
+                                        id="requesterEmail"
                                         className="input-field"
                                         value={formData.requesterEmail}
                                         onChange={e => setFormData({ ...formData, requesterEmail: e.target.value })}
@@ -261,8 +263,9 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
+                                    <label htmlFor="meetingType" className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
                                     <select
+                                        id="meetingType"
                                         className="input-field"
                                         value={formData.meetingType}
                                         onChange={e => setFormData({ ...formData, meetingType: e.target.value })}
@@ -278,8 +281,9 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Purpose / Agenda</label>
+                                    <label htmlFor="purpose" className="block text-sm font-medium text-zinc-700 mb-1.5">Purpose / Agenda</label>
                                     <textarea
+                                        id="purpose"
                                         className="input-field h-24 resize-none"
                                         value={formData.purpose}
                                         onChange={e => setFormData({ ...formData, purpose: e.target.value })}
@@ -288,8 +292,9 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Other Details</label>
+                                    <label htmlFor="otherDetails" className="block text-sm font-medium text-zinc-700 mb-1.5">Other Details</label>
                                     <textarea
+                                        id="otherDetails"
                                         className="input-field h-24 resize-none"
                                         value={formData.otherDetails}
                                         onChange={e => setFormData({ ...formData, otherDetails: e.target.value })}
@@ -317,9 +322,10 @@ export default function SchedulePage() {
                                 )}
 
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Date</label>
+                                    <label htmlFor="date" className="block text-sm font-medium text-zinc-700 mb-1.5">Date</label>
                                     <input
                                         type="date"
+                                        id="date"
                                         className="input-field"
                                         value={formData.date}
                                         onChange={e => setFormData({ ...formData, date: e.target.value })}
@@ -329,9 +335,10 @@ export default function SchedulePage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Start Time</label>
+                                        <label htmlFor="startTime" className="block text-sm font-medium text-zinc-700 mb-1.5">Start Time</label>
                                         <input
                                             type="time"
+                                            id="startTime"
                                             className="input-field"
                                             value={formData.startTime}
                                             onChange={e => setFormData({ ...formData, startTime: e.target.value })}
@@ -339,8 +346,9 @@ export default function SchedulePage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Duration</label>
+                                        <label htmlFor="duration" className="block text-sm font-medium text-zinc-700 mb-1.5">Duration</label>
                                         <select
+                                            id="duration"
                                             className="input-field"
                                             value={formData.duration}
                                             onChange={e => setFormData({ ...formData, duration: e.target.value })}
@@ -376,8 +384,9 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Select Room</label>
+                                    <label htmlFor="roomId" className="block text-sm font-medium text-zinc-700 mb-1.5">Select Room</label>
                                     <select
+                                        id="roomId"
                                         className="input-field"
                                         value={formData.roomId}
                                         onChange={e => setFormData({ ...formData, roomId: e.target.value })}
@@ -392,8 +401,9 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
+                                    <label htmlFor="status" className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
                                     <select
+                                        id="status"
                                         className="input-field"
                                         value={formData.status}
                                         onChange={e => setFormData({ ...formData, status: e.target.value })}
@@ -408,6 +418,7 @@ export default function SchedulePage() {
                                     <label className="flex items-center space-x-3 cursor-pointer">
                                         <input
                                             type="checkbox"
+                                            id="isApproved"
                                             className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
                                             checked={formData.isApproved}
                                             onChange={e => setFormData({ ...formData, isApproved: e.target.checked })}
@@ -418,6 +429,7 @@ export default function SchedulePage() {
                                     <label className="flex items-center space-x-3 cursor-pointer">
                                         <input
                                             type="checkbox"
+                                            id="calendarInviteSent"
                                             className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
                                             checked={formData.calendarInviteSent}
                                             onChange={e => setFormData({ ...formData, calendarInviteSent: e.target.checked })}

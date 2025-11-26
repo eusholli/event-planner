@@ -37,8 +37,13 @@ export async function POST(request: Request) {
             calendarInviteSent
         } = body
 
-        const user = await currentUser()
-        const createdBy = user?.emailAddresses[0]?.emailAddress
+        let createdBy = null
+        if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
+            createdBy = 'test-user@example.com'
+        } else {
+            const user = await currentUser()
+            createdBy = user?.emailAddresses[0]?.emailAddress
+        }
 
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
