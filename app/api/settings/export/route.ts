@@ -13,35 +13,25 @@ export async function GET() {
             }
         })
 
+        // Helper to remove ID and other internal fields
+        const cleanData = (data: any) => {
+            if (!data) return null
+            const { id, ...rest } = data
+            return rest
+        }
+
         const exportData = {
-            event: settings ? {
-                name: settings.name,
-                startDate: settings.startDate.toISOString().split('T')[0], // Export as YYYY-MM-DD
-                endDate: settings.endDate.toISOString().split('T')[0], // Export as YYYY-MM-DD
-                geminiApiKey: settings.geminiApiKey,
-                tags: settings.tags
-            } : null,
-            attendees: attendees.map(a => ({
-                name: a.name,
-                title: a.title,
-                email: a.email,
-                bio: a.bio,
-                company: a.company,
-                companyDescription: a.companyDescription,
-                linkedin: a.linkedin,
-                imageUrl: a.imageUrl
-            })),
-            rooms: rooms.map(r => ({
-                name: r.name,
-                capacity: r.capacity
-            })),
-            meetings: meetings.map(m => ({
-                title: m.title,
-                startTime: m.startTime,
-                endTime: m.endTime,
-                room: m.room?.name,
-                attendees: m.attendees.map(a => a.email)
-            }))
+            event: settings ? cleanData(settings) : null,
+            attendees: attendees.map(a => cleanData(a)),
+            rooms: rooms.map(r => cleanData(r)),
+            meetings: meetings.map(m => {
+                const { id, roomId, room, attendees, ...rest } = m
+                return {
+                    ...rest,
+                    room: room?.name,
+                    attendees: attendees.map(a => a.email)
+                }
+            })
         }
 
         const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)

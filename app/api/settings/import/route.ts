@@ -13,31 +13,36 @@ export async function POST(request: Request) {
         const text = await file.text()
         const config = JSON.parse(text)
 
+        // Helper to parse dates in an object
+        const parseDates = (obj: any) => {
+            const newObj: any = { ...obj }
+            for (const key in newObj) {
+                if (typeof newObj[key] === 'string') {
+                    // Check if it looks like a date (ISO format or YYYY-MM-DD)
+                    if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(newObj[key])) {
+                        const d = new Date(newObj[key])
+                        if (!isNaN(d.getTime())) {
+                            newObj[key] = d
+                        }
+                    }
+                }
+            }
+            return newObj
+        }
+
         // 1. Update Event Settings
         if (config.event) {
             const existingSettings = await prisma.eventSettings.findFirst()
+            const eventData = parseDates(config.event)
+
             if (existingSettings) {
                 await prisma.eventSettings.update({
                     where: { id: existingSettings.id },
-                    data: {
-                        name: config.event.name,
-                        // Parse date strings (YYYY-MM-DD) and set to midnight UTC
-                        startDate: new Date(config.event.startDate + 'T00:00:00.000Z'),
-                        endDate: new Date(config.event.endDate + 'T00:00:00.000Z'),
-                        geminiApiKey: config.event.geminiApiKey,
-                        tags: { set: config.event.tags || [] }
-                    }
+                    data: eventData
                 })
             } else {
                 await prisma.eventSettings.create({
-                    data: {
-                        name: config.event.name,
-                        // Parse date strings (YYYY-MM-DD) and set to midnight UTC
-                        startDate: new Date(config.event.startDate + 'T00:00:00.000Z'),
-                        endDate: new Date(config.event.endDate + 'T00:00:00.000Z'),
-                        geminiApiKey: config.event.geminiApiKey,
-                        tags: { set: config.event.tags || [] }
-                    }
+                    data: eventData
                 })
             }
         }
@@ -71,89 +76,46 @@ export async function POST(request: Request) {
         // 4. Import Meetings
         if (config.meetings && Array.isArray(config.meetings)) {
             for (const meeting of config.meetings) {
+                // Extract relations and special fields
+                const { room: roomName, attendees: attendeeEmails, ...meetingFields } = meeting
+
                 // Find Room ID
                 let roomId = null
-                if (meeting.room) {
-                    const room = await prisma.room.findFirst({ where: { name: meeting.room } })
+                if (roomName) {
+                    const room = await prisma.room.findFirst({ where: { name: roomName } })
                     if (room) roomId = room.id
                 }
 
                 // Find Attendee IDs
                 const attendees = []
-                if (meeting.attendees && Array.isArray(meeting.attendees)) {
-                    for (const email of meeting.attendees) {
+                if (attendeeEmails && Array.isArray(attendeeEmails)) {
+                    for (const email of attendeeEmails) {
                         const attendee = await prisma.attendee.findUnique({ where: { email } })
                         if (attendee) attendees.push({ id: attendee.id })
                     }
                 }
 
-                // Check if meeting exists (by title and date)
-                const existing = await prisma.meeting.findFirst({
-                    where: {
-                        title: meeting.title,
-                        // This is a loose check, but sufficient for import
-                        date: (() => {
-                            if (!meeting.startTime) return undefined
-                            // Try parsing as ISO
-                            const d = new Date(meeting.startTime)
-                            if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+                // Check if meeting exists (by title and date/startTime)
+                // We need to be careful with dynamic fields here. 
+                // For now, we'll stick to title and startTime/date as unique identifiers if they exist.
+                const whereClause: any = { title: meeting.title }
+                if (meeting.startTime) whereClause.startTime = meeting.startTime
+                if (meeting.date) whereClause.date = meeting.date
 
-                            // If HH:mm format, use event start date
-                            if (/^\d{2}:\d{2}$/.test(meeting.startTime) && config.event?.startDate) {
-                                return new Date(config.event.startDate).toISOString().split('T')[0]
-                            }
-                            return undefined
-                        })()
-                    }
+                const existing = await prisma.meeting.findFirst({
+                    where: whereClause
                 })
 
                 if (!existing) {
-                    // Parse date and time from ISO strings if present
-                    let date: string | undefined = undefined
-                    let startTime: string | undefined = undefined
-                    let endTime: string | undefined = undefined
-
-                    if (meeting.startTime) {
-                        // Check if it's already HH:mm
-                        if (/^\d{2}:\d{2}$/.test(meeting.startTime)) {
-                            startTime = meeting.startTime
-                            // Default date to event start date if available
-                            if (config.event?.startDate) {
-                                date = new Date(config.event.startDate).toISOString().split('T')[0]
-                            }
-                        } else {
-                            const start = new Date(meeting.startTime)
-                            if (!isNaN(start.getTime())) {
-                                date = start.toISOString().split('T')[0]
-                                startTime = start.toTimeString().slice(0, 5)
-                            }
-                        }
-                    }
-
-                    if (meeting.endTime) {
-                        // Check if it's already HH:mm
-                        if (/^\d{2}:\d{2}$/.test(meeting.endTime)) {
-                            endTime = meeting.endTime
-                        } else {
-                            const end = new Date(meeting.endTime)
-                            if (!isNaN(end.getTime())) {
-                                endTime = end.toTimeString().slice(0, 5)
-                            }
-                        }
-                    }
+                    const meetingData = parseDates(meetingFields)
 
                     await prisma.meeting.create({
                         data: {
-                            title: meeting.title,
-                            date: (date || null) as any,
-                            startTime: (startTime || null) as any,
-                            endTime: (endTime || null) as any,
+                            ...meetingData,
                             roomId: roomId,
                             attendees: {
                                 connect: attendees
-                            },
-                            status: meeting.status || 'STARTED',
-                            tags: meeting.tags || []
+                            }
                         }
                     })
                 }

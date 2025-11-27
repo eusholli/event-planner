@@ -1,0 +1,25 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 127.0.0.1:3000...
+* Connected to 127.0.0.1 (127.0.0.1) port 3000
+> GET /api/settings/export HTTP/1.1
+> Host: 127.0.0.1:3000
+> User-Agent: curl/8.7.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/1.1 200 OK
+< x-clerk-auth-reason: dev-browser-missing
+< x-clerk-auth-status: signed-out
+< x-middleware-rewrite: /api/settings/export
+< vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+< content-disposition: attachment; filename="event-config-2025-11-27T17-24-16.json"
+< content-type: application/json
+< Date: Thu, 27 Nov 2025 17:24:16 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< Transfer-Encoding: chunked
+< 
+{ [18472 bytes data]
+100 18459    0 18459    0     0  89649      0 --:--:-- --:--:-- --:--:-- 90043
+* Connection #0 to host 127.0.0.1 left intact

@@ -21,20 +21,28 @@
   },
   "rooms": [
     {
-      "name": "Boardroom A",
-      "capacity": 20
-    },
-    {
-      "name": "Conference Room B",
+      "name": "Meeting Room 1 (Mickey)",
       "capacity": 10
     },
     {
-      "name": "Huddle Room C",
-      "capacity": 4
+      "name": "Meeting Room 2 (Sharad)",
+      "capacity": 10
     },
     {
-      "name": "Auditorium",
-      "capacity": 100
+      "name": "Meeting Room 3",
+      "capacity": 6
+    },
+    {
+      "name": "Meeting Room 4",
+      "capacity": 6
+    },
+    {
+      "name": "Meeting Room 5",
+      "capacity": 6
+    },
+    {
+      "name": "Meeting Room 6",
+      "capacity": 6
     }
   ],
   "attendees": [
