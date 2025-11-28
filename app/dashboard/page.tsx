@@ -3,26 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import moment from 'moment'
-import MeetingModal from '@/components/MeetingModal'
-
-interface Meeting {
-    id: string
-    title: string
-    date: string | null
-    startTime: string | null
-    endTime: string | null
-    resourceId: string
-    attendees: { id: string, name: string }[]
-    purpose: string
-    status: string
-    room?: { name: string }
-    tags: string[]
-    start?: Date | null
-    end?: Date | null
-    meetingType?: string
-    isApproved: boolean
-    calendarInviteSent: boolean
-}
+import MeetingModal, { Meeting } from '@/components/MeetingModal'
 
 interface Room {
     id: string
@@ -100,7 +81,10 @@ export default function DashboardPage() {
                     endTime: m.endTime,
                     meetingType: m.meetingType,
                     isApproved: m.isApproved || false,
-                    calendarInviteSent: m.calendarInviteSent || false
+                    calendarInviteSent: m.calendarInviteSent || false,
+                    requesterEmail: m.requesterEmail,
+                    otherDetails: m.otherDetails,
+                    createdBy: m.createdBy
                 }
             })
             setMeetings(formattedEvents)
@@ -136,7 +120,7 @@ export default function DashboardPage() {
 
             // Date
             const matchesDate = !selectedDate ||
-                (meeting.start && moment(meeting.start).format('YYYY-MM-DD') === selectedDate)
+                (meeting.date === selectedDate)
 
             // Room
             const matchesRoom = !selectedRoomId || meeting.resourceId === selectedRoomId
@@ -152,10 +136,20 @@ export default function DashboardPage() {
 
             return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType && matchesApproved && matchesInviteSent
         }).sort((a, b) => {
-            if (!a.start && !b.start) return 0
-            if (!a.start) return 1
-            if (!b.start) return -1
-            return a.start.getTime() - b.start.getTime()
+            // Sort by date/time
+            if (!a.date && !b.date) return 0
+            if (!a.date) return 1
+            if (!b.date) return -1
+
+            // Compare dates
+            const dateCompare = a.date!.localeCompare(b.date!)
+            if (dateCompare !== 0) return dateCompare
+
+            // Compare times if dates are equal
+            if (!a.startTime && !b.startTime) return 0
+            if (!a.startTime) return 1
+            if (!b.startTime) return -1
+            return a.startTime!.localeCompare(b.startTime!)
         })
     }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
 
@@ -219,7 +213,9 @@ export default function DashboardPage() {
                     tags: editingMeeting.tags,
                     meetingType: editingMeeting.meetingType,
                     isApproved: editingMeeting.isApproved,
-                    calendarInviteSent: editingMeeting.calendarInviteSent
+                    calendarInviteSent: editingMeeting.calendarInviteSent,
+                    requesterEmail: editingMeeting.requesterEmail,
+                    otherDetails: editingMeeting.otherDetails
                 })
             })
 
@@ -240,7 +236,10 @@ export default function DashboardPage() {
                     endTime: savedData.endTime,
                     meetingType: savedData.meetingType,
                     isApproved: savedData.isApproved,
-                    calendarInviteSent: savedData.calendarInviteSent
+                    calendarInviteSent: savedData.calendarInviteSent,
+                    requesterEmail: savedData.requesterEmail,
+                    otherDetails: savedData.otherDetails,
+                    createdBy: savedData.createdBy
                 }
                 setMeetings(prev => prev.map(m => m.id === formattedSaved.id ? formattedSaved : m))
                 setIsModalOpen(false)
