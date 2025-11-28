@@ -20,6 +20,8 @@ interface Meeting {
     start?: Date | null
     end?: Date | null
     meetingType?: string
+    isApproved: boolean
+    calendarInviteSent: boolean
 }
 
 interface Room {
@@ -48,6 +50,8 @@ export default function DashboardPage() {
     const [selectedDate, setSelectedDate] = useState('')
     const [selectedRoomId, setSelectedRoomId] = useState('')
     const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
+    const [filterApproved, setFilterApproved] = useState(false)
+    const [filterInviteSent, setFilterInviteSent] = useState(false)
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -94,7 +98,9 @@ export default function DashboardPage() {
                     date: m.date,
                     startTime: m.startTime,
                     endTime: m.endTime,
-                    meetingType: m.meetingType
+                    meetingType: m.meetingType,
+                    isApproved: m.isApproved || false,
+                    calendarInviteSent: m.calendarInviteSent || false
                 }
             })
             setMeetings(formattedEvents)
@@ -135,18 +141,23 @@ export default function DashboardPage() {
             // Room
             const matchesRoom = !selectedRoomId || meeting.resourceId === selectedRoomId
 
-            // Meeting Type
             const matchesMeetingType = selectedMeetingTypes.length === 0 ||
                 (meeting.meetingType && selectedMeetingTypes.includes(meeting.meetingType))
 
-            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType
+            // Approved Filter
+            const matchesApproved = !filterApproved || meeting.isApproved
+
+            // Invite Sent Filter
+            const matchesInviteSent = !filterInviteSent || meeting.calendarInviteSent
+
+            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType && matchesApproved && matchesInviteSent
         }).sort((a, b) => {
             if (!a.start && !b.start) return 0
             if (!a.start) return 1
             if (!b.start) return -1
             return a.start.getTime() - b.start.getTime()
         })
-    }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes])
+    }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
 
     // Stats
     const stats = useMemo(() => {
@@ -206,7 +217,9 @@ export default function DashboardPage() {
                     attendeeIds: editingMeeting.attendees?.map(a => a.id),
                     status: editingMeeting.status,
                     tags: editingMeeting.tags,
-                    meetingType: editingMeeting.meetingType
+                    meetingType: editingMeeting.meetingType,
+                    isApproved: editingMeeting.isApproved,
+                    calendarInviteSent: editingMeeting.calendarInviteSent
                 })
             })
 
@@ -225,7 +238,9 @@ export default function DashboardPage() {
                     date: savedData.date,
                     startTime: savedData.startTime,
                     endTime: savedData.endTime,
-                    meetingType: savedData.meetingType
+                    meetingType: savedData.meetingType,
+                    isApproved: savedData.isApproved,
+                    calendarInviteSent: savedData.calendarInviteSent
                 }
                 setMeetings(prev => prev.map(m => m.id === formattedSaved.id ? formattedSaved : m))
                 setIsModalOpen(false)
@@ -411,6 +426,31 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
+                        {/* Status Flags */}
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
+                            <div className="space-y-2">
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={filterApproved}
+                                        onChange={(e) => setFilterApproved(e.target.checked)}
+                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-zinc-600">Approved</span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={filterInviteSent}
+                                        onChange={(e) => setFilterInviteSent(e.target.checked)}
+                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-zinc-600">Invite Sent</span>
+                                </label>
+                            </div>
+                        </div>
+
                         {/* Tags */}
                         {availableTags.length > 0 && (
                             <div>
@@ -469,6 +509,8 @@ export default function DashboardPage() {
                                 setSelectedDate('')
                                 setSelectedRoomId('')
                                 setSelectedMeetingTypes([])
+                                setFilterApproved(false)
+                                setFilterInviteSent(false)
                             }}
                             className="w-full py-2 text-sm text-zinc-500 hover:text-zinc-700 font-medium border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors"
                         >
@@ -517,6 +559,22 @@ export default function DashboardPage() {
                                                         <span className="text-zinc-300">•</span>
                                                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                                             {meeting.meetingType}
+                                                        </span>
+                                                    </>
+                                                )}
+                                                {meeting.isApproved && (
+                                                    <>
+                                                        <span className="text-zinc-300">•</span>
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                                                            Approved
+                                                        </span>
+                                                    </>
+                                                )}
+                                                {meeting.calendarInviteSent && (
+                                                    <>
+                                                        <span className="text-zinc-300">•</span>
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                                                            Invite Sent
                                                         </span>
                                                     </>
                                                 )}
