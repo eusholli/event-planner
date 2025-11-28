@@ -27,6 +27,8 @@ export async function GET() {
             ...settings,
             startDate: settings.startDate.toISOString().split('T')[0],
             endDate: settings.endDate.toISOString().split('T')[0],
+            tags: settings.tags || [],
+            meetingTypes: settings.meetingTypes || [],
         }
 
         return NextResponse.json(response)
@@ -57,6 +59,7 @@ export async function POST(request: Request) {
                     endDate: endDateObj,
                     geminiApiKey,
                     tags: tags ? Array.from(new Set(tags as string[])).sort() : [],
+                    meetingTypes: body.meetingTypes ? Array.from(new Set(body.meetingTypes as string[])).sort() : [],
                 },
             })
         } else {
@@ -67,6 +70,7 @@ export async function POST(request: Request) {
                     endDate: endDateObj,
                     geminiApiKey,
                     tags: tags ? Array.from(new Set(tags as string[])).sort() : [],
+                    meetingTypes: body.meetingTypes ? Array.from(new Set(body.meetingTypes as string[])).sort() : [],
                 },
             })
         }
@@ -76,6 +80,8 @@ export async function POST(request: Request) {
             ...settings,
             startDate: settings.startDate.toISOString().split('T')[0],
             endDate: settings.endDate.toISOString().split('T')[0],
+            tags: settings.tags || [],
+            meetingTypes: settings.meetingTypes || [],
         }
 
         return NextResponse.json(response)

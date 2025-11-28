@@ -45,6 +45,7 @@ export default function SchedulePage() {
 
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
     const [availableTags, setAvailableTags] = useState<string[]>([])
+    const [meetingTypes, setMeetingTypes] = useState<string[]>([])
 
     useEffect(() => {
         Promise.all([
@@ -57,6 +58,9 @@ export default function SchedulePage() {
             setEventSettings(settingsData)
             if (settingsData?.tags) {
                 setAvailableTags(settingsData.tags)
+            }
+            if (settingsData?.meetingTypes) {
+                setMeetingTypes(settingsData.meetingTypes)
             }
 
         })
@@ -272,12 +276,9 @@ export default function SchedulePage() {
                                         onChange={e => setFormData({ ...formData, meetingType: e.target.value })}
                                     >
                                         <option value="">Select Type...</option>
-                                        <option value="Sales/Customer">Sales/Customer</option>
-                                        <option value="Vendor Partner">Vendor Partner</option>
-                                        <option value="Technology Partner">Technology Partner</option>
-                                        <option value="PR Engagement">PR Engagement</option>
-                                        <option value="Gov't">Gov't</option>
-                                        <option value="Other">Other</option>
+                                        {meetingTypes.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
                                     </select>
                                 </div>
 

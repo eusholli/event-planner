@@ -40,6 +40,7 @@ export default function CalendarPage() {
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
     const [error, setError] = useState('')
     const [availableTags, setAvailableTags] = useState<string[]>([])
+    const [meetingTypes, setMeetingTypes] = useState<string[]>([])
 
     const [date, setDate] = useState(new Date())
     const [view, setView] = useState<View>(Views.DAY)
@@ -117,6 +118,9 @@ export default function CalendarPage() {
                 }
                 if (settingsData.tags) {
                     setAvailableTags(settingsData.tags)
+                }
+                if (settingsData.meetingTypes) {
+                    setMeetingTypes(settingsData.meetingTypes)
                 }
             }
             setLoading(false)
@@ -439,6 +443,7 @@ export default function CalendarPage() {
                 rooms={rooms}
                 allAttendees={allAttendees}
                 availableTags={availableTags}
+                meetingTypes={meetingTypes}
                 isCreating={isCreating}
                 onSave={handleSaveEvent}
                 onDelete={handleDeleteEvent}

@@ -38,6 +38,7 @@ export default function DashboardPage() {
     const [rooms, setRooms] = useState<Room[]>([])
     const [allAttendees, setAllAttendees] = useState<Attendee[]>([])
     const [availableTags, setAvailableTags] = useState<string[]>([])
+    const [meetingTypes, setMeetingTypes] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
 
     // Filters
@@ -48,15 +49,6 @@ export default function DashboardPage() {
     const [selectedRoomId, setSelectedRoomId] = useState('')
     const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
 
-    const meetingTypes = [
-        "Sales/Customer",
-        "Vendor Partner",
-        "Technology Partner",
-        "PR Engagement",
-        "Gov't",
-        "Other"
-    ]
-
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedEvent, setSelectedEvent] = useState<Partial<Meeting> | null>(null)
@@ -66,10 +58,10 @@ export default function DashboardPage() {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/meetings').then(res => res.json()),
-            fetch('/api/rooms').then(res => res.json()),
-            fetch('/api/attendees').then(res => res.json()),
-            fetch('/api/settings').then(res => res.json())
+            fetch('/api/meetings', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/rooms', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/attendees', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/settings', { cache: 'no-store' }).then(res => res.json())
         ]).then(([meetingsData, roomsData, attendeesData, settingsData]) => {
             if (!Array.isArray(meetingsData)) {
                 console.error('Failed to fetch meetings:', meetingsData)
@@ -111,6 +103,9 @@ export default function DashboardPage() {
             if (settingsData && settingsData.tags) {
                 setAvailableTags(settingsData.tags)
             }
+            if (settingsData && settingsData.meetingTypes) {
+                setMeetingTypes(settingsData.meetingTypes)
+            }
             setLoading(false)
         })
     }, [])
@@ -151,7 +146,7 @@ export default function DashboardPage() {
             if (!b.start) return -1
             return a.start.getTime() - b.start.getTime()
         })
-    }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId])
+    }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes])
 
     // Stats
     const stats = useMemo(() => {
@@ -517,6 +512,14 @@ export default function DashboardPage() {
                                                     </svg>
                                                     {rooms.find(r => r.id === meeting.resourceId)?.name || 'No Room'}
                                                 </span>
+                                                {meeting.meetingType && (
+                                                    <>
+                                                        <span className="text-zinc-300">•</span>
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                            {meeting.meetingType}
+                                                        </span>
+                                                    </>
+                                                )}
                                                 <span className="text-zinc-300">•</span>
                                                 {getStatusBadge(meeting.status)}
                                             </div>
@@ -559,6 +562,7 @@ export default function DashboardPage() {
                 rooms={rooms}
                 allAttendees={allAttendees}
                 availableTags={availableTags}
+                meetingTypes={meetingTypes}
                 isCreating={false}
                 onSave={handleSaveEvent}
                 onDelete={handleDeleteEvent}

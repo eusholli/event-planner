@@ -1,8 +1,8 @@
 {
   "event": {
     "name": "MWC BCN 2026",
-    "startDate": "2026-03-02T09:00:00.000Z",
-    "endDate": "2026-03-05T17:00:00.000Z",
+    "startDate": "2026-03-02",
+    "endDate": "2026-03-05",
     "geminiApiKey": "",
     "tags": [
       "Americas",
@@ -17,6 +17,14 @@
       "Partner",
       "Global",
       "Open RAN MoU"
+    ],
+    "meetingTypes": [
+      "Sales/Customer",
+      "Vendor Partner",
+      "Technology Partner",
+      "PR Engagement",
+      "Govt",
+      "Other"
     ]
   },
   "rooms": [
@@ -680,39 +688,315 @@
   "meetings": [
     {
       "title": "Welcome Session",
-      "startTime": "2025-03-02T09:00:00.000Z",
-      "endTime": "2025-03-02T10:00:00.000Z",
+      "startTime": "2025-03-02T09:00:00",
+      "endTime": "2025-03-02T10:00:00",
       "room": "Auditorium",
       "attendees": [
         "arun.nair@rakuten.com",
         "nitin.goyal@rakuten.com",
         "tapas.ranjan@rakuten.com"
       ],
-      "status": "STARTED"
+      "status": "STARTED",
+      "meetingType": "PR Engagement"
     },
     {
       "title": "Symplan Product Demo",
-      "startTime": "2025-03-02T11:00:00.000Z",
-      "endTime": "2025-03-02T12:00:00.000Z",
+      "startTime": "2025-03-02T10:30:00",
+      "endTime": "2025-03-02T11:30:00",
       "room": "Boardroom A",
       "attendees": [
         "arun.nair@rakuten.com",
         "sandeep.karkala@rakuten.com",
         "faiq.khan@rakuten.com"
       ],
-      "status": "STARTED"
+      "status": "STARTED",
+      "meetingType": "Sales/Customer"
     },
     {
       "title": "Networking Lunch",
-      "startTime": "2025-03-02T12:30:00.000Z",
-      "endTime": "2025-03-02T13:30:00.000Z",
+      "startTime": "2025-03-02T12:00:00",
+      "endTime": "2025-03-02T13:00:00",
       "room": "Conference Room B",
       "attendees": [
         "anshul.bhatt@rakuten.com",
         "mina.nicola@rakuten.com",
         "hazem.hussein@rakuten.com"
       ],
-      "status": "STARTED"
+      "status": "STARTED",
+      "meetingType": "Other"
+    },
+    {
+      "title": "Tech Deep Dive",
+      "startTime": "2025-03-02T09:00:00",
+      "endTime": "2025-03-02T10:00:00",
+      "room": "Meeting Room 5",
+      "attendees": [
+        "wasim.saddique@rakuten.com",
+        "anirban.chakravartti@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "PR Engagement"
+    },
+    {
+      "title": "Partnership Discussion",
+      "startTime": "2025-03-02T17:30:00",
+      "endTime": "2025-03-02T18:30:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "nitin.goyal@rakuten.com",
+        "swamy.vasudevan@rakuten.com",
+        "shadi.sayed@rakuten.com",
+        "khalid.elrumman@rakuten.com",
+        "stefan.winter@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Sales/Customer"
+    },
+    {
+      "title": "Engineering All-Hands",
+      "startTime": "2025-03-04T13:30:00",
+      "endTime": "2025-03-04T14:30:00",
+      "room": "Meeting Room 5",
+      "attendees": [
+        "udai.kanukolanu@rakuten.com",
+        "anil.sawkar@rakuten.com",
+        "sachin.mahajan@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Vendor Partner"
+    },
+    {
+      "title": "Marketing Sync",
+      "startTime": "2025-03-03T12:30:00",
+      "endTime": "2025-03-03T13:00:00",
+      "room": "Meeting Room 1 (Mickey)",
+      "attendees": [
+        "faiq.khan@rakuten.com",
+        "ahmad.farid@rakuten.com",
+        "vivek.murthy@rakuten.com",
+        "keita.hino@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Sales/Customer"
+    },
+    {
+      "title": "Team Building",
+      "startTime": "2025-03-03T10:00:00",
+      "endTime": "2025-03-03T11:30:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "raul.carubelli@rakuten.com",
+        "frederic.pion@rakuten.com",
+        "neeraj.patel@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Other"
+    },
+    {
+      "title": "Client Call",
+      "startTime": "2025-03-02T10:30:00",
+      "endTime": "2025-03-02T12:00:00",
+      "room": "Meeting Room 4",
+      "attendees": [
+        "aliasgar.lokhandwala@rakuten.com",
+        "matan.barth@rakuten.com",
+        "zaheen.khan@rakuten.com",
+        "anirban.chakravartti@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Technology Partner"
+    },
+    {
+      "title": "Contract Review",
+      "startTime": "2025-03-02T16:30:00",
+      "endTime": "2025-03-02T18:00:00",
+      "room": "Meeting Room 1 (Mickey)",
+      "attendees": [
+        "chris.alvis@rakuten.com",
+        "sheheryar.khakwani@rakuten.com",
+        "randhir.amarasinghe@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Sales/Customer"
+    },
+    {
+      "title": "Architecture Sync",
+      "startTime": "2025-03-03T15:30:00",
+      "endTime": "2025-03-03T16:00:00",
+      "room": "Meeting Room 3",
+      "attendees": [
+        "tapas.ranjan@rakuten.com",
+        "randhir.amarasinghe@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Technology Partner"
+    },
+    {
+      "title": "Engineering All-Hands",
+      "startTime": "2025-03-03T09:00:00",
+      "endTime": "2025-03-03T10:00:00",
+      "room": "Meeting Room 5",
+      "attendees": [
+        "matan.barth@rakuten.com",
+        "jessica.cheng@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Other"
+    },
+    {
+      "title": "Sales Pipeline",
+      "startTime": "2025-03-02T12:00:00",
+      "endTime": "2025-03-02T12:30:00",
+      "room": "Meeting Room 4",
+      "attendees": [
+        "tomoe.yoshida@rakuten.com",
+        "arun.nair@rakuten.com",
+        "faisal.ghazaleh@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Vendor Partner"
+    },
+    {
+      "title": "Architecture Sync",
+      "startTime": "2025-03-03T16:30:00",
+      "endTime": "2025-03-03T17:00:00",
+      "room": "Meeting Room 3",
+      "attendees": [
+        "keita.hino@rakuten.com",
+        "talaat.mohamed@rakuten.com",
+        "stefan.winter@rakuten.com",
+        "swamy.vasudevan@rakuten.com",
+        "shadi.sayed@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "PR Engagement"
+    },
+    {
+      "title": "Q1 Review",
+      "startTime": "2025-03-04T15:30:00",
+      "endTime": "2025-03-04T16:00:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "bhvana.murthy@rakuten.com",
+        "chritina.james@rakuten.com",
+        "partha.seetala@rakuten.com",
+        "jason.king@rakuten.com",
+        "thomas.riedel@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Govt"
+    },
+    {
+      "title": "Tech Deep Dive",
+      "startTime": "2025-03-02T15:30:00",
+      "endTime": "2025-03-02T16:00:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "ahmed.abuhakmeh@rakuten.com",
+        "sandeep.panthula@rakuten.com",
+        "sandeep.karkala@rakuten.com",
+        "arun.nair@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Other"
+    },
+    {
+      "title": "Q1 Review",
+      "startTime": "2025-03-04T10:00:00",
+      "endTime": "2025-03-04T11:30:00",
+      "room": "Meeting Room 1 (Mickey)",
+      "attendees": [
+        "sandeep.panthula@rakuten.com",
+        "arun.nair@rakuten.com",
+        "aliasgar.lokhandwala@rakuten.com",
+        "nitin.goyal@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Other"
+    },
+    {
+      "title": "Q1 Review",
+      "startTime": "2025-03-04T12:30:00",
+      "endTime": "2025-03-04T13:30:00",
+      "room": "Meeting Room 1 (Mickey)",
+      "attendees": [
+        "richard.thalluri@rakuten.com",
+        "matan.barth@rakuten.com",
+        "miguelangel.sanchez@rakuten.com",
+        "faisal.ghazaleh@rakuten.com",
+        "vishwesh.potdar@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Technology Partner"
+    },
+    {
+      "title": "Q1 Review",
+      "startTime": "2025-03-03T15:00:00",
+      "endTime": "2025-03-03T16:30:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "padmarajan.narayanan@rakuten.com",
+        "geoff.hollingworth@rakuten.com",
+        "stefan.winter@rakuten.com",
+        "vijayalaxmi.shinde@rakuten.com",
+        "ahmad.farid@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Sales/Customer"
+    },
+    {
+      "title": "Team Building",
+      "startTime": "2025-03-02T10:00:00",
+      "endTime": "2025-03-02T10:30:00",
+      "room": "Meeting Room 5",
+      "attendees": [
+        "michael.mcgroarty@rakuten.com",
+        "anshul.bhatt@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Technology Partner"
+    },
+    {
+      "title": "Compliance Check",
+      "startTime": "2025-03-04T11:30:00",
+      "endTime": "2025-03-04T13:00:00",
+      "room": "Meeting Room 6",
+      "attendees": [
+        "sachin.mahajan@rakuten.com",
+        "sheheryar.khakwani@rakuten.com",
+        "sandeep.karkala@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Govt"
+    },
+    {
+      "title": "Vendor Sync",
+      "startTime": "2025-03-04T14:00:00",
+      "endTime": "2025-03-04T15:30:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "wasim.saddique@rakuten.com",
+        "hazem.hussein@rakuten.com",
+        "khalid.elrumman@rakuten.com",
+        "jason.king@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Technology Partner"
+    },
+    {
+      "title": "Client Call",
+      "startTime": "2025-03-04T11:00:00",
+      "endTime": "2025-03-04T12:00:00",
+      "room": "Meeting Room 2 (Sharad)",
+      "attendees": [
+        "nitin.goyal@rakuten.com",
+        "vijayalaxmi.shinde@rakuten.com",
+        "chritina.james@rakuten.com",
+        "bhvana.murthy@rakuten.com",
+        "chetan.wani@rakuten.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Vendor Partner"
     }
   ]
 }

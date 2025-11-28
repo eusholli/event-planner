@@ -48,6 +48,7 @@ interface MeetingModalProps {
     conflicts?: string[]
     suggestions?: { type: 'room' | 'time', label: string, value: any }[]
     error?: string
+    meetingTypes?: string[]
 }
 
 export default function MeetingModal({
@@ -63,7 +64,8 @@ export default function MeetingModal({
     onDelete,
     conflicts = [],
     suggestions = [],
-    error
+    error,
+    meetingTypes = []
 }: MeetingModalProps) {
     const [localError, setLocalError] = useState('')
     const { user } = useUser()
@@ -200,12 +202,9 @@ export default function MeetingModal({
                             onChange={e => onEventChange({ ...event, meetingType: e.target.value })}
                         >
                             <option value="">Select Type...</option>
-                            <option value="Sales/Customer">Sales/Customer</option>
-                            <option value="Vendor Partner">Vendor Partner</option>
-                            <option value="Technology Partner">Technology Partner</option>
-                            <option value="PR Engagement">PR Engagement</option>
-                            <option value="Gov't">Gov't</option>
-                            <option value="Other">Other</option>
+                            {meetingTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
                         </select>
                     </div>
 

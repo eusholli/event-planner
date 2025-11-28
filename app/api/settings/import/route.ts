@@ -107,7 +107,7 @@ export async function POST(request: Request) {
                 })
 
                 if (!existing) {
-                    const meetingData = parseDates(meetingFields)
+                    const meetingData = meetingFields
 
                     await prisma.meeting.create({
                         data: {

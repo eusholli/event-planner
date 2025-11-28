@@ -17,6 +17,7 @@ model EventSettings {
   endDate   DateTime @default(now())
   geminiApiKey String?
   tags      String[] @default([])
+  meetingTypes String[] @default([])
 }
 
 model Attendee {
