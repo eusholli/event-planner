@@ -227,9 +227,32 @@ export default function SettingsPage() {
                             onClick={async () => {
                                 if (confirm('WARNING: This will delete ALL Attendees, Rooms, Meetings, and Event Settings. This action cannot be undone. Are you sure?')) {
                                     try {
+                                        // 1. Export
+                                        const exportRes = await fetch('/api/settings/export')
+                                        if (!exportRes.ok) throw new Error('Export failed')
+
+                                        const blob = await exportRes.blob()
+                                        const url = window.URL.createObjectURL(blob)
+                                        const a = document.createElement('a')
+                                        a.href = url
+
+                                        // Get filename from header or default
+                                        const contentDisposition = exportRes.headers.get('Content-Disposition')
+                                        let filename = 'event-config-backup.json'
+                                        if (contentDisposition) {
+                                            const match = contentDisposition.match(/filename="?([^"]+)"?/)
+                                            if (match && match[1]) filename = match[1]
+                                        }
+                                        a.download = filename
+                                        document.body.appendChild(a)
+                                        a.click()
+                                        window.URL.revokeObjectURL(url)
+                                        document.body.removeChild(a)
+
+                                        // 2. Delete
                                         const res = await fetch('/api/settings/delete-data', { method: 'DELETE' })
                                         if (res.ok) {
-                                            alert('Database cleared successfully')
+                                            alert('Database exported and cleared successfully')
                                             router.refresh()
                                         } else {
                                             alert('Failed to clear database')
