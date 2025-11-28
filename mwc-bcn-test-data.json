@@ -24,7 +24,8 @@
       "Technology Partner",
       "PR Engagement",
       "Govt",
-      "Other"
+      "Other",
+      "External"
     ]
   },
   "rooms": [
@@ -683,6 +684,50 @@
       "companyDescription": "Open RAN and Telco Cloud Platform Provider",
       "linkedin": null,
       "imageUrl": null
+    },
+    {
+      "name": "Alice Johnson",
+      "title": "CTO",
+      "email": "alice.johnson@techcorp.com",
+      "bio": "CTO of TechCorp, leading innovation in AI and cloud computing.",
+      "company": "TechCorp",
+      "companyDescription": "Leading provider of AI solutions.",
+      "linkedin": "https://linkedin.com/in/alicejohnson",
+      "imageUrl": null,
+      "isExternal": true
+    },
+    {
+      "name": "Bob Smith",
+      "title": "VP Sales",
+      "email": "bob.smith@futurenet.com",
+      "bio": "VP Sales at FutureNet, expert in 5G monetization.",
+      "company": "FutureNet",
+      "companyDescription": "Next-gen network infrastructure.",
+      "linkedin": null,
+      "imageUrl": null,
+      "isExternal": true
+    },
+    {
+      "name": "Diana Prince",
+      "title": "CEO",
+      "email": "diana.prince@wondertech.com",
+      "bio": "CEO of WonderTech, focused on sustainable tech.",
+      "company": "WonderTech",
+      "companyDescription": "Sustainable technology solutions.",
+      "linkedin": null,
+      "imageUrl": null,
+      "isExternal": true
+    },
+    {
+      "name": "Evan Wright",
+      "title": "Lead Engineer",
+      "email": "evan.wright@nextgen.com",
+      "bio": "Lead Engineer at NextGen, specializing in edge computing.",
+      "company": "NextGen",
+      "companyDescription": "Edge computing pioneers.",
+      "linkedin": null,
+      "imageUrl": null,
+      "isExternal": true
     }
   ],
   "meetings": [
@@ -997,6 +1042,72 @@
       ],
       "status": "STARTED",
       "meetingType": "Vendor Partner"
+    },
+    {
+      "title": "Past Strategy Sync",
+      "startTime": "2025-03-01T09:00:00",
+      "endTime": "2025-03-01T10:00:00",
+      "room": "Meeting Room 1 (Mickey)",
+      "attendees": [
+        "arun.nair@rakuten.com",
+        "alice.johnson@techcorp.com"
+      ],
+      "status": "COMPLETED",
+      "meetingType": "Strategy",
+      "purpose": "Review Q1 strategy",
+      "tags": [
+        "Strategy",
+        "Q1"
+      ]
+    },
+    {
+      "title": "Canceled Sync",
+      "startTime": "2025-03-05T14:00:00",
+      "endTime": "2025-03-05T15:00:00",
+      "room": "Meeting Room 3",
+      "attendees": [
+        "nitin.goyal@rakuten.com",
+        "bob.smith@futurenet.com"
+      ],
+      "status": "CANCELED",
+      "meetingType": "Sales/Customer",
+      "purpose": "Discuss potential partnership"
+    },
+    {
+      "title": "Joint Workshop",
+      "startTime": "2025-03-03T14:00:00",
+      "endTime": "2025-03-03T16:00:00",
+      "room": "Boardroom A",
+      "attendees": [
+        "sandeep.karkala@rakuten.com",
+        "evan.wright@nextgen.com",
+        "diana.prince@wondertech.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Technology Partner",
+      "purpose": "Deep dive into integration",
+      "tags": [
+        "Integration",
+        "Technical"
+      ]
+    },
+    {
+      "title": "Executive Review",
+      "startTime": "2025-03-04T09:00:00",
+      "endTime": "2025-03-04T10:00:00",
+      "room": "Auditorium",
+      "attendees": [
+        "udai.kanukolanu@rakuten.com",
+        "alice.johnson@techcorp.com",
+        "diana.prince@wondertech.com"
+      ],
+      "status": "STARTED",
+      "meetingType": "Govt",
+      "purpose": "High level review",
+      "tags": [
+        "Executive",
+        "Review"
+      ]
     }
   ]
 }
