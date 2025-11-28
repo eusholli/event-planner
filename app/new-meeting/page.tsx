@@ -232,16 +232,6 @@ export default function SchedulePage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Created By</label>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        className="input-field bg-zinc-100 text-zinc-500"
-                                        value={user?.primaryEmailAddress?.emailAddress || ''}
-                                    />
-                                </div>
-
-                                <div className="col-span-full">
                                     <label htmlFor="meeting-title" className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Title</label>
                                     <input
                                         type="text"
@@ -253,6 +243,20 @@ export default function SchedulePage() {
                                         placeholder="e.g. Project Kickoff"
                                         data-lpignore="true"
                                     />
+                                </div>
+
+                                <div className="col-span-full">
+                                    <label htmlFor="status" className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
+                                    <select
+                                        id="status"
+                                        className="input-field"
+                                        value={formData.status}
+                                        onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                    >
+                                        <option value="STARTED">Started</option>
+                                        <option value="COMPLETED">Completed</option>
+                                        <option value="CANCELED">Canceled</option>
+                                    </select>
                                 </div>
 
                                 <div className="col-span-full">
@@ -402,18 +406,16 @@ export default function SchedulePage() {
                                     </select>
                                 </div>
 
+
+
                                 <div className="col-span-full">
-                                    <label htmlFor="status" className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
-                                    <select
-                                        id="status"
-                                        className="input-field"
-                                        value={formData.status}
-                                        onChange={e => setFormData({ ...formData, status: e.target.value })}
-                                    >
-                                        <option value="STARTED">Started</option>
-                                        <option value="COMPLETED">Completed</option>
-                                        <option value="CANCELED">Canceled</option>
-                                    </select>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Created By</label>
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        className="input-field bg-zinc-100 text-zinc-500"
+                                        value={user?.primaryEmailAddress?.emailAddress || ''}
+                                    />
                                 </div>
 
                                 <div className="col-span-full flex space-x-6">

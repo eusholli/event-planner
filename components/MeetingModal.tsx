@@ -174,13 +174,16 @@ export default function MeetingModal({
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Created By</label>
-                        <input
-                            type="text"
-                            readOnly
-                            className="input-field bg-zinc-100 text-zinc-500"
-                            value={event.createdBy || user?.primaryEmailAddress?.emailAddress || ''}
-                        />
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
+                        <select
+                            className="input-field"
+                            value={event.status || 'STARTED'}
+                            onChange={e => onEventChange({ ...event, status: e.target.value })}
+                        >
+                            <option value="STARTED">Started</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="CANCELED">Canceled</option>
+                        </select>
                     </div>
 
                     <div>
@@ -388,17 +391,16 @@ export default function MeetingModal({
                             </div>
                         </div>
                     )}
+
+
                     <div>
-                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
-                        <select
-                            className="input-field"
-                            value={event.status || 'STARTED'}
-                            onChange={e => onEventChange({ ...event, status: e.target.value })}
-                        >
-                            <option value="STARTED">Started</option>
-                            <option value="COMPLETED">Completed</option>
-                            <option value="CANCELED">Canceled</option>
-                        </select>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">Created By</label>
+                        <input
+                            type="text"
+                            readOnly
+                            className="input-field bg-zinc-100 text-zinc-500"
+                            value={event.createdBy || user?.primaryEmailAddress?.emailAddress || ''}
+                        />
                     </div>
 
                     <div className="flex space-x-6">
