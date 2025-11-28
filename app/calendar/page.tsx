@@ -19,10 +19,14 @@ interface Attendee {
     id: string
     name: string
     email: string
+    company: string
     isExternal?: boolean
+    bio?: string
+    companyDescription?: string
 }
 
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
+import { generateBriefingBook } from '@/lib/briefing-book'
 
 interface CalendarEvent extends Meeting {
     start: Date
@@ -423,9 +427,22 @@ export default function CalendarPage() {
                     className="h-full font-sans text-zinc-600"
                     components={{
                         event: ({ event }: any) => (
-                            <div className="text-xs h-full flex flex-col p-1">
-                                <div className="font-bold leading-tight mb-0.5">{event.title}</div>
+                            <div className="text-xs h-full flex flex-col p-1 group relative">
+                                <div className="font-bold leading-tight mb-0.5 pr-4">{event.title}</div>
                                 {event.purpose && <div className="opacity-80 truncate text-[10px]">{event.purpose}</div>}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        const roomName = rooms.find(r => r.id === event.resourceId)?.name || 'Unknown Room'
+                                        generateBriefingBook(event, roomName)
+                                    }}
+                                    className="absolute top-1 right-1 p-0.5 text-white/70 hover:text-white hover:bg-white/20 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Export Briefing"
+                                >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </button>
                             </div>
                         )
                     }}

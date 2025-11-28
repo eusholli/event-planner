@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import moment from 'moment'
 import { useUser } from '@/components/auth'
 
+
 interface Room {
     id: string
     name: string
@@ -15,6 +16,8 @@ interface Attendee {
     email: string
     company: string
     isExternal?: boolean
+    bio?: string
+    companyDescription?: string
 }
 
 export interface Meeting {
@@ -492,6 +495,7 @@ export default function MeetingModal({
                                 Delete Meeting
                             </button>
                         )}
+
                         <div className="flex space-x-3 ml-auto">
                             <button
                                 type="button"

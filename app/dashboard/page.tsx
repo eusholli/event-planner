@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import moment from 'moment'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
+import { generateBriefingBook } from '@/lib/briefing-book'
 
 interface Room {
     id: string
@@ -14,10 +15,20 @@ interface Attendee {
     id: string
     name: string
     email: string
+    company: string
+    isExternal?: boolean
+    bio?: string
+    companyDescription?: string
+}
+
+interface DashboardMeeting extends Meeting {
+    start: Date | null
+    end: Date | null
+    room?: Room
 }
 
 export default function DashboardPage() {
-    const [meetings, setMeetings] = useState<Meeting[]>([])
+    const [meetings, setMeetings] = useState<DashboardMeeting[]>([])
     const [rooms, setRooms] = useState<Room[]>([])
     const [allAttendees, setAllAttendees] = useState<Attendee[]>([])
     const [availableTags, setAvailableTags] = useState<string[]>([])
@@ -36,7 +47,7 @@ export default function DashboardPage() {
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [selectedEvent, setSelectedEvent] = useState<Partial<Meeting> | null>(null)
+    const [selectedEvent, setSelectedEvent] = useState<Partial<DashboardMeeting> | null>(null)
     const [conflicts, setConflicts] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
     const [error, setError] = useState('')
@@ -182,7 +193,7 @@ export default function DashboardPage() {
         if (!selectedEvent) return
 
         // Optimistic Update
-        const editingMeeting = { ...selectedEvent } as Meeting
+        const editingMeeting = { ...selectedEvent } as DashboardMeeting
         setMeetings(prev => prev.map(m => {
             if (m.id === editingMeeting.id) {
                 return {
@@ -191,7 +202,7 @@ export default function DashboardPage() {
                     // Ensure we have the full objects for display if needed, though we mostly use strings now
                     room: rooms.find(r => r.id === editingMeeting.resourceId) || m.room,
                     attendees: editingMeeting.attendees || m.attendees
-                } as any
+                } as DashboardMeeting
             }
             return m
         }))
@@ -602,6 +613,21 @@ export default function DashboardPage() {
                                                     </span>
                                                 ))}
                                             </div>
+                                        </div>
+                                        <div className="flex flex-col justify-center pl-4 border-l border-zinc-100">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    const roomName = rooms.find(r => r.id === meeting.resourceId)?.name || 'Unknown Room'
+                                                    generateBriefingBook(meeting, roomName)
+                                                }}
+                                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                title="Export Briefing"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

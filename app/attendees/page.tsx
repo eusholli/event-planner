@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
+import { generateScheduleBriefing } from '@/lib/briefing-book'
 
 interface Attendee {
     id: string
@@ -117,70 +116,11 @@ export default function AttendeesPage() {
             const res = await fetch(`/api/attendees/${attendee.id}/briefing`)
             const data = await res.json()
 
-            const doc = new jsPDF()
-
-            // Title
-            doc.setFontSize(20)
-            doc.text(`Briefing Book: ${attendee.name}`, 14, 20)
-            doc.setFontSize(12)
-            doc.text(`${attendee.title ? attendee.title + ' at ' : ''}${attendee.company}`, 14, 28)
-
-            let yPos = 40
-
-            if (data.meetings.length === 0) {
-                doc.text("No meetings scheduled.", 14, yPos)
-            } else {
-                data.meetings.forEach((meeting: any, index: number) => {
-                    // Meeting Header
-                    doc.setFontSize(14)
-                    doc.setFillColor(240, 240, 240)
-                    doc.rect(14, yPos - 6, 182, 10, 'F')
-                    doc.text(`${new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${meeting.title}`, 16, yPos)
-                    yPos += 10
-
-                    doc.setFontSize(10)
-                    doc.text(`Room: ${meeting.room?.name || 'TBD'}`, 14, yPos)
-                    yPos += 6
-                    doc.text(`Purpose: ${meeting.purpose || 'N/A'}`, 14, yPos)
-                    yPos += 10
-
-                    // Participants
-                    doc.setFontSize(11)
-                    doc.text("Participants:", 14, yPos)
-                    yPos += 6
-
-                    const participants = meeting.attendees.filter((a: any) => a.id !== attendee.id)
-
-                    if (participants.length > 0) {
-                        participants.forEach((p: any) => {
-                            doc.setFontSize(10)
-                            doc.setFont("helvetica", "bold")
-                            doc.text(`• ${p.name} (${p.company})`, 18, yPos)
-                            yPos += 5
-                            doc.setFont("helvetica", "normal")
-                            const bioLines = doc.splitTextToSize(p.bio || 'No bio available.', 170)
-                            doc.text(bioLines, 22, yPos)
-                            yPos += (bioLines.length * 4) + 4
-
-                            if (yPos > 270) {
-                                doc.addPage()
-                                yPos = 20
-                            }
-                        })
-                    } else {
-                        doc.text("No other participants.", 18, yPos)
-                        yPos += 8
-                    }
-
-                    yPos += 10
-                    if (yPos > 250) {
-                        doc.addPage()
-                        yPos = 20
-                    }
-                })
-            }
-
-            doc.save(`Briefing_${attendee.name.replace(/\s+/g, '_')}.pdf`)
+            generateScheduleBriefing(
+                `Briefing Book: ${attendee.name}`,
+                `${attendee.title ? attendee.title + ' at ' : ''}${attendee.company}`,
+                data.meetings || []
+            )
         } catch (error) {
             console.error("Failed to generate PDF", error)
             alert("Failed to generate briefing book")
