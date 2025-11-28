@@ -15,6 +15,7 @@ interface Attendee {
     companyDescription?: string
     linkedin?: string
     imageUrl?: string
+    isExternal?: boolean
 }
 
 export default function AttendeesPage() {
@@ -31,9 +32,11 @@ export default function AttendeesPage() {
         bio: '',
         companyDescription: '',
         linkedin: '',
-        imageUrl: ''
+        imageUrl: '',
+        isExternal: false
     })
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         fetchAttendees()
@@ -80,7 +83,8 @@ export default function AttendeesPage() {
             bio: attendee.bio || '',
             companyDescription: attendee.companyDescription || '',
             linkedin: attendee.linkedin || '',
-            imageUrl: attendee.imageUrl || ''
+            imageUrl: attendee.imageUrl || '',
+            isExternal: attendee.isExternal || false
         })
         setIsEditModalOpen(true)
     }
@@ -185,12 +189,107 @@ export default function AttendeesPage() {
         }
     }
 
+    const internalAttendees = attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
+    const externalAttendees = attendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
+
+    const renderAttendeeCard = (attendee: Attendee) => (
+        <div key={attendee.id} className="card hover:border-zinc-200 group relative flex flex-col">
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-100 flex-shrink-0 border border-zinc-100">
+                        {attendee.imageUrl ? (
+                            <img src={attendee.imageUrl} alt={attendee.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
+                                {attendee.name.charAt(0)}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors">{attendee.name}</h3>
+                        <p className="text-sm text-zinc-500 font-medium">
+                            {attendee.title ? `${attendee.title} at ` : ''}{attendee.company}
+                            {attendee.isExternal && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    External
+                                </span>
+                            )}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={() => openEditModal(attendee)}
+                        className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
+                        title="Edit"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={() => handleDelete(attendee.id)}
+                        className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={() => generateBriefing(attendee)}
+                        disabled={generatingPdf === attendee.id}
+                        className="p-1.5 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Download Briefing Book"
+                    >
+                        {generatingPdf === attendee.id ? (
+                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        )}
+                    </button>
+                </div>
+            </div>
+            <p className="text-sm text-zinc-600 line-clamp-3 leading-relaxed mb-4 flex-grow">{attendee.bio || 'No bio available'}</p>
+            {attendee.linkedin && (
+                <a href={attendee.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                    </svg>
+                    LinkedIn Profile
+                </a>
+            )}
+            <div className="mt-4 pt-4 border-t border-zinc-100 flex justify-between items-center">
+                <span className="text-xs text-zinc-400 font-mono">{attendee.email}</span>
+            </div>
+        </div>
+    )
+
     return (
         <div className="space-y-10">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Attendees</h1>
                     <p className="mt-2 text-zinc-500">Manage your event participants.</p>
+                </div>
+                <div className="relative w-64">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        className="input-field pl-10"
+                        placeholder="Search attendees..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </div>
 
@@ -201,83 +300,41 @@ export default function AttendeesPage() {
                 </div>
 
                 {/* Attendees List */}
-                <div className="lg:col-span-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {attendees.map((attendee) => (
-                            <div key={attendee.id} className="card hover:border-zinc-200 group relative flex flex-col">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-100 flex-shrink-0 border border-zinc-100">
-                                            {attendee.imageUrl ? (
-                                                <img src={attendee.imageUrl} alt={attendee.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
-                                                    {attendee.name.charAt(0)}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors">{attendee.name}</h3>
-                                            <p className="text-sm text-zinc-500 font-medium">{attendee.title ? `${attendee.title} at ` : ''}{attendee.company}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => openEditModal(attendee)}
-                                            className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
-                                            title="Edit"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(attendee.id)}
-                                            className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Delete"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            onClick={() => generateBriefing(attendee)}
-                                            disabled={generatingPdf === attendee.id}
-                                            className="p-1.5 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                            title="Download Briefing Book"
-                                        >
-                                            {generatingPdf === attendee.id ? (
-                                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                    </div>
+                <div className="lg:col-span-2 space-y-12">
+                    {/* Internal Attendees */}
+                    <div>
+                        <div className="flex items-center mb-6">
+                            <h2 className="text-xl font-bold text-zinc-900">Internal Attendees</h2>
+                            <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600">
+                                {internalAttendees.length}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {internalAttendees.map(renderAttendeeCard)}
+                            {internalAttendees.length === 0 && (
+                                <div className="col-span-full text-center py-12 text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
+                                    No internal attendees found.
                                 </div>
-                                <p className="text-sm text-zinc-600 line-clamp-3 leading-relaxed mb-4 flex-grow">{attendee.bio || 'No bio available'}</p>
-                                {attendee.linkedin && (
-                                    <a href={attendee.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                                        </svg>
-                                        LinkedIn Profile
-                                    </a>
-                                )}
-                                <div className="mt-4 pt-4 border-t border-zinc-100 flex justify-between items-center">
-                                    <span className="text-xs text-zinc-400 font-mono">{attendee.email}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* External Attendees */}
+                    <div>
+                        <div className="flex items-center mb-6">
+                            <h2 className="text-xl font-bold text-zinc-900">External Attendees</h2>
+                            <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                {externalAttendees.length}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {externalAttendees.map(renderAttendeeCard)}
+                            {externalAttendees.length === 0 && (
+                                <div className="col-span-full text-center py-12 text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
+                                    No external attendees found.
                                 </div>
-                            </div>
-                        ))}
-                        {attendees.length === 0 && (
-                            <div className="col-span-full text-center py-16 text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
-                                No attendees yet. Add one to get started.
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -370,6 +427,18 @@ export default function AttendeesPage() {
                                     value={editFormData.bio}
                                     onChange={(e) => setEditFormData({ ...editFormData, bio: e.target.value })}
                                 />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="edit-isExternal"
+                                    className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                                    checked={editFormData.isExternal}
+                                    onChange={(e) => setEditFormData({ ...editFormData, isExternal: e.target.checked })}
+                                />
+                                <label htmlFor="edit-isExternal" className="text-sm font-medium text-zinc-700">
+                                    External Attendee
+                                </label>
                             </div>
                             <div className="flex justify-end space-x-3 pt-4">
                                 <button

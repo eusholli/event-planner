@@ -30,6 +30,7 @@ model Attendee {
   companyDescription String?
   linkedin           String?
   imageUrl           String?
+  isExternal         Boolean   @default(false)
   meetings           Meeting[] @relation("AttendeeMeetings")
 }
 

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
 
 export async function GET() {
@@ -19,7 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl } = body
+        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal } = body
 
         // Auto-enrichment Logic
         if (!linkedin && name && company) {
@@ -46,6 +49,7 @@ export async function POST(request: Request) {
                 companyDescription,
                 linkedin,
                 imageUrl,
+                isExternal,
             },
         })
         return NextResponse.json(attendee)

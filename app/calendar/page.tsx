@@ -19,6 +19,7 @@ interface Attendee {
     id: string
     name: string
     email: string
+    isExternal?: boolean
 }
 
 import MeetingModal, { Meeting } from '@/components/MeetingModal'

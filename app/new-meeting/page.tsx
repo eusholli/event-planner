@@ -9,6 +9,7 @@ interface Attendee {
     id: string
     name: string
     company: string
+    isExternal?: boolean
 }
 
 interface Room {
@@ -46,6 +47,7 @@ export default function SchedulePage() {
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
     const [availableTags, setAvailableTags] = useState<string[]>([])
     const [meetingTypes, setMeetingTypes] = useState<string[]>([])
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         Promise.all([
@@ -374,18 +376,65 @@ export default function SchedulePage() {
 
                                 <div className="col-span-full">
                                     <label className="block text-sm font-medium text-zinc-700 mb-2">Select Attendees</label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
-                                        {attendees.map(attendee => (
-                                            <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.attendeeIds.includes(attendee.id)}
-                                                    onChange={() => toggleAttendee(attendee.id)}
-                                                    className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                                />
-                                                <span className="text-sm text-zinc-700">{attendee.name} <span className="text-zinc-400 text-xs">({attendee.company})</span></span>
-                                            </label>
-                                        ))}
+                                    <div className="mb-3">
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <svg className="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                className="input-field pl-10"
+                                                placeholder="Search attendees..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-2">Internal Attendees</label>
+                                    <div className="max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
+                                                <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.attendeeIds.includes(attendee.id)}
+                                                        onChange={() => toggleAttendee(attendee.id)}
+                                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-sm text-zinc-700">{attendee.name} <span className="text-zinc-400 text-xs">({attendee.company})</span></span>
+                                                </label>
+                                            ))}
+                                            {attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                                <p className="text-xs text-zinc-400 italic col-span-full px-2">No internal attendees found.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-2">External Attendees</label>
+                                    <div className="max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {attendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
+                                                <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.attendeeIds.includes(attendee.id)}
+                                                        onChange={() => toggleAttendee(attendee.id)}
+                                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-sm text-zinc-700">{attendee.name} <span className="text-zinc-400 text-xs">({attendee.company})</span></span>
+                                                </label>
+                                            ))}
+                                            {attendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                                <p className="text-xs text-zinc-400 italic col-span-full px-2">No external attendees found.</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

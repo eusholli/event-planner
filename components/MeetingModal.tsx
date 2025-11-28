@@ -13,6 +13,8 @@ interface Attendee {
     id: string
     name: string
     email: string
+    company: string
+    isExternal?: boolean
 }
 
 export interface Meeting {
@@ -68,6 +70,8 @@ export default function MeetingModal({
     meetingTypes = []
 }: MeetingModalProps) {
     const [localError, setLocalError] = useState('')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [loading, setLoading] = useState(false)
     const { user } = useUser()
 
     useEffect(() => {
@@ -319,10 +323,26 @@ export default function MeetingModal({
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                            Attendees{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                            Internal Attendees{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
                         </label>
-                        <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-2 bg-zinc-50/50">
-                            {allAttendees.map(attendee => (
+                        <div className="mb-2">
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    className="input-field pl-10 py-1.5 text-sm"
+                                    placeholder="Search attendees..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
+                            {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
                                 <label key={attendee.id} className="flex items-center space-x-3 p-1 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -346,6 +366,44 @@ export default function MeetingModal({
                                     <span className="text-sm text-zinc-700">{attendee.name}</span>
                                 </label>
                             ))}
+                            {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                <p className="text-xs text-zinc-400 italic px-2">No internal attendees found.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                            External Attendees
+                        </label>
+                        <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
+                            {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
+                                <label key={attendee.id} className="flex items-center space-x-3 p-1 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                        checked={event.attendees?.some(a => a.id === attendee.id) || false}
+                                        onChange={(e) => {
+                                            const currentAttendees = event.attendees || []
+                                            if (e.target.checked) {
+                                                onEventChange({
+                                                    ...event,
+                                                    attendees: [...currentAttendees, { id: attendee.id, name: attendee.name }]
+                                                })
+                                            } else {
+                                                onEventChange({
+                                                    ...event,
+                                                    attendees: currentAttendees.filter(a => a.id !== attendee.id)
+                                                })
+                                            }
+                                        }}
+                                    />
+                                    <span className="text-sm text-zinc-700">{attendee.name}</span>
+                                </label>
+                            ))}
+                            {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                <p className="text-xs text-zinc-400 italic px-2">No external attendees found.</p>
+                            )}
                         </div>
                     </div>
                     <div>

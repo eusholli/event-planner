@@ -9,7 +9,7 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
-        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl } = body
+        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal } = body
 
         // Auto-enrichment Logic (only if fields are missing)
         if (!linkedin && name && company) {
@@ -37,6 +37,7 @@ export async function PUT(
                 companyDescription,
                 linkedin,
                 imageUrl,
+                isExternal,
             },
         })
 

@@ -27,7 +27,8 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
         bio: '',
         companyDescription: '',
         linkedin: '',
-        imageUrl: ''
+        imageUrl: '',
+        isExternal: false
     })
     const [loading, setLoading] = useState(false)
     const [autoCompleting, setAutoCompleting] = useState(false)
@@ -98,7 +99,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
             })
             if (res.ok) {
                 const newAttendee = await res.json()
-                setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '' })
+                setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false })
                 if (onSuccess) {
                     onSuccess(newAttendee)
                 }
@@ -112,7 +113,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
 
     return (
         <>
-            <div className="card sticky top-24">
+            <div className="card sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto">
                 <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-6">Add Attendee</h2>
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Photo Input */}
@@ -198,6 +199,18 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
                             value={formData.bio}
                             onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                         />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            id="isExternal"
+                            className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                            checked={formData.isExternal}
+                            onChange={(e) => setFormData({ ...formData, isExternal: e.target.checked })}
+                        />
+                        <label htmlFor="isExternal" className="text-sm font-medium text-zinc-700">
+                            External Attendee
+                        </label>
                     </div>
                     <div className="flex gap-3">
                         <div className="relative flex-grow group">
