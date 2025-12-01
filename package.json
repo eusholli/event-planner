@@ -15,6 +15,7 @@
     "@types/react-big-calendar": "^1.16.3",
     "@types/react-dnd": "^2.0.36",
     "@types/react-dnd-html5-backend": "^3.0.2",
+    "@vercel/speed-insights": "^1.2.0",
     "ics": "^3.8.1",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
