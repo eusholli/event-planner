@@ -218,11 +218,25 @@ export default function CalendarPage() {
             meetingType: '',
             otherDetails: '',
             isApproved: false,
-            calendarInviteSent: false
+            calendarInviteSent: false,
+            // Populate strings for the modal form
+            date: moment(start).format('YYYY-MM-DD'),
+            startTime: moment(start).format('HH:mm'),
+            endTime: moment(endDate).format('HH:mm')
         })
         setIsCreating(true)
         setIsModalOpen(true)
     }, [rooms])
+
+    const onEventDrop = useCallback(({ event, start, end, resourceId }: any) => {
+        const updatedEvent = {
+            ...event,
+            start,
+            end,
+            resourceId: resourceId || event.resourceId
+        }
+        handleEventUpdate(updatedEvent)
+    }, [handleEventUpdate])
 
     const handleDoubleClickEvent = (event: Meeting) => {
         setSelectedEvent(event)
@@ -422,6 +436,7 @@ export default function CalendarPage() {
                     resourceTitleAccessor={(resource: any) => resource.title}
                     onSelectSlot={handleSelectSlot}
                     selectable
+                    onEventDrop={onEventDrop}
                     onDoubleClickEvent={(event: any) => handleDoubleClickEvent(event)}
                     resizable={false}
                     className="h-full font-sans text-zinc-600"
