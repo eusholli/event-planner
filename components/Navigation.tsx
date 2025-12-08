@@ -3,20 +3,28 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@/components/auth'
+import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut, useUser } from '@/components/auth'
+import { Roles } from '@/lib/constants'
 
 export default function Navigation() {
     const [isOpen, setIsOpen] = useState(false)
     const pathname = usePathname()
+    const { user } = useUser()
 
-    const links = [
+    const allLinks = [
         { href: '/dashboard', label: 'Meeting Tracker' },
         { href: '/new-meeting', label: 'New Meeting' },
         { href: '/attendees', label: 'Attendees' },
         { href: '/rooms', label: 'Rooms' },
         { href: '/calendar', label: 'Calendar' },
-        { href: '/settings', label: 'Settings' },
+        { href: '/settings', label: 'Settings', roles: [Roles.Root] },
+        { href: '/admin/users', label: 'Users', roles: [Roles.Root] },
     ]
+
+    const links = allLinks.filter(link => {
+        if (!link.roles) return true
+        return user?.publicMetadata?.role && link.roles.includes(user.publicMetadata.role as string)
+    })
 
     const isActive = (path: string) => pathname === path
 

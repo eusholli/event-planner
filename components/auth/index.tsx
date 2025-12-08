@@ -11,6 +11,8 @@ const mockUser = {
     lastName: 'User',
     primaryEmailAddress: { emailAddress: 'mock@example.com' },
     imageUrl: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+    publicMetadata: { role: 'root' },
+    reload: async () => { },
 };
 
 // Mock Hooks
