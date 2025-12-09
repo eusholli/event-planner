@@ -18,6 +18,7 @@ model EventSettings {
   geminiApiKey String?
   tags      String[] @default([])
   meetingTypes String[] @default([])
+  attendeeTypes String[] @default([])
 }
 
 model Attendee {
@@ -31,6 +32,7 @@ model Attendee {
   linkedin           String?
   imageUrl           String?
   isExternal         Boolean   @default(false)
+  type               String?
   meetings           Meeting[] @relation("AttendeeMeetings")
 }
 

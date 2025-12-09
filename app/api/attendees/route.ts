@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal } = body
+        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal, type } = body
 
         if (!name || !title || !company || !email) {
             return NextResponse.json({ error: 'Name, Title, Company, and Email are required.' }, { status: 400 })
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
                 linkedin,
                 imageUrl,
                 isExternal,
+                type,
             },
         })
         return NextResponse.json(attendee)

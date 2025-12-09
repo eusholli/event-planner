@@ -9,7 +9,7 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
-        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal } = body
+        let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal, type } = body
 
         if ((name !== undefined && !name) || (title !== undefined && !title) || (company !== undefined && !company) || (email !== undefined && !email)) {
             return NextResponse.json({ error: 'Name, Title, Company, and Email cannot be empty.' }, { status: 400 })
@@ -42,6 +42,7 @@ export async function PUT(
                 linkedin,
                 imageUrl,
                 isExternal,
+                type,
             },
         })
 

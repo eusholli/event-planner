@@ -15,11 +15,13 @@ interface Attendee {
     linkedin?: string
     imageUrl?: string
     isExternal?: boolean
+    type?: string
 }
 
 export default function AttendeesPage() {
     const [attendees, setAttendees] = useState<Attendee[]>([])
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null)
+    const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
 
     // Edit State
     const [editingAttendee, setEditingAttendee] = useState<Attendee | null>(null)
@@ -32,14 +34,26 @@ export default function AttendeesPage() {
         companyDescription: '',
         linkedin: '',
         imageUrl: '',
-        isExternal: false
+        isExternal: false,
+        type: ''
     })
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         fetchAttendees()
+        fetchSettings()
     }, [])
+
+    const fetchSettings = async () => {
+        try {
+            const res = await fetch('/api/settings')
+            const data = await res.json()
+            setAttendeeTypes(data.attendeeTypes || [])
+        } catch (error) {
+            console.error('Error fetching settings:', error)
+        }
+    }
 
     const fetchAttendees = async () => {
         try {
@@ -83,7 +97,8 @@ export default function AttendeesPage() {
             companyDescription: attendee.companyDescription || '',
             linkedin: attendee.linkedin || '',
             imageUrl: attendee.imageUrl || '',
-            isExternal: attendee.isExternal || false
+            isExternal: attendee.isExternal || false,
+            type: attendee.type || ''
         })
         setIsEditModalOpen(true)
     }
@@ -154,6 +169,11 @@ export default function AttendeesPage() {
                             {attendee.isExternal && (
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                     External
+                                </span>
+                            )}
+                            {attendee.type && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    {attendee.type}
                                 </span>
                             )}
                         </p>
@@ -384,6 +404,24 @@ export default function AttendeesPage() {
                                     External Attendee
                                 </label>
                             </div>
+
+                            {attendeeTypes.length > 0 && (
+                                <div>
+                                    <label htmlFor="edit-type" className="block text-sm font-medium text-zinc-700 mb-1.5">Attendee Type</label>
+                                    <select
+                                        id="edit-type"
+                                        className="input-field"
+                                        value={editFormData.type}
+                                        onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
+                                    >
+                                        <option value="">Select a type...</option>
+                                        {attendeeTypes.map(t => (
+                                            <option key={t} value={t}>{t}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="flex justify-end space-x-3 pt-4">
                                 <button
                                     type="button"

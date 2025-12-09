@@ -11,6 +11,7 @@ export default function SettingsPage() {
     const [geminiApiKey, setGeminiApiKey] = useState('')
     const [tags, setTags] = useState('')
     const [meetingTypes, setMeetingTypes] = useState('')
+    const [attendeeTypes, setAttendeeTypes] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
@@ -24,6 +25,7 @@ export default function SettingsPage() {
                 setGeminiApiKey(data.geminiApiKey || '')
                 setTags(data.tags ? data.tags.join(', ') : '')
                 setMeetingTypes(data.meetingTypes ? data.meetingTypes.join(', ') : '')
+                setAttendeeTypes(data.attendeeTypes ? data.attendeeTypes.join(', ') : '')
                 setLoading(false)
             })
     }, [])
@@ -43,6 +45,7 @@ export default function SettingsPage() {
                     geminiApiKey,
                     tags: tags.split(',').map(t => t.trim()).filter(t => t !== ''),
                     meetingTypes: meetingTypes.split(',').map(t => t.trim()).filter(t => t !== ''),
+                    attendeeTypes: attendeeTypes.split(',').map(t => t.trim()).filter(t => t !== ''),
                 }),
             })
 
@@ -53,6 +56,7 @@ export default function SettingsPage() {
                 setEndDate(data.endDate) // Already in YYYY-MM-DD format
                 setGeminiApiKey(data.geminiApiKey || '')
                 setTags(data.tags ? data.tags.join(', ') : '')
+                setAttendeeTypes(data.attendeeTypes ? data.attendeeTypes.join(', ') : '')
 
                 alert('Settings saved successfully!')
                 router.refresh()
@@ -150,6 +154,19 @@ export default function SettingsPage() {
                             placeholder="e.g. Sales, Internal, Vendor"
                         />
                         <p className="mt-1 text-sm text-slate-500">Define meeting types available for selection.</p>
+                    </div>
+
+                    <div>
+                        <label htmlFor="attendeeTypes" className="block text-sm font-medium text-slate-700 mb-1">Attendee Types (comma separated)</label>
+                        <input
+                            type="text"
+                            id="attendeeTypes"
+                            className="input-field"
+                            value={attendeeTypes}
+                            onChange={e => setAttendeeTypes(e.target.value)}
+                            placeholder="e.g. VIP, Speaker, Guest"
+                        />
+                        <p className="mt-1 text-sm text-slate-500">Define possible attendee types available for selection.</p>
                     </div>
 
                     <div className="pt-4 flex justify-end">

@@ -12,6 +12,7 @@ interface Attendee {
     companyDescription?: string
     linkedin?: string
     imageUrl?: string
+    type?: string
 }
 
 interface AddAttendeeFormProps {
@@ -28,12 +29,14 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
         companyDescription: '',
         linkedin: '',
         imageUrl: '',
-        isExternal: false
+        isExternal: false,
+        type: ''
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [autoCompleting, setAutoCompleting] = useState(false)
     const [hasApiKey, setHasApiKey] = useState(false)
+    const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<Partial<Attendee> | null>(null)
 
     useEffect(() => {
@@ -45,6 +48,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
             const res = await fetch('/api/settings')
             const data = await res.json()
             setHasApiKey(!!data.geminiApiKey)
+            setAttendeeTypes(data.attendeeTypes || [])
         } catch (error) {
             console.error('Error checking settings:', error)
         }
@@ -101,7 +105,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
             })
             const data = await res.json()
             if (res.ok) {
-                setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false })
+                setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false, type: '' })
                 if (onSuccess) {
                     onSuccess(data)
                 }
@@ -224,6 +228,23 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
                             External Attendee
                         </label>
                     </div>
+
+                    {attendeeTypes.length > 0 && (
+                        <div>
+                            <label htmlFor="type" className="block text-sm font-medium text-zinc-700 mb-1.5">Attendee Type</label>
+                            <select
+                                id="type"
+                                className="input-field"
+                                value={formData.type}
+                                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            >
+                                <option value="">Select a type...</option>
+                                {attendeeTypes.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     <div className="flex gap-3">
                         <div className="relative flex-grow group">
                             <button
