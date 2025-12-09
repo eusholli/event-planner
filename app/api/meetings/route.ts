@@ -35,6 +35,7 @@ export async function POST(request: Request) {
             tags,
             requesterEmail,
             meetingType,
+            location,
             otherDetails,
             isApproved,
             calendarInviteSent
@@ -58,8 +59,8 @@ export async function POST(request: Request) {
             if (!date || !startTime || !endTime) {
                 return NextResponse.json({ error: 'Date, Start time, and End time are required for completed meetings' }, { status: 400 })
             }
-            if (!roomId) {
-                return NextResponse.json({ error: 'Room is required for completed meetings' }, { status: 400 })
+            if (!roomId && !location) {
+                return NextResponse.json({ error: 'Room or Location is required for completed meetings' }, { status: 400 })
             }
             if (!attendeeIds || attendeeIds.length === 0) {
                 return NextResponse.json({ error: 'At least one attendee is required for completed meetings' }, { status: 400 })
@@ -151,6 +152,7 @@ export async function POST(request: Request) {
             createdBy,
             requesterEmail,
             meetingType,
+            location,
             otherDetails,
             isApproved,
             calendarInviteSent

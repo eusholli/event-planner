@@ -35,6 +35,7 @@ export default function SchedulePage() {
         duration: '30', // Default 30 minutes
         attendeeIds: [] as string[],
         roomId: '',
+        location: '',
         status: 'STARTED', // Default status
         tags: [] as string[],
         requesterEmail: '',
@@ -87,7 +88,8 @@ export default function SchedulePage() {
         const requestBody: any = {
             title: formData.title,
             purpose: formData.purpose || '',
-            roomId: formData.roomId || null,
+            roomId: formData.roomId === 'external' ? null : (formData.roomId || null),
+            location: formData.roomId === 'external' ? formData.location : null,
             attendeeIds: formData.attendeeIds || [],
             status: formData.status,
             tags: formData.tags || [],
@@ -107,6 +109,11 @@ export default function SchedulePage() {
             }
             if (!formData.roomId) {
                 setError('Room is required for completed meetings')
+                setLoading(false)
+                return
+            }
+            if (formData.roomId === 'external' && !formData.location) {
+                setError('Location is required for external meetings')
                 setLoading(false)
                 return
             }
@@ -175,6 +182,7 @@ export default function SchedulePage() {
                     duration: '30',
                     attendeeIds: [],
                     roomId: '',
+                    location: '',
                     status: 'STARTED',
                     tags: [],
                     requesterEmail: '',
@@ -447,6 +455,7 @@ export default function SchedulePage() {
                                         onChange={e => setFormData({ ...formData, roomId: e.target.value })}
                                     >
                                         <option value="">Select a room...</option>
+                                        <option value="external">External</option>
                                         {rooms.map(room => (
                                             <option key={room.id} value={room.id}>
                                                 {room.name} (Capacity: {room.capacity})
@@ -454,6 +463,23 @@ export default function SchedulePage() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {formData.roomId === 'external' && (
+                                    <div className="col-span-full">
+                                        <label htmlFor="location" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                            Location<span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="location"
+                                            required
+                                            className="input-field"
+                                            value={formData.location}
+                                            onChange={e => setFormData({ ...formData, location: e.target.value })}
+                                            placeholder="e.g. Coffee Shop, Zoom, Client Office"
+                                        />
+                                    </div>
+                                )}
 
 
 

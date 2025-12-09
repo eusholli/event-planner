@@ -13,6 +13,7 @@ interface MeetingCardProps {
         end?: Date | null
         room?: Room
         resourceId?: string
+        location?: string | null
     }
     rooms: Room[]
     onClick?: (e: React.MouseEvent) => void
@@ -59,7 +60,7 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                             <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
-                            {rooms.find(r => r.id === meeting.resourceId)?.name || 'No Room'}
+                            {meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'No Room')}
                         </span>
                         {meeting.meetingType && (
                             <>
@@ -115,7 +116,7 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                     <button
                         onClick={(e) => {
                             e.stopPropagation()
-                            const roomName = rooms.find(r => r.id === meeting.resourceId)?.name || 'Unknown Room'
+                            const roomName = meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'Unknown Room')
                             generateBriefingBook(meeting, roomName)
                         }}
                         className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"

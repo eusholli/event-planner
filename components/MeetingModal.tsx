@@ -27,6 +27,7 @@ export interface Meeting {
     startTime: string | null
     endTime: string | null
     resourceId: string // Room ID
+    location?: string | null
     attendees: { id: string, name: string }[]
     purpose: string
     status: string
@@ -102,6 +103,10 @@ export default function MeetingModal({
             }
             if (!event.resourceId) {
                 setLocalError('Room is required for completed meetings')
+                return
+            }
+            if (event.resourceId === 'external' && !event.location) {
+                setLocalError('Location is required for external meetings')
                 return
             }
             if (!event.attendees || event.attendees.length === 0) {
@@ -319,11 +324,28 @@ export default function MeetingModal({
                             onChange={e => onEventChange({ ...event, resourceId: e.target.value })}
                         >
                             <option value="">Select a Room</option>
+                            <option value="external">External</option>
                             {rooms.map(room => (
                                 <option key={room.id} value={room.id}>{room.name}</option>
                             ))}
                         </select>
                     </div>
+
+                    {event.resourceId === 'external' && (
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                Location<span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                className="input-field"
+                                value={event.location || ''}
+                                onChange={e => onEventChange({ ...event, location: e.target.value })}
+                                placeholder="e.g. Coffee Shop, Zoom, Client Office"
+                            />
+                        </div>
+                    )}
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">
                             Internal Attendees{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}

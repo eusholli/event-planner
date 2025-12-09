@@ -26,6 +26,7 @@ interface DashboardMeeting extends Meeting {
     start: Date | null
     end: Date | null
     room?: Room
+    location?: string | null
 }
 
 export default function DashboardPage() {
@@ -83,7 +84,8 @@ export default function DashboardPage() {
                     title: m.title,
                     start,
                     end,
-                    resourceId: m.roomId,
+                    resourceId: m.roomId || (m.location ? 'external' : null),
+                    location: m.location,
                     attendees: m.attendees,
                     purpose: m.purpose,
                     status: m.status || 'STARTED',
@@ -194,7 +196,13 @@ export default function DashboardPage() {
         if (!selectedEvent) return
 
         // Optimistic Update
-        const editingMeeting = { ...selectedEvent } as DashboardMeeting
+        const editingMeeting = {
+            ...selectedEvent,
+            // Ensure location/room logic is consistent for optimistic update
+            resourceId: selectedEvent.resourceId,
+            location: selectedEvent.resourceId === 'external' ? selectedEvent.location : null
+        } as DashboardMeeting
+
         setMeetings(prev => prev.map(m => {
             if (m.id === editingMeeting.id) {
                 return {
@@ -219,7 +227,8 @@ export default function DashboardPage() {
                     date: editingMeeting.date,
                     startTime: editingMeeting.startTime,
                     endTime: editingMeeting.endTime,
-                    roomId: editingMeeting.resourceId,
+                    // Send null for roomId if external or empty
+                    roomId: (editingMeeting.resourceId === 'external' ? null : editingMeeting.resourceId) || null,
                     attendeeIds: editingMeeting.attendees?.map(a => a.id),
                     status: editingMeeting.status,
                     tags: editingMeeting.tags,
@@ -227,7 +236,8 @@ export default function DashboardPage() {
                     isApproved: editingMeeting.isApproved,
                     calendarInviteSent: editingMeeting.calendarInviteSent,
                     requesterEmail: editingMeeting.requesterEmail,
-                    otherDetails: editingMeeting.otherDetails
+                    otherDetails: editingMeeting.otherDetails,
+                    location: editingMeeting.resourceId === 'external' ? editingMeeting.location : null
                 })
             })
 
@@ -251,7 +261,8 @@ export default function DashboardPage() {
                     calendarInviteSent: savedData.calendarInviteSent,
                     requesterEmail: savedData.requesterEmail,
                     otherDetails: savedData.otherDetails,
-                    createdBy: savedData.createdBy
+                    createdBy: savedData.createdBy,
+                    location: savedData.location
                 }
                 setMeetings(prev => prev.map(m => m.id === formattedSaved.id ? formattedSaved : m))
                 setIsModalOpen(false)

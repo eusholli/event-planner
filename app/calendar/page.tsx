@@ -86,7 +86,8 @@ export default function CalendarPage() {
                         title: meeting.title,
                         start,
                         end,
-                        resourceId: meeting.roomId,
+                        resourceId: meeting.roomId || (meeting.location ? 'external' : null),
+                        location: meeting.location,
                         // Keep original fields for the modal
                         date: meeting.date,
                         startTime: meeting.startTime,
@@ -325,6 +326,7 @@ export default function CalendarPage() {
             tags: selectedEvent.tags,
             requesterEmail: selectedEvent.requesterEmail,
             meetingType: selectedEvent.meetingType,
+            location: selectedEvent.resourceId === 'external' ? selectedEvent.location : null,
             otherDetails: selectedEvent.otherDetails,
             isApproved: selectedEvent.isApproved,
             calendarInviteSent: selectedEvent.calendarInviteSent
@@ -350,7 +352,7 @@ export default function CalendarPage() {
         }
 
         // Always include roomId - send null if empty to clear the room
-        requestBody.roomId = selectedEvent.resourceId || null
+        requestBody.roomId = (selectedEvent.resourceId === 'external' ? null : selectedEvent.resourceId) || null
 
         // Always include attendeeIds (can be empty array)
         requestBody.attendeeIds = selectedEvent.attendees?.map(a => a.id) || []
@@ -378,7 +380,7 @@ export default function CalendarPage() {
                     title: savedEvent.title,
                     start,
                     end,
-                    resourceId: savedEvent.roomId,
+                    resourceId: savedEvent.roomId || (savedEvent.location ? 'external' : null),
                     attendees: savedEvent.attendees,
                     purpose: savedEvent.purpose,
                     status: savedEvent.status || 'STARTED',
@@ -391,7 +393,8 @@ export default function CalendarPage() {
                     calendarInviteSent: savedEvent.calendarInviteSent,
                     date: savedEvent.date,
                     startTime: savedEvent.startTime,
-                    endTime: savedEvent.endTime
+                    endTime: savedEvent.endTime,
+                    location: savedEvent.location
                 }
 
                 if (isCreating) {

@@ -63,6 +63,7 @@ model Meeting {
   createdBy   String?
   requesterEmail String?
   meetingType String?
+  location    String?
   otherDetails String?
   isApproved  Boolean       @default(false)
   calendarInviteSent Boolean @default(false)
