@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Calendar, momentLocalizer, Views, View } from 'react-big-calendar'
 import moment from 'moment'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
@@ -26,6 +26,7 @@ interface Attendee {
 }
 
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
+import MeetingDetailsModal from '@/components/MeetingDetailsModal'
 import { generateBriefingBook } from '@/lib/briefing-book'
 
 interface CalendarEvent extends Meeting {
@@ -39,7 +40,9 @@ export default function CalendarPage() {
     const [allAttendees, setAllAttendees] = useState<Attendee[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedEvent, setSelectedEvent] = useState<Partial<CalendarEvent> | null>(null)
+    const [viewEvent, setViewEvent] = useState<Partial<CalendarEvent> | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [conflicts, setConflicts] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
@@ -50,6 +53,7 @@ export default function CalendarPage() {
     const [date, setDate] = useState(new Date())
     const [view, setView] = useState<View>(Views.DAY)
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
+    const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
         const fetchMeetings = async () => {
@@ -233,7 +237,11 @@ export default function CalendarPage() {
             ...event,
             start,
             end,
-            resourceId: resourceId || event.resourceId
+            resourceId: resourceId || event.resourceId,
+            // Sync string fields for Modal and Card
+            date: moment(start).format('YYYY-MM-DD'),
+            startTime: moment(start).format('HH:mm'),
+            endTime: moment(end).format('HH:mm')
         }
         handleEventUpdate(updatedEvent)
     }, [handleEventUpdate])
@@ -322,13 +330,22 @@ export default function CalendarPage() {
             calendarInviteSent: selectedEvent.calendarInviteSent
         }
 
-        // Only add times if they exist and are valid
-        if (selectedEvent.start && !isNaN(selectedEvent.start.getTime())) {
+        // Use the edited string values if available (from Modal), otherwise fallback to Date objects (from Drag & Drop)
+        if (selectedEvent.date) {
+            requestBody.date = selectedEvent.date
+        } else if (selectedEvent.start) {
             requestBody.date = moment(selectedEvent.start).format('YYYY-MM-DD')
+        }
+
+        if (selectedEvent.startTime) {
+            requestBody.startTime = selectedEvent.startTime
+        } else if (selectedEvent.start) {
             requestBody.startTime = moment(selectedEvent.start).format('HH:mm')
         }
 
-        if (selectedEvent.end && !isNaN(selectedEvent.end.getTime())) {
+        if (selectedEvent.endTime) {
+            requestBody.endTime = selectedEvent.endTime
+        } else if (selectedEvent.end) {
             requestBody.endTime = moment(selectedEvent.end).format('HH:mm')
         }
 
@@ -347,11 +364,20 @@ export default function CalendarPage() {
 
             if (res.ok) {
                 const savedEvent = await res.json()
+
+                // Construct proper Date objects for the calendar
+                let start = new Date()
+                let end = new Date()
+                if (savedEvent.date && savedEvent.startTime && savedEvent.endTime) {
+                    start = new Date(`${savedEvent.date}T${savedEvent.startTime}`)
+                    end = new Date(`${savedEvent.date}T${savedEvent.endTime}`)
+                }
+
                 const formattedEvent = {
                     id: savedEvent.id,
                     title: savedEvent.title,
-                    start: new Date(savedEvent.startTime),
-                    end: new Date(savedEvent.endTime),
+                    start,
+                    end,
                     resourceId: savedEvent.roomId,
                     attendees: savedEvent.attendees,
                     purpose: savedEvent.purpose,
@@ -410,6 +436,21 @@ export default function CalendarPage() {
 
     if (loading) return <div className="p-8 text-center text-zinc-500">Loading calendar...</div>
 
+    const getStatusBadge = (status: string) => {
+        const statusConfig: Record<string, { label: string; className: string }> = {
+            STARTED: { label: 'Started', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+            COMPLETED: { label: 'Completed', className: 'bg-green-50 text-green-700 border-green-200' },
+            CANCELED: { label: 'Canceled', className: 'bg-gray-50 text-gray-700 border-gray-200' },
+        }
+        const config = statusConfig[status] || statusConfig.STARTED
+        if (config.label === 'Started') return null
+        return (
+            <span className={`inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium border leading-none ${config.className}`}>
+                {config.label}
+            </span>
+        )
+    }
+
     return (
         <div className="h-[calc(100vh-120px)] flex flex-col space-y-6">
             <div className="flex justify-between items-center">
@@ -419,6 +460,7 @@ export default function CalendarPage() {
                 </div>
                 {error && <div className="text-red-600 bg-red-50 px-4 py-2 rounded-lg border border-red-200 text-sm font-medium">{error}</div>}
             </div>
+
 
             <div className="flex-1 bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100/50">
                 <DnDCalendar
@@ -437,24 +479,80 @@ export default function CalendarPage() {
                     onSelectSlot={handleSelectSlot}
                     selectable
                     onEventDrop={onEventDrop}
-                    onDoubleClickEvent={(event: any) => handleDoubleClickEvent(event)}
+                    onDoubleClickEvent={(event: any) => {
+                        if (clickTimeoutRef.current) {
+                            clearTimeout(clickTimeoutRef.current)
+                            clickTimeoutRef.current = null
+                        }
+                        handleDoubleClickEvent(event)
+                    }}
+                    onSelectEvent={(event: any) => {
+                        if (clickTimeoutRef.current) {
+                            clearTimeout(clickTimeoutRef.current)
+                        }
+                        clickTimeoutRef.current = setTimeout(() => {
+                            setViewEvent(event)
+                            setIsViewModalOpen(true)
+                        }, 250)
+                    }}
                     resizable={false}
                     className="h-full font-sans text-zinc-600"
                     components={{
                         event: ({ event }: any) => (
-                            <div className="text-xs h-full flex flex-col p-1 group relative">
-                                <div className="font-bold leading-tight mb-0.5 pr-4">{event.title}</div>
-                                {event.purpose && <div className="opacity-80 truncate text-[10px]">{event.purpose}</div>}
+                            <div
+                                className="h-full flex flex-col p-1 group relative overflow-hidden bg-white/90 hover:bg-white border rounded-lg transition-all border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md cursor-pointer"
+                                onClick={(e) => {
+                                    // Let the calendar onSelectEvent handle this, but if we need propagation stopping we can do it here. 
+                                    // React Big Calendar handles event clicks via onSelectEvent prop usually.
+                                }}
+                            >
+                                <div className="font-bold text-xs text-zinc-900 leading-tight pr-6 truncate">
+                                    {event.title}
+                                </div>
+
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                    {event.meetingType && (
+                                        <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 leading-none">
+                                            {event.meetingType}
+                                        </span>
+                                    )}
+                                    {event.isApproved && (
+                                        <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium bg-green-50 text-green-700 border border-green-100 leading-none">
+                                            Appr.
+                                        </span>
+                                    )}
+                                    {event.calendarInviteSent && (
+                                        <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium bg-purple-50 text-purple-700 border border-purple-100 leading-none">
+                                            Sent
+                                        </span>
+                                    )}
+                                    {getStatusBadge(event.status)}
+                                </div>
+
+                                {event.purpose && (
+                                    <div className="opacity-80 truncate text-[10px] text-zinc-500 mt-0.5">
+                                        {event.purpose}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-wrap gap-1 mt-auto">
+                                    {event.tags && event.tags.map((tag: string) => (
+                                        <span key={tag} className="inline-flex items-center px-1 py-0.5 rounded-full text-[8px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200 leading-none">
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
+
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         const roomName = rooms.find(r => r.id === event.resourceId)?.name || 'Unknown Room'
                                         generateBriefingBook(event, roomName)
                                     }}
-                                    className="absolute top-1 right-1 p-0.5 text-white/70 hover:text-white hover:bg-white/20 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                    className="absolute top-2 right-2 p-1 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                                     title="Export Briefing"
                                 >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </button>
@@ -483,6 +581,14 @@ export default function CalendarPage() {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
+            />
+
+            {/* View Modal */}
+            <MeetingDetailsModal
+                isOpen={isViewModalOpen}
+                onClose={() => setIsViewModalOpen(false)}
+                meeting={viewEvent}
+                rooms={rooms}
             />
         </div>
     )

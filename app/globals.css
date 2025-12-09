@@ -45,4 +45,9 @@
   .card:hover {
     box-shadow: 0 8px 30px rgb(0, 0, 0, 0.08);
   }
+
+  /* React Big Calendar Overrides */
+  .rbc-timeslot-group {
+    min-height: 120px !important; /* Force taller hours */
+  }
 }
