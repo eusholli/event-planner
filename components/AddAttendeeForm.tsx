@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 interface Attendee {
     id: string
     name: string
-    title?: string
+    title: string
     email: string
     company: string
     bio: string
@@ -31,6 +31,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
         isExternal: false
     })
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [autoCompleting, setAutoCompleting] = useState(false)
     const [hasApiKey, setHasApiKey] = useState(false)
     const [suggestions, setSuggestions] = useState<Partial<Attendee> | null>(null)
@@ -91,21 +92,25 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+        setError(null)
         try {
             const res = await fetch('/api/attendees', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             })
+            const data = await res.json()
             if (res.ok) {
-                const newAttendee = await res.json()
                 setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false })
                 if (onSuccess) {
-                    onSuccess(newAttendee)
+                    onSuccess(data)
                 }
+            } else {
+                setError(data.error || 'Failed to add attendee')
             }
         } catch (error) {
             console.error('Error adding attendee:', error)
+            setError('An unexpected error occurred')
         } finally {
             setLoading(false)
         }
@@ -115,6 +120,11 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
         <>
             <div className="card sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto">
                 <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-6">Add Attendee</h2>
+                {error && (
+                    <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-sm">
+                        {error}
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Photo Input */}
                     <div className="flex justify-center mb-6">
@@ -154,6 +164,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
                         <input
                             type="text"
                             id="title"
+                            required
                             className="input-field"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -164,6 +175,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
                         <input
                             type="text"
                             id="company"
+                            required
                             className="input-field"
                             value={formData.company}
                             onChange={(e) => setFormData({ ...formData, company: e.target.value })}

@@ -11,6 +11,10 @@ export async function PUT(
         const body = await request.json()
         let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal } = body
 
+        if ((name !== undefined && !name) || (title !== undefined && !title) || (company !== undefined && !company) || (email !== undefined && !email)) {
+            return NextResponse.json({ error: 'Name, Title, Company, and Email cannot be empty.' }, { status: 400 })
+        }
+
         // Auto-enrichment Logic (only if fields are missing)
         if (!linkedin && name && company) {
             const foundUrl = await findLinkedInUrl(name, company)

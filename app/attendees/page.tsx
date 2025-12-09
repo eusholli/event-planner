@@ -7,7 +7,7 @@ import { generateScheduleBriefing } from '@/lib/briefing-book'
 interface Attendee {
     id: string
     name: string
-    title?: string
+    title: string
     email: string
     company: string
     bio: string
@@ -103,10 +103,12 @@ export default function AttendeesPage() {
                 setEditingAttendee(null)
                 fetchAttendees()
             } else {
-                alert('Failed to update attendee')
+                const data = await res.json()
+                alert(data.error || 'Failed to update attendee')
             }
         } catch (error) {
             console.error('Error updating attendee:', error)
+            alert('An unexpected error occurred')
         }
     }
 
@@ -323,6 +325,7 @@ export default function AttendeesPage() {
                                 <input
                                     type="text"
                                     id="edit-title"
+                                    required
                                     className="input-field"
                                     value={editFormData.title}
                                     onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
@@ -333,6 +336,7 @@ export default function AttendeesPage() {
                                 <input
                                     type="text"
                                     id="edit-company"
+                                    required
                                     className="input-field"
                                     value={editFormData.company}
                                     onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}

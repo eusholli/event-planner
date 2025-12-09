@@ -24,6 +24,10 @@ export async function POST(request: Request) {
         const body = await request.json()
         let { name, title, email, bio, company, companyDescription, linkedin, imageUrl, isExternal } = body
 
+        if (!name || !title || !company || !email) {
+            return NextResponse.json({ error: 'Name, Title, Company, and Email are required.' }, { status: 400 })
+        }
+
         // Auto-enrichment Logic
         if (!linkedin && name && company) {
             const foundUrl = await findLinkedInUrl(name, company)
