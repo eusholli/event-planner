@@ -530,7 +530,7 @@ export default function SchedulePage() {
                                     disabled={loading}
                                     className="btn-primary w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {loading ? 'Booking...' : 'Book Meeting'}
+                                    {loading ? 'Booking...' : 'Start Meeting'}
                                 </button>
                             </div>
                         </form>
