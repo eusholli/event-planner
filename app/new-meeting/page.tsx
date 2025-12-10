@@ -183,8 +183,8 @@ export default function SchedulePage() {
                 setFormData({
                     title: '',
                     purpose: '',
-                    date: '',
-                    startTime: '',
+                    date: eventSettings?.startDate || '',
+                    startTime: '09:00',
                     duration: '30',
                     attendeeIds: [],
                     roomId: '',
