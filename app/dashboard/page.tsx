@@ -337,6 +337,61 @@ export default function DashboardPage() {
 
 
 
+    const handleExport = () => {
+        if (filteredMeetings.length === 0) {
+            alert('No meetings to export.')
+            return
+        }
+
+        const headers = [
+            'ID', 'Title', 'Date', 'Start Time', 'End Time', 'Status',
+            'Room/Location', 'Attendees', 'Purpose', 'Tags',
+            'Meeting Type', 'Approved', 'Invite Sent',
+            'Requester Email', 'Other Details', 'Created By'
+        ]
+
+        const csvContent = [
+            headers.join(','),
+            ...filteredMeetings.map(m => {
+                const roomName = m.resourceId === 'external'
+                    ? (m.location || 'External')
+                    : (rooms.find(r => r.id === m.resourceId)?.name || 'Unknown Room')
+
+                const attendeeNames = m.attendees.map(a => a.name).join('; ')
+
+                const row = [
+                    m.id,
+                    `"${(m.title || '').replace(/"/g, '""')}"`,
+                    m.date || '',
+                    m.startTime || '',
+                    m.endTime || '',
+                    m.status || '',
+                    `"${(roomName || '').replace(/"/g, '""')}"`,
+                    `"${(attendeeNames || '').replace(/"/g, '""')}"`,
+                    `"${(m.purpose || '').replace(/"/g, '""')}"`,
+                    `"${(m.tags?.join('; ') || '').replace(/"/g, '""')}"`,
+                    m.meetingType || '',
+                    m.isApproved ? 'Yes' : 'No',
+                    m.calendarInviteSent ? 'Yes' : 'No',
+                    `"${(m.requesterEmail || '').replace(/"/g, '""')}"`,
+                    `"${(m.otherDetails || '').replace(/"/g, '""')}"`,
+                    m.createdBy || ''
+                ]
+                return row.join(',')
+            })
+        ].join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `meetings-export-${moment().format('YYYYMMDD-HHmmss')}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center">
@@ -344,9 +399,17 @@ export default function DashboardPage() {
                     <h1 className="text-4xl font-bold tracking-tight text-zinc-900">Meeting Tracker</h1>
                     <p className="mt-2 text-zinc-500">Overview of your scheduled events.</p>
                 </div>
-                <Link href="/new-meeting" className="btn-primary">
-                    New Meeting
-                </Link>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleExport}
+                        className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
+                    >
+                        Export CSV
+                    </button>
+                    <Link href="/new-meeting" className="btn-primary">
+                        New Meeting
+                    </Link>
+                </div>
             </div>
 
             {/* Stats */}
