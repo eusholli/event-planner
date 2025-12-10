@@ -66,6 +66,12 @@ export default function SchedulePage() {
                 setMeetingTypes(settingsData.meetingTypes)
             }
 
+            // Set defaults if not already set
+            setFormData(prev => ({
+                ...prev,
+                date: prev.date || settingsData.startDate || '',
+                startTime: prev.startTime || '09:00'
+            }))
         })
     }, [])
 
