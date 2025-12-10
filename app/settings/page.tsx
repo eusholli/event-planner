@@ -12,6 +12,7 @@ export default function SettingsPage() {
     const [tags, setTags] = useState('')
     const [meetingTypes, setMeetingTypes] = useState('')
     const [attendeeTypes, setAttendeeTypes] = useState('')
+    const [timezone, setTimezone] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
@@ -26,6 +27,7 @@ export default function SettingsPage() {
                 setTags(data.tags ? data.tags.join(', ') : '')
                 setMeetingTypes(data.meetingTypes ? data.meetingTypes.join(', ') : '')
                 setAttendeeTypes(data.attendeeTypes ? data.attendeeTypes.join(', ') : '')
+                setTimezone(data.timezone || '')
                 setLoading(false)
             })
     }, [])
@@ -46,6 +48,7 @@ export default function SettingsPage() {
                     tags: tags.split(',').map(t => t.trim()).filter(t => t !== ''),
                     meetingTypes: meetingTypes.split(',').map(t => t.trim()).filter(t => t !== ''),
                     attendeeTypes: attendeeTypes.split(',').map(t => t.trim()).filter(t => t !== ''),
+                    timezone,
                 }),
             })
 
@@ -57,6 +60,7 @@ export default function SettingsPage() {
                 setGeminiApiKey(data.geminiApiKey || '')
                 setTags(data.tags ? data.tags.join(', ') : '')
                 setAttendeeTypes(data.attendeeTypes ? data.attendeeTypes.join(', ') : '')
+                setTimezone(data.timezone || '')
 
                 alert('Settings saved successfully!')
                 router.refresh()
@@ -115,6 +119,23 @@ export default function SettingsPage() {
                                 onChange={e => setEndDate(e.target.value)}
                             />
                         </div>
+                    </div>
+
+
+                    <div>
+                        <label htmlFor="timezone" className="block text-sm font-medium text-slate-700 mb-1">Timezone</label>
+                        <select
+                            id="timezone"
+                            className="input-field"
+                            value={timezone}
+                            onChange={e => setTimezone(e.target.value)}
+                        >
+                            <option value="">Select a timezone...</option>
+                            {Intl.supportedValuesOf('timeZone').map(tz => (
+                                <option key={tz} value={tz}>{tz}</option>
+                            ))}
+                        </select>
+                        <p className="mt-1 text-sm text-slate-500">The timezone for the event.</p>
                     </div>
 
                     <div>
@@ -179,7 +200,7 @@ export default function SettingsPage() {
                         </button>
                     </div>
                 </form>
-            </div>
+            </div >
 
             <div className="mt-8 bg-white shadow-sm rounded-xl border border-slate-200 p-6">
                 <h2 className="text-xl font-bold text-slate-900 mb-4">Data Management</h2>
@@ -287,6 +308,6 @@ export default function SettingsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

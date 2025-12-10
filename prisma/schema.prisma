@@ -19,6 +19,7 @@ model EventSettings {
   tags      String[] @default([])
   meetingTypes String[] @default([])
   attendeeTypes String[] @default([])
+  timezone      String?
 }
 
 model Attendee {
