@@ -5,6 +5,10 @@ export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { canWrite } = await import('@/lib/roles')
+    if (!await canWrite()) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const id = (await params).id
     try {
         const body = await request.json()
@@ -28,6 +32,10 @@ export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { canWrite } = await import('@/lib/roles')
+    if (!await canWrite()) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const id = (await params).id
     try {
         await prisma.room.delete({

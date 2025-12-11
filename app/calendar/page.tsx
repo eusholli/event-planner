@@ -6,6 +6,8 @@ import moment from 'moment'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
+import { useUser } from '@/components/auth'
+import { hasWriteAccess } from '@/lib/role-utils'
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop(Calendar)
@@ -54,6 +56,8 @@ export default function CalendarPage() {
     const [view, setView] = useState<View>(Views.DAY)
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
     const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const { user } = useUser()
+    const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
 
     useEffect(() => {
         const fetchMeetings = async () => {
@@ -584,6 +588,7 @@ export default function CalendarPage() {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
+                readOnly={readOnly}
             />
 
             {/* View Modal */}

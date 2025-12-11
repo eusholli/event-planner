@@ -13,9 +13,9 @@ export default function Navigation() {
 
     const allLinks = [
         { href: '/dashboard', label: 'Meeting Tracker' },
-        { href: '/new-meeting', label: 'New Meeting' },
+        { href: '/new-meeting', label: 'New Meeting', roles: [Roles.Root, Roles.Admin] },
         { href: '/attendees', label: 'Attendees' },
-        { href: '/rooms', label: 'Rooms' },
+        { href: '/rooms', label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
         { href: '/calendar', label: 'Calendar' },
         { href: '/settings', label: 'Settings', roles: [Roles.Root] },
         { href: '/admin/users', label: 'Users', roles: [Roles.Root] },

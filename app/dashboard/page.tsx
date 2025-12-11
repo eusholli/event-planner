@@ -6,6 +6,8 @@ import moment from 'moment'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook } from '@/lib/briefing-book'
 import MeetingCard from '@/components/MeetingCard'
+import { useUser } from '@/components/auth'
+import { hasWriteAccess } from '@/lib/role-utils'
 
 interface Room {
     id: string
@@ -36,6 +38,8 @@ export default function DashboardPage() {
     const [availableTags, setAvailableTags] = useState<string[]>([])
     const [meetingTypes, setMeetingTypes] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
+    const { user } = useUser()
+    const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('')
@@ -406,9 +410,11 @@ export default function DashboardPage() {
                     >
                         Export CSV
                     </button>
-                    <Link href="/new-meeting" className="btn-primary">
-                        New Meeting
-                    </Link>
+                    {!readOnly && (
+                        <Link href="/new-meeting" className="btn-primary">
+                            New Meeting
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -630,6 +636,7 @@ export default function DashboardPage() {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
+                readOnly={readOnly}
             />
         </div>
     )

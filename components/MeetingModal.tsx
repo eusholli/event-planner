@@ -55,6 +55,7 @@ interface MeetingModalProps {
     suggestions?: { type: 'room' | 'time', label: string, value: any }[]
     error?: string
     meetingTypes?: string[]
+    readOnly?: boolean
 }
 
 export default function MeetingModal({
@@ -71,7 +72,8 @@ export default function MeetingModal({
     conflicts = [],
     suggestions = [],
     error,
-    meetingTypes = []
+    meetingTypes = [],
+    readOnly = false
 }: MeetingModalProps) {
     const [localError, setLocalError] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
@@ -177,7 +179,8 @@ export default function MeetingModal({
                         <input
                             type="text"
                             required
-                            className="input-field"
+                            disabled={readOnly}
+                            className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             value={event.title || ''}
                             onChange={e => onEventChange({ ...event, title: e.target.value })}
                             data-lpignore="true"
@@ -188,7 +191,8 @@ export default function MeetingModal({
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">Status</label>
                         <select
-                            className="input-field"
+                            className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            disabled={readOnly}
                             value={event.status || 'STARTED'}
                             onChange={e => onEventChange({ ...event, status: e.target.value })}
                         >
@@ -202,7 +206,8 @@ export default function MeetingModal({
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">Requester Email</label>
                         <input
                             type="email"
-                            className="input-field"
+                            disabled={readOnly}
+                            className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             value={event.requesterEmail || ''}
                             onChange={e => onEventChange({ ...event, requesterEmail: e.target.value })}
                             placeholder="requester@example.com"
@@ -212,7 +217,8 @@ export default function MeetingModal({
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
                         <select
-                            className="input-field"
+                            className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            disabled={readOnly}
                             value={event.meetingType || ''}
                             onChange={e => onEventChange({ ...event, meetingType: e.target.value })}
                         >
@@ -231,7 +237,8 @@ export default function MeetingModal({
                             <input
                                 type="date"
                                 required={event.status === 'COMPLETED'}
-                                className="input-field"
+                                disabled={readOnly}
+                                className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 value={event.date || ''}
                                 onChange={e => onEventChange({ ...event, date: e.target.value || null })}
                                 data-lpignore="true"
@@ -244,7 +251,8 @@ export default function MeetingModal({
                             <input
                                 type="time"
                                 required={event.status === 'COMPLETED'}
-                                className="input-field"
+                                disabled={readOnly}
+                                className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 value={event.startTime || ''}
                                 onChange={e => {
                                     const newStartTime = e.target.value
@@ -279,7 +287,8 @@ export default function MeetingModal({
                         <div className="md:col-span-1">
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">Duration</label>
                             <select
-                                className="input-field"
+                                className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                disabled={readOnly}
                                 value={(() => {
                                     if (event.startTime && event.endTime) {
                                         const [startH, startM] = event.startTime.split(':').map(Number)
@@ -318,7 +327,8 @@ export default function MeetingModal({
                             Room{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
                         </label>
                         <select
-                            className="input-field"
+                            className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            disabled={readOnly}
                             required={event.status === 'COMPLETED'}
                             value={event.resourceId || ''}
                             onChange={e => onEventChange({ ...event, resourceId: e.target.value })}
@@ -339,7 +349,8 @@ export default function MeetingModal({
                             <input
                                 type="text"
                                 required
-                                className="input-field"
+                                disabled={readOnly}
+                                className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 value={event.location || ''}
                                 onChange={e => onEventChange({ ...event, location: e.target.value })}
                                 placeholder="e.g. Coffee Shop, Zoom, Client Office"
@@ -434,7 +445,8 @@ export default function MeetingModal({
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">Purpose</label>
                         <textarea
-                            className="input-field h-24 resize-none"
+                            className={`input-field h-24 resize-none ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            disabled={readOnly}
                             value={event.purpose || ''}
                             onChange={e => onEventChange({ ...event, purpose: e.target.value })}
                             placeholder="Meeting agenda or description..."
@@ -444,7 +456,8 @@ export default function MeetingModal({
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 mb-1.5">Other Details</label>
                         <textarea
-                            className="input-field h-24 resize-none"
+                            className={`input-field h-24 resize-none ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            disabled={readOnly}
                             value={event.otherDetails || ''}
                             onChange={e => onEventChange({ ...event, otherDetails: e.target.value })}
                             placeholder="Any other details..."
@@ -458,6 +471,7 @@ export default function MeetingModal({
                                     <label key={tag} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
                                         <input
                                             type="checkbox"
+                                            disabled={readOnly}
                                             checked={event.tags?.includes(tag) || false}
                                             onChange={() => {
                                                 const currentTags = event.tags || []
@@ -466,7 +480,7 @@ export default function MeetingModal({
                                                     : [...currentTags, tag]
                                                 onEventChange({ ...event, tags: newTags })
                                             }}
-                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                            className={`w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500 ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         />
                                         <span className="text-sm text-zinc-700">{tag}</span>
                                     </label>
@@ -487,20 +501,22 @@ export default function MeetingModal({
                     </div>
 
                     <div className="flex space-x-6">
-                        <label className="flex items-center space-x-3 cursor-pointer">
+                        <label className={`flex items-center space-x-3 ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                             <input
                                 type="checkbox"
-                                className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                disabled={readOnly}
+                                className={`w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500 ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 checked={event.isApproved || false}
                                 onChange={e => onEventChange({ ...event, isApproved: e.target.checked })}
                             />
                             <span className="text-sm font-medium text-zinc-700">Approved</span>
                         </label>
 
-                        <label className="flex items-center space-x-3 cursor-pointer">
+                        <label className={`flex items-center space-x-3 ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                             <input
                                 type="checkbox"
-                                className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                disabled={readOnly}
+                                className={`w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500 ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 checked={event.calendarInviteSent || false}
                                 onChange={e => onEventChange({ ...event, calendarInviteSent: e.target.checked })}
                             />
@@ -508,7 +524,7 @@ export default function MeetingModal({
                         </label>
                     </div>
                     <div className="flex justify-between pt-4 items-center">
-                        {!isCreating && (
+                        {!isCreating && !readOnly && (
                             <button
                                 type="button"
                                 onClick={onDelete}
@@ -524,11 +540,13 @@ export default function MeetingModal({
                                 onClick={onClose}
                                 className="btn-secondary"
                             >
-                                Cancel
+                                {readOnly ? 'Close' : 'Cancel'}
                             </button>
-                            <button type="submit" className="btn-primary">
-                                {isCreating ? 'Create' : 'Save Changes'}
-                            </button>
+                            {!readOnly && (
+                                <button type="submit" className="btn-primary">
+                                    {isCreating ? 'Create' : 'Save Changes'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </form>

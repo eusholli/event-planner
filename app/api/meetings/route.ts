@@ -22,6 +22,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const { canWrite } = await import('@/lib/roles')
+        if (!await canWrite()) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
         const body = await request.json()
         const {
             title,
