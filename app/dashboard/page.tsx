@@ -405,6 +405,21 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-3">
                     <button
+                        onClick={() => {
+                            setSearchQuery('')
+                            setSelectedTags([])
+                            setSelectedAttendees([])
+                            setSelectedDate('')
+                            setSelectedRoomId('')
+                            setSelectedMeetingTypes([])
+                            setFilterApproved(false)
+                            setFilterInviteSent(false)
+                        }}
+                        className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
+                    >
+                        Clear Filters
+                    </button>
+                    <button
                         onClick={handleExport}
                         className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
                     >
@@ -579,22 +594,7 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Clear Filters */}
-                        <button
-                            onClick={() => {
-                                setSearchQuery('')
-                                setSelectedTags([])
-                                setSelectedAttendees([])
-                                setSelectedDate('')
-                                setSelectedRoomId('')
-                                setSelectedMeetingTypes([])
-                                setFilterApproved(false)
-                                setFilterInviteSent(false)
-                            }}
-                            className="w-full py-2 text-sm text-zinc-500 hover:text-zinc-700 font-medium border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors"
-                        >
-                            Clear Filters
-                        </button>
+
                     </div>
                 </div>
 
