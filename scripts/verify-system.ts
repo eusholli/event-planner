@@ -12,7 +12,7 @@ async function main() {
         data: { name: 'Integration Test Room', capacity: 10 }
     })
     const attendee = await prisma.attendee.create({
-        data: { name: 'Integration User', email: 'integration@test.com', company: 'Test Corp' }
+        data: { name: 'Integration User', email: 'integration@test.com', company: 'Test Corp', title: 'Tester' }
     })
     console.log(`Created Room: ${room.name} (${room.id})`)
     console.log(`Created Attendee: ${attendee.name} (${attendee.id})`)
