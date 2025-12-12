@@ -20,7 +20,7 @@
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "moment": "^2.30.1",
-    "next": "16.0.3",
+    "next": "16.0.9",
     "react": "19.2.0",
     "react-big-calendar": "^1.19.4",
     "react-dnd": "^16.0.1",
