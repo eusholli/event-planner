@@ -19,6 +19,7 @@ export default function Navigation() {
         { href: '/calendar', label: 'Calendar' },
         { href: '/settings', label: 'Settings', roles: [Roles.Root] },
         { href: '/admin/users', label: 'Users', roles: [Roles.Root] },
+        { href: '/reports', label: 'Reports', roles: [Roles.Root] },
     ]
 
     const links = allLinks.filter(link => {
