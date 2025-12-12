@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import moment from 'moment'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
-import { generateBriefingBook } from '@/lib/briefing-book'
+import { generateBriefingBook, generateScheduleBriefing, generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import MeetingCard from '@/components/MeetingCard'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess } from '@/lib/role-utils'
@@ -414,6 +414,52 @@ export default function DashboardPage() {
         document.body.removeChild(link)
     }
 
+    const handleExportPdf = () => {
+        if (filteredMeetings.length === 0) {
+            alert('No meetings to export.')
+            return
+        }
+
+        // Transform data to match generateMultiMeetingBriefingBook expectations
+        const meetingsForPdf = filteredMeetings.map(m => {
+            const roomName = m.resourceId === 'external'
+                ? (m.location || 'External')
+                : (rooms.find(r => r.id === m.resourceId)?.name || 'Unknown Room')
+
+            // Construct ISO date string for startTime if possible to ensure Moment parses it correctly
+            // The refactored renderMeetingDetails handles both T-separated and separate date/time strings decently,
+            // but consistency helps.
+            let startDateTime = m.startTime || ''
+            if (m.date && m.startTime) {
+                startDateTime = `${m.date}T${m.startTime}`
+            }
+            let endDateTime = m.endTime || ''
+            if (m.date && m.endTime) {
+                endDateTime = `${m.date}T${m.endTime}`
+            }
+
+            return {
+                meeting: {
+                    ...m,
+                    startTime: startDateTime,
+                    endTime: endDateTime
+                },
+                roomName: roomName
+            }
+        })
+
+        // Import dynamically if needed, or assume it's imported at top.
+        // I need to make sure generateMultiMeetingBriefingBook is imported at the top of the file.
+        // Re-checking imports... I will update imports in a separate edit if needed, or rely on previous import update if it included all named exports or wildcard.
+        // Expecting: import { ..., generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
+
+        generateMultiMeetingBriefingBook(
+            "Meeting Briefing Book",
+            "Detailed Report",
+            meetingsForPdf
+        )
+    }
+
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center">
@@ -437,6 +483,12 @@ export default function DashboardPage() {
                         className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
                     >
                         Clear Filters
+                    </button>
+                    <button
+                        onClick={handleExportPdf}
+                        className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
+                    >
+                        Export PDF
                     </button>
                     <button
                         onClick={handleExport}
