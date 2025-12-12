@@ -6,6 +6,7 @@ const isProtectedRoute = createRouteMatcher([
     '/new-meeting(.*)',
     '/settings(.*)',
     '/admin(.*)',
+    '/reports(.*)',
     '/api(.*)'
 ]);
 
