@@ -43,6 +43,7 @@ export default function DashboardPage() {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('')
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['STARTED', 'COMPLETED', 'CANCELED'])
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [selectedAttendees, setSelectedAttendees] = useState<string[]>([])
     const [selectedDate, setSelectedDate] = useState('')
@@ -141,6 +142,9 @@ export default function DashboardPage() {
                 checkMatch(roomName) ||
                 meeting.attendees.some(a => checkMatch(a.name))
 
+            // Status
+            const matchesStatus = selectedStatuses.includes(meeting.status || 'STARTED')
+
             // Tags (Multiple Selection - OR logic? or AND? Usually OR for tags, or AND. Let's do AND for strict filtering, or OR. User said "user controlled choice of multiple tag selection". I'll assume OR (match any selected tag) is more common for "filtering by tags", but AND is more specific. Let's do "Match ANY selected tag" if tags are selected. If no tags selected, show all.)
             // Actually, usually filters are "Show items that have at least one of these tags" (OR).
             const matchesTags = selectedTags.length === 0 ||
@@ -166,7 +170,7 @@ export default function DashboardPage() {
             // Invite Sent Filter
             const matchesInviteSent = !filterInviteSent || meeting.calendarInviteSent
 
-            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType && matchesApproved && matchesInviteSent
+            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType && matchesApproved && matchesInviteSent && matchesStatus
         }).sort((a, b) => {
             // Sort by date/time
             if (!a.date && !b.date) return 0
@@ -183,7 +187,7 @@ export default function DashboardPage() {
             if (!b.startTime) return -1
             return a.startTime!.localeCompare(b.startTime!)
         })
-    }, [meetings, searchQuery, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
+    }, [meetings, searchQuery, selectedStatuses, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
 
     // Stats
     const stats = useMemo(() => {
@@ -421,6 +425,7 @@ export default function DashboardPage() {
                     <button
                         onClick={() => {
                             setSearchQuery('')
+                            setSelectedStatuses(['STARTED', 'COMPLETED', 'CANCELED'])
                             setSelectedTags([])
                             setSelectedAttendees([])
                             setSelectedDate('')
@@ -472,6 +477,30 @@ export default function DashboardPage() {
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm space-y-6">
                         <h3 className="font-semibold text-zinc-900">Filters</h3>
+
+                        {/* Status (First Filter) */}
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
+                            <div className="space-y-2">
+                                {['STARTED', 'COMPLETED', 'CANCELED'].map(status => (
+                                    <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedStatuses.includes(status)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedStatuses(prev => [...prev, status])
+                                                } else {
+                                                    setSelectedStatuses(prev => prev.filter(s => s !== status))
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                        />
+                                        <span className="text-sm text-zinc-600 capitalize">{status.toLowerCase()}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
 
                         {/* Search */}
                         <div>
