@@ -20,6 +20,59 @@ interface Meeting {
 
 export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
     const doc = new jsPDF()
+    renderMeetingDetails(doc, meeting, roomName, true)
+
+    // Save
+    const safeTitle = meeting.title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)
+    const filename = `Briefing_${meeting.date || 'NoDate'}_${safeTitle}.pdf`
+    doc.save(filename)
+}
+
+export const generateMultiMeetingBriefingBook = (title: string, subtitle: string, meetings: { meeting: Meeting, roomName: string }[]) => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 20
+
+    // Cover Page
+    doc.setFillColor(63, 81, 181) // Indigo color
+    doc.rect(0, 0, pageWidth, 60, 'F')
+
+    doc.setFontSize(24)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor('#FFFFFF')
+    doc.text(title, margin, 30)
+
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor('#E0E0E0')
+    doc.text(subtitle, margin, 45)
+
+    doc.setFontSize(12)
+    doc.setTextColor('#333333')
+    doc.text(`Generated on ${moment().format('MMMM D, YYYY')}`, margin, 80)
+    doc.text(`Total Meetings: ${meetings.length}`, margin, 90)
+
+    // Render each meeting
+    meetings.forEach((item, index) => {
+        doc.addPage()
+        renderMeetingDetails(doc, item.meeting, item.roomName, false)
+    })
+
+    // Add page numbers
+    const pageCount = doc.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor('#AAAAAA')
+        doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, doc.internal.pageSize.getHeight() - 10)
+    }
+
+    const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)
+    const timestamp = moment().format('YYYYMMDD-HHmmss')
+    doc.save(`${safeTitle}_${timestamp}.pdf`)
+}
+
+const renderMeetingDetails = (doc: jsPDF, meeting: Meeting, roomName: string, addPageNumbers: boolean) => {
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 20
     let yPos = 20
@@ -45,9 +98,18 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
         yPos += 2
     }
 
+    // Helper to check for page break
+    const checkPageBreak = (heightNeeded: number = 20) => {
+        if (yPos + heightNeeded > doc.internal.pageSize.getHeight() - 20) {
+            doc.addPage()
+            yPos = 20
+        }
+    }
+
     // Helper to add a field
     const addField = (label: string, value: string | undefined | null) => {
         if (!value) return
+        checkPageBreak()
         doc.setFontSize(10)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor('#555555')
@@ -68,7 +130,7 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
     doc.setFontSize(24)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor('#FFFFFF')
-    doc.text('Meeting Briefing Book', margin, 25)
+    doc.text('Meeting Briefing', margin, 25)
 
     yPos = 55
 
@@ -82,7 +144,10 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
 
     let timeStr = 'Time Not Set'
     if (meeting.startTime && meeting.endTime) {
-        timeStr = `${moment(meeting.date + 'T' + meeting.startTime).format('h:mm A')} - ${moment(meeting.date + 'T' + meeting.endTime).format('h:mm A')}`
+        // Handle both full ISO strings and simple time strings
+        const startM = meeting.startTime.includes('T') ? moment(meeting.startTime) : moment(meeting.date + 'T' + meeting.startTime)
+        const endM = meeting.endTime.includes('T') ? moment(meeting.endTime) : moment(meeting.date + 'T' + meeting.endTime)
+        timeStr = `${startM.format('h:mm A')} - ${endM.format('h:mm A')}`
     }
 
     addText(`${dateStr}  |  ${timeStr}`, 12, 'normal', '#666666')
@@ -105,15 +170,18 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
     }
 
     // --- Attendees ---
+    checkPageBreak(40)
     addSectionHeader('Attendees')
 
     const internalAttendees = meeting.attendees.filter(a => !a.isExternal)
     const externalAttendees = meeting.attendees.filter(a => a.isExternal)
 
     if (externalAttendees.length > 0) {
+        checkPageBreak()
         addText('External Guests', 11, 'bold', '#444444')
 
         externalAttendees.forEach(a => {
+            checkPageBreak(30)
             let text = `• ${a.name}`
             if (a.company) text += ` (${a.company})`
             addText(text, 10, 'bold')
@@ -127,8 +195,10 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
     }
 
     if (internalAttendees.length > 0) {
+        checkPageBreak()
         addText('Internal Attendees', 11, 'bold', '#444444')
         internalAttendees.forEach(a => {
+            checkPageBreak()
             addText(`• ${a.name}`, 10)
             yPos -= 2 // Tighten list
         })
@@ -148,41 +218,28 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
     })
 
     if (companies.size > 0) {
+        checkPageBreak(40)
         addSectionHeader('Participating Companies')
         companies.forEach((description, company) => {
+            checkPageBreak(30)
             addText(company, 11, 'bold', '#444444')
             addText(description, 10, 'normal', '#000000')
             yPos += 3
         })
     }
 
-    // --- Additional Details ---
-    if (meeting.tags.length > 0 || meeting.otherDetails || meeting.requesterEmail || meeting.createdBy) {
-        addSectionHeader('Additional Details')
 
-        if (meeting.tags.length > 0) {
-            addField('Tags', meeting.tags.join(', '))
+
+    if (addPageNumbers) {
+        const pageCount = doc.getNumberOfPages()
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i)
+            doc.setFontSize(8)
+            doc.setTextColor('#AAAAAA')
+            doc.text(`Generated on ${moment().format('MMM D, YYYY h:mm A')}`, margin, doc.internal.pageSize.getHeight() - 10)
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, doc.internal.pageSize.getHeight() - 10)
         }
-
-        addField('Requester', meeting.requesterEmail)
-        addField('Created By', meeting.createdBy)
-        addField('Other Details', meeting.otherDetails)
     }
-
-    // Footer
-    const pageCount = doc.getNumberOfPages()
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i)
-        doc.setFontSize(8)
-        doc.setTextColor('#AAAAAA')
-        doc.text(`Generated on ${moment().format('MMM D, YYYY h:mm A')}`, margin, doc.internal.pageSize.getHeight() - 10)
-        doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, doc.internal.pageSize.getHeight() - 10)
-    }
-
-    // Save
-    const safeTitle = meeting.title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)
-    const filename = `Briefing_${meeting.date || 'NoDate'}_${safeTitle}.pdf`
-    doc.save(filename)
 }
 
 export const generateScheduleBriefing = (title: string, subtitle: string, meetings: any[]) => {
