@@ -179,7 +179,7 @@ export default function AttendeesPage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex space-x-1">
                     <button
                         onClick={() => openEditModal(attendee)}
                         className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"

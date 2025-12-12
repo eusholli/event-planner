@@ -186,7 +186,7 @@ export default function RoomsPage() {
                                 <div>
                                     <div className="flex justify-between items-start mb-4">
                                         <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors">{room.name}</h3>
-                                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex space-x-1">
                                             <button
                                                 onClick={() => openEditModal(room)}
                                                 className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
