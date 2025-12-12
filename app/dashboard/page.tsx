@@ -122,10 +122,24 @@ export default function DashboardPage() {
     const filteredMeetings = useMemo(() => {
         return meetings.filter(meeting => {
             // Search (Title & Purpose)
+            // Search (Title, Purpose, Room, Attendees, Other Details)
             const searchLower = searchQuery.toLowerCase()
+
+            // Helper to check string match
+            const checkMatch = (text: string | null | undefined) =>
+                text && text.toLowerCase().includes(searchLower)
+
+            // Find room name
+            const roomName = meeting.resourceId === 'external'
+                ? meeting.location
+                : rooms.find(r => r.id === meeting.resourceId)?.name
+
             const matchesSearch =
-                meeting.title.toLowerCase().includes(searchLower) ||
-                (meeting.purpose && meeting.purpose.toLowerCase().includes(searchLower))
+                checkMatch(meeting.title) ||
+                checkMatch(meeting.purpose) ||
+                checkMatch(meeting.otherDetails) ||
+                checkMatch(roomName) ||
+                meeting.attendees.some(a => checkMatch(a.name))
 
             // Tags (Multiple Selection - OR logic? or AND? Usually OR for tags, or AND. Let's do AND for strict filtering, or OR. User said "user controlled choice of multiple tag selection". I'll assume OR (match any selected tag) is more common for "filtering by tags", but AND is more specific. Let's do "Match ANY selected tag" if tags are selected. If no tags selected, show all.)
             // Actually, usually filters are "Show items that have at least one of these tags" (OR).
@@ -464,7 +478,7 @@ export default function DashboardPage() {
                             <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Search</label>
                             <input
                                 type="text"
-                                placeholder="Search title or purpose..."
+                                placeholder="Search text, room, attendees, other details..."
                                 className="input-field text-sm"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
