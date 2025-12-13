@@ -57,25 +57,50 @@ export default function ReportsPage() {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
     // Fetch Data
+    // Fetch Initial Data
     useEffect(() => {
         Promise.all([
-            fetch('/api/meetings').then(res => res.json()),
             fetch('/api/attendees').then(res => res.json()),
             fetch('/api/settings').then(res => res.json())
-        ]).then(([meetingsData, attendeesData, settingsData]) => {
-            setMeetings(meetingsData)
+        ]).then(([attendeesData, settingsData]) => {
             setAttendees(attendeesData)
             setSettings({
                 attendeeTypes: settingsData.attendeeTypes || [],
                 meetingTypes: settingsData.meetingTypes || [],
                 tags: settingsData.tags || []
             })
-            setLoading(false)
+            // Initial meetings fetch handled by filter effect
         }).catch(err => {
             console.error('Failed to load reports data', err)
             setLoading(false)
         })
     }, [])
+
+    // Fetch Meetings when filters change
+    useEffect(() => {
+        const fetchMeetings = async () => {
+            setLoading(true)
+            try {
+                const params = new URLSearchParams()
+                if (selectedMeetingTypes.length > 0) params.append('meetingType', selectedMeetingTypes.join(','))
+                if (selectedTags.length > 0) params.append('tags', selectedTags.join(','))
+
+                // For reports, we typically want all statuses to calculate stats properly
+                // unless we want to filter specific statuses. The code currently calculates
+                // started/completed/canceled from the fetched list. So we just need the relevant meetings.
+
+                const res = await fetch(`/api/meetings?${params.toString()}`)
+                const meetingsData = await res.json()
+                setMeetings(meetingsData)
+            } catch (err) {
+                console.error('Failed to fetch meetings', err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchMeetings()
+    }, [selectedMeetingTypes, selectedTags])
 
     // Process Data
     const tableData = useMemo(() => {
@@ -92,17 +117,7 @@ export default function ReportsPage() {
                 const hasAttendee = m.attendees.some(a => a.id === attendee.id)
                 if (!hasAttendee) return false
 
-                // Meeting Type Filter
-                if (selectedMeetingTypes.length > 0) {
-                    if (!m.meetingType || !selectedMeetingTypes.includes(m.meetingType)) return false
-                }
-
-                // Tags Filter (Match ANY selected tag)
-                if (selectedTags.length > 0) {
-                    const hasTag = m.tags?.some(t => selectedTags.includes(t))
-                    if (!hasTag) return false
-                }
-
+                // Server-side filtering already handled meetingType and tags
                 return true
             })
 
