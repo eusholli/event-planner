@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { generateScheduleBriefing } from '@/lib/briefing-book'
+import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 
 interface Room {
     id: string
@@ -110,10 +110,25 @@ export default function RoomsPage() {
             const res = await fetch(`/api/rooms/${room.id}/briefing`)
             const data = await res.json()
 
-            generateScheduleBriefing(
-                `Room Schedule: ${room.name}`,
-                `Capacity: ${room.capacity}`,
-                data.meetings || []
+            // Map meetings to the format expected by generateMultiMeetingBriefingBook
+            // data.meetings matches the structure but we need to ensure dates are strings if they aren't already,
+            // or just pass them if they are clean.
+            // But we also need to wrap them in { meeting, roomName } objects.
+            const meetingsForPdf = (data.meetings || []).map((m: any) => ({
+                meeting: {
+                    ...m,
+                    // Ensuring start/end times are formatted as ISO strings if they aren't
+                    startTime: m.startTime || '',
+                    endTime: m.endTime || ''
+                },
+                roomName: room.name
+            }))
+
+            generateMultiMeetingBriefingBook(
+                `Room Meeting Briefing`,
+                `${room.name} (Capacity: ${room.capacity})`,
+                meetingsForPdf,
+                `${room.name}_Briefing_Book`
             )
         } catch (error) {
             console.error("Failed to generate PDF", error)

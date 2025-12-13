@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
-import { generateScheduleBriefing } from '@/lib/briefing-book'
+import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 
 interface Attendee {
     id: string
@@ -133,10 +133,20 @@ export default function AttendeesPage() {
             const res = await fetch(`/api/attendees/${attendee.id}/briefing`)
             const data = await res.json()
 
-            generateScheduleBriefing(
-                `Briefing Book: ${attendee.name}`,
-                `${attendee.title ? attendee.title + ' at ' : ''}${attendee.company}`,
-                data.meetings || []
+            const meetingsForPdf = (data.meetings || []).map((m: any) => ({
+                meeting: {
+                    ...m,
+                    startTime: m.startTime || '',
+                    endTime: m.endTime || ''
+                },
+                roomName: m.room?.name || (m.location ? m.location : 'Unknown')
+            }))
+
+            generateMultiMeetingBriefingBook(
+                `Attendee Briefing Book`,
+                `${attendee.name} - ${attendee.title ? attendee.title + ' at ' : ''}${attendee.company}`,
+                meetingsForPdf,
+                `${attendee.name}_Briefing_Book`
             )
         } catch (error) {
             console.error("Failed to generate PDF", error)

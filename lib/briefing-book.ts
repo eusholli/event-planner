@@ -28,7 +28,7 @@ export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
     doc.save(filename)
 }
 
-export const generateMultiMeetingBriefingBook = (title: string, subtitle: string, meetings: { meeting: Meeting, roomName: string }[]) => {
+export const generateMultiMeetingBriefingBook = (title: string, subtitle: string, meetings: { meeting: Meeting, roomName: string }[], filenamePrefix?: string) => {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 20
@@ -67,7 +67,8 @@ export const generateMultiMeetingBriefingBook = (title: string, subtitle: string
         doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, doc.internal.pageSize.getHeight() - 10)
     }
 
-    const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)
+    const baseName = filenamePrefix || title
+    const safeTitle = baseName.replace(/[^a-z0-9]/gi, '_').substring(0, 50)
     const timestamp = moment().format('YYYYMMDD-HHmmss')
     doc.save(`${safeTitle}_${timestamp}.pdf`)
 }
