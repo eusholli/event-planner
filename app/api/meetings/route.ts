@@ -6,16 +6,86 @@ export const dynamic = 'force-dynamic'
 
 
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url)
+
+        // Extract filters
+        const date = searchParams.get('date')
+        const roomId = searchParams.get('roomId')
+        const searchQuery = searchParams.get('search')?.toLowerCase()
+        const statuses = searchParams.get('status')?.split(',').filter(Boolean)
+        const tags = searchParams.get('tags')?.split(',').filter(Boolean)
+        const meetingTypes = searchParams.get('meetingType')?.split(',').filter(Boolean)
+        const attendeeIds = searchParams.get('attendeeIds')?.split(',').filter(Boolean)
+        const isApproved = searchParams.get('isApproved')
+        const calendarInviteSent = searchParams.get('calendarInviteSent')
+
+        // Build Where Clause
+        const where: any = {}
+
+        if (date) {
+            where.date = date
+        }
+
+        if (roomId) {
+            where.roomId = roomId
+        }
+
+        if (statuses && statuses.length > 0) {
+            where.status = { in: statuses }
+        }
+
+        if (tags && tags.length > 0) {
+            where.tags = { hasSome: tags }
+        }
+
+        if (meetingTypes && meetingTypes.length > 0) {
+            where.meetingType = { in: meetingTypes }
+        }
+
+        if (attendeeIds && attendeeIds.length > 0) {
+            where.attendees = {
+                some: {
+                    id: { in: attendeeIds }
+                }
+            }
+        }
+
+        if (isApproved === 'true') where.isApproved = true
+        if (calendarInviteSent === 'true') where.calendarInviteSent = true
+
+        if (searchQuery) {
+            where.OR = [
+                { title: { contains: searchQuery, mode: 'insensitive' } },
+                { purpose: { contains: searchQuery, mode: 'insensitive' } },
+                { location: { contains: searchQuery, mode: 'insensitive' } },
+                { otherDetails: { contains: searchQuery, mode: 'insensitive' } },
+                // Search in attendees
+                {
+                    attendees: {
+                        some: {
+                            name: { contains: searchQuery, mode: 'insensitive' }
+                        }
+                    }
+                }
+            ]
+        }
+
         const meetings = await prisma.meeting.findMany({
+            where,
             include: {
                 room: true,
                 attendees: true,
             },
+            orderBy: [
+                { date: 'asc' },
+                { startTime: 'asc' }
+            ]
         })
         return NextResponse.json(meetings)
     } catch (error) {
+        console.error('Failed to fetch meetings:', error)
         return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 })
     }
 }

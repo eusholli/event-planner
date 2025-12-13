@@ -59,13 +59,58 @@ export default function DashboardPage() {
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
     const [error, setError] = useState('')
 
+    // Debounced Search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchMeetings()
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    // Immediate Fetch for other filters
+    useEffect(() => {
+        // Skip initial mount fetch to avoid double fetch with search effect
+        // Actually, we can just let them both run or manage it. 
+        // Simplest is to just fetch when these change.
+        fetchMeetings()
+    }, [selectedStatuses, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
+
+    // Initial Load
     useEffect(() => {
         Promise.all([
-            fetch('/api/meetings', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/rooms', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/attendees', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/settings', { cache: 'no-store' }).then(res => res.json())
-        ]).then(([meetingsData, roomsData, attendeesData, settingsData]) => {
+        ]).then(([roomsData, attendeesData, settingsData]) => {
+            setRooms(roomsData)
+            setAllAttendees(attendeesData)
+            if (settingsData && settingsData.tags) {
+                setAvailableTags(settingsData.tags)
+            }
+            if (settingsData && settingsData.meetingTypes) {
+                setMeetingTypes(settingsData.meetingTypes)
+            }
+            // fetchMeetings is handled by the other effects
+        })
+    }, [])
+
+    const fetchMeetings = async () => {
+        setLoading(true)
+        try {
+            const params = new URLSearchParams()
+            if (selectedDate) params.append('date', selectedDate)
+            if (selectedRoomId) params.append('roomId', selectedRoomId)
+            if (searchQuery) params.append('search', searchQuery)
+            if (selectedStatuses.length > 0) params.append('status', selectedStatuses.join(','))
+            if (selectedTags.length > 0) params.append('tags', selectedTags.join(','))
+            if (selectedMeetingTypes.length > 0) params.append('meetingType', selectedMeetingTypes.join(','))
+            if (selectedAttendees.length > 0) params.append('attendeeIds', selectedAttendees.join(','))
+            if (filterApproved) params.append('isApproved', 'true')
+            if (filterInviteSent) params.append('calendarInviteSent', 'true')
+
+            const res = await fetch(`/api/meetings?${params.toString()}`, { cache: 'no-store' })
+            const meetingsData = await res.json()
+
             if (!Array.isArray(meetingsData)) {
                 console.error('Failed to fetch meetings:', meetingsData)
                 setMeetings([])
@@ -107,71 +152,17 @@ export default function DashboardPage() {
                 }
             })
             setMeetings(formattedEvents)
-            setRooms(roomsData)
-            setAllAttendees(attendeesData)
-            if (settingsData && settingsData.tags) {
-                setAvailableTags(settingsData.tags)
-            }
-            if (settingsData && settingsData.meetingTypes) {
-                setMeetingTypes(settingsData.meetingTypes)
-            }
+        } catch (error) {
+            console.error('Error fetching meetings:', error)
+        } finally {
             setLoading(false)
-        })
-    }, [])
+        }
+    }
 
-    // Filter Logic
+    // Filter Logic - MOVED TO SERVER
+    // We still keep the sort logic client-side as requested in the plan
     const filteredMeetings = useMemo(() => {
-        return meetings.filter(meeting => {
-            // Search (Title & Purpose)
-            // Search (Title, Purpose, Room, Attendees, Other Details)
-            const searchLower = searchQuery.toLowerCase()
-
-            // Helper to check string match
-            const checkMatch = (text: string | null | undefined) =>
-                text && text.toLowerCase().includes(searchLower)
-
-            // Find room name
-            const roomName = meeting.resourceId === 'external'
-                ? meeting.location
-                : rooms.find(r => r.id === meeting.resourceId)?.name
-
-            const matchesSearch =
-                checkMatch(meeting.title) ||
-                checkMatch(meeting.purpose) ||
-                checkMatch(meeting.otherDetails) ||
-                checkMatch(roomName) ||
-                meeting.attendees.some(a => checkMatch(a.name))
-
-            // Status
-            const matchesStatus = selectedStatuses.includes(meeting.status || 'STARTED')
-
-            // Tags (Multiple Selection - OR logic? or AND? Usually OR for tags, or AND. Let's do AND for strict filtering, or OR. User said "user controlled choice of multiple tag selection". I'll assume OR (match any selected tag) is more common for "filtering by tags", but AND is more specific. Let's do "Match ANY selected tag" if tags are selected. If no tags selected, show all.)
-            // Actually, usually filters are "Show items that have at least one of these tags" (OR).
-            const matchesTags = selectedTags.length === 0 ||
-                selectedTags.some(tag => meeting.tags?.includes(tag))
-
-            // Attendees (Multiple Selection - Match ANY)
-            const matchesAttendees = selectedAttendees.length === 0 ||
-                selectedAttendees.some(attendeeId => meeting.attendees.some(a => a.id === attendeeId))
-
-            // Date
-            const matchesDate = !selectedDate ||
-                (meeting.date === selectedDate)
-
-            // Room
-            const matchesRoom = !selectedRoomId || meeting.resourceId === selectedRoomId
-
-            const matchesMeetingType = selectedMeetingTypes.length === 0 ||
-                (meeting.meetingType && selectedMeetingTypes.includes(meeting.meetingType))
-
-            // Approved Filter
-            const matchesApproved = !filterApproved || meeting.isApproved
-
-            // Invite Sent Filter
-            const matchesInviteSent = !filterInviteSent || meeting.calendarInviteSent
-
-            return matchesSearch && matchesTags && matchesAttendees && matchesDate && matchesRoom && matchesMeetingType && matchesApproved && matchesInviteSent && matchesStatus
-        }).sort((a, b) => {
+        return meetings.sort((a, b) => {
             // Sort by date/time
             if (!a.date && !b.date) return 0
             if (!a.date) return 1
@@ -187,7 +178,7 @@ export default function DashboardPage() {
             if (!b.startTime) return -1
             return a.startTime!.localeCompare(b.startTime!)
         })
-    }, [meetings, searchQuery, selectedStatuses, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
+    }, [meetings])
 
     // Stats
     const stats = useMemo(() => {
