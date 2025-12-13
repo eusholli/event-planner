@@ -38,6 +38,7 @@ export default function DashboardPage() {
     const [availableTags, setAvailableTags] = useState<string[]>([])
     const [meetingTypes, setMeetingTypes] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
+    const [eventSettings, setEventSettings] = useState<{ startDate?: string, endDate?: string } | null>(null)
     const { user } = useUser()
     const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
 
@@ -89,6 +90,12 @@ export default function DashboardPage() {
             }
             if (settingsData && settingsData.meetingTypes) {
                 setMeetingTypes(settingsData.meetingTypes)
+            }
+            if (settingsData) {
+                setEventSettings({
+                    startDate: settingsData.startDate,
+                    endDate: settingsData.endDate
+                })
             }
             // fetchMeetings is handled by the other effects
         })
@@ -564,6 +571,8 @@ export default function DashboardPage() {
                                 type="date"
                                 className="input-field text-sm"
                                 value={selectedDate}
+                                min={eventSettings?.startDate}
+                                max={eventSettings?.endDate}
                                 onChange={e => setSelectedDate(e.target.value)}
                             />
                         </div>
