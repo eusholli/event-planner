@@ -8,9 +8,13 @@ For a detailed guide on how to use the application features, please refer to the
 
 ## Features
 
-- **Meeting Tracker**: Real-time overview of event statistics.
+- **Meeting Tracker**: Real-time overview of event statistics with optional PDF Briefing Book export.
+- **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV).
+- **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User).
+- **AI Chat Assistant**: Smart chatbot for event queries, aware of event context and dates.
+- **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
 - **Meeting Tags**: Categorize meetings with custom tags (e.g., "Internal", "Client").
-- **Attendee Management**: Add, edit, and track event attendees.
+- **Attendee Management**: Add, edit, and track event attendees (Read-only for standard users).
 - **AI-Powered Auto Complete**: Use Google Gemini to automatically populate attendee professional details.
 - **Schedule Management**: Drag-and-drop interface for organizing meetings and sessions.
 - **Data Management**: Import, Export, Reset database, and Delete Event Settings capabilities.

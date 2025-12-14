@@ -3,11 +3,23 @@
 Welcome to the Event Planner application! This guide will help you navigate the features and manage your event effectively.
 
 ## Table of Contents
-1. [Meeting Tracker](#meeting-tracker)
-2. [Managing Attendees](#managing-attendees)
-3. [Auto Complete Feature](#auto-complete-feature)
-4. [Scheduling Meetings](#scheduling-meetings)
-5. [Settings & Data Management](#settings--data-management)
+1. [User Roles & Permissions](#user-roles--permissions)
+2. [Meeting Tracker](#meeting-tracker)
+3. [Managing Attendees](#managing-attendees)
+4. [Auto Complete Feature](#auto-complete-feature)
+5. [AI Chat Assistant](#ai-chat-assistant)
+6. [Scheduling Meetings](#scheduling-meetings)
+7. [Reports](#reports)
+8. [Settings & Data Management](#settings--data-management)
+
+---
+
+## User Roles & Permissions
+The application serves different types of users with specific access levels:
+
+- **Root**: Full administrative access. Can manage all settings, users, and data. Access to all pages including Settings and Admin User Management.
+- **Admin**: Operational access. Can view Reports, manage Schedules and Attendees, but cannot modify system-wide Settings or User permissions.
+- **User**: Read-only access. Can view Dashboards, Schedules, and Attendees but cannot create new meetings or edit data. Restricted from sensitive areas.
 
 ---
 
@@ -16,11 +28,16 @@ The **Meeting Tracker** is your landing page. It provides a quick overview of yo
 - **Total Attendees**: The number of people registered.
 - **Total Meetings**: The number of scheduled sessions.
 - **Room Utilization**: How effectively your venue space is being used.
+- **Export Options**: Download data as a CSV file or a comprehensive **PDF Briefing Book**.
+- **Enhanced Search**: Filter meetings by searching across titles, attendees, rooms, and descriptions.
 
 ---
 
 ## Managing Attendees
 Navigate to the **Attendees** page to view and manage your guest list.
+
+> **Note**: Users with the **User** role have read-only access and cannot add or edit attendees.
+
 
 ### Adding an Attendee
 1.  Click the **Add Attendee** button.
@@ -44,6 +61,13 @@ The application integrates with Google Gemini to help you quickly fill in profes
 4.  Review the suggestions in the modal and click **Accept & Fill** to populate the form.
 
 > **Note**: This feature requires a valid Google Gemini API Key to be configured in [Settings](#settings--data-management).
+
+---
+
+## AI Chat Assistant
+The built-in **AI Chat** allows you to ask natural language questions about the event.
+- **Context Aware**: The AI knows your event's start and end dates and general configuration.
+- **Usage**: Click the chat icon to open the assistant and ask questions like "How do I add an attendee?" or "What acts are performing?".
 
 ---
 
@@ -77,6 +101,17 @@ You can categorize your meetings using tags.
 - **Drag and Drop**: You can drag meetings around the calendar to reschedule them.
 - **Resize**: Drag the bottom edge of a meeting block to change its duration.
 - **View Details**: Click on a meeting to view its details or delete it.
+
+---
+
+## Reports
+*Access: Root and Admin users only.*
+
+The **Reports** page provides deep insights into meeting metrics and attendee engagement.
+- **Analytics Table**: View meetings breakdown (Started, Canceled, Completed) per attendee.
+- **Filtering**: Filter by Attendee Type, Meeting Type, and Tags.
+- **Sorting**: Click column headers to sort data.
+- **Export**: Generate PDF or CSV reports for offline analysis.
 
 ---
 
