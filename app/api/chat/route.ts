@@ -40,7 +40,7 @@ Assume all queries are relative to this event unless specified otherwise.
 `;
 
         const result = await streamText({
-            model: google('gemini-2.5-flash'),
+            model: google('gemini-2.5-flash-lite'),
             system: systemPrompt,
             messages,
             onError: (error) => {
