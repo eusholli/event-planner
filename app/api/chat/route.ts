@@ -26,8 +26,22 @@ export async function POST(req: Request) {
             apiKey: settings.geminiApiKey,
         });
 
+        // Construct System Prompt with Event Context
+        const systemPrompt = `
+You are the AI assistant for the event "${settings.name}".
+Event Details:
+- Start Date: ${settings.startDate.toISOString().split('T')[0]}
+- End Date: ${settings.endDate.toISOString().split('T')[0]}
+- Timezone: ${settings.timezone || 'UTC'}
+- Current Date: ${new Date().toISOString().split('T')[0]}
+
+Use this context to answer questions. If the user mentions "Day 1", it refers to the start date.
+Assume all queries are relative to this event unless specified otherwise.
+`;
+
         const result = await streamText({
             model: google('gemini-2.5-flash'),
+            system: systemPrompt,
             messages,
             onError: (error) => {
                 console.error('Chat API Stream Error:', error);
@@ -171,6 +185,43 @@ export async function POST(req: Request) {
                     },
                 }),
 
+                checkAttendeeAvailability: tool({
+                    description: 'Check if a specific attendee is available at a given time.',
+                    parameters: z.object({
+                        attendeeEmail: z.string(),
+                        date: z.string().describe('YYYY-MM-DD'),
+                        startTime: z.string().describe('HH:mm'),
+                        endTime: z.string().describe('HH:mm'),
+                    }),
+                    execute: async ({ attendeeEmail, date, startTime, endTime }: { attendeeEmail: string, date: string, startTime: string, endTime: string }) => {
+                        const attendee = await prisma.attendee.findUnique({
+                            where: { email: attendeeEmail },
+                        });
+
+                        if (!attendee) {
+                            return { error: `Attendee with email ${attendeeEmail} not found.` };
+                        }
+
+                        const conflicts = await prisma.meeting.findMany({
+                            where: {
+                                attendees: { some: { id: attendee.id } },
+                                date,
+                                status: { not: 'CANCELED' },
+                                OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }],
+                            },
+                        });
+
+                        if (conflicts.length > 0) {
+                            return {
+                                status: 'Busy',
+                                conflicts: conflicts.map(c => `${c.startTime}-${c.endTime}: ${c.title}`)
+                            };
+                        }
+
+                        return { status: 'Available' };
+                    }
+                }),
+
                 addAttendee: tool({
                     description: 'Add a new attendee.',
                     parameters: z.object({
@@ -246,15 +297,13 @@ export async function POST(req: Request) {
             maxSteps: 5,
         });
 
-    });
-
-    return (result as any).toDataStreamResponse({
-        getErrorMessage: (error: any) => {
-            return error.message || String(error);
-        }
-    });
-} catch (error: any) {
-    console.error('Chat API Error:', error);
-    return new Response(`Chat API Error: ${error.message || error}`, { status: 500 });
-}
+        return (result as any).toDataStreamResponse({
+            getErrorMessage: (error: any) => {
+                return error.message || String(error);
+            }
+        });
+    } catch (error: any) {
+        console.error('Chat API Error:', error);
+        return new Response(`Chat API Error: ${error.message || error}`, { status: 500 });
+    }
 }
