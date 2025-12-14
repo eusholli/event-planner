@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher([
     '/dashboard(.*)',
@@ -10,12 +11,33 @@ const isProtectedRoute = createRouteMatcher([
     '/api(.*)'
 ]);
 
+const isRootRoute = createRouteMatcher([
+    '/settings(.*)',
+    '/admin/users(.*)'
+]);
+
+const isReportRoute = createRouteMatcher([
+    '/reports(.*)'
+]);
+
 export default clerkMiddleware(async (auth, req) => {
     if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
         return;
     }
     if (isProtectedRoute(req)) {
         await auth.protect();
+
+        const { sessionClaims } = await auth();
+        const role = sessionClaims?.metadata?.role;
+
+        // Redirect logic for RBAC
+        if (isRootRoute(req) && role !== 'root') {
+            return NextResponse.redirect(new URL('/access-denied', req.url));
+        }
+
+        if (isReportRoute(req) && role !== 'root' && role !== 'admin') {
+            return NextResponse.redirect(new URL('/access-denied', req.url));
+        }
     }
 });
 
