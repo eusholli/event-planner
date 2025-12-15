@@ -5,7 +5,7 @@ import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function ChatPage() {
-    const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
+    const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({
         api: '/api/chat',
         onError: (err) => {
             console.error('Chat error:', err);
@@ -14,6 +14,25 @@ export default function ChatPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isReady, setIsReady] = useState<boolean | null>(null);
+
+    // Load messages from localStorage on mount
+    useEffect(() => {
+        const savedMessages = localStorage.getItem('chat_messages');
+        if (savedMessages) {
+            try {
+                setMessages(JSON.parse(savedMessages));
+            } catch (e) {
+                console.error('Failed to parse chat messages:', e);
+            }
+        }
+    }, [setMessages]);
+
+    // Save messages to localStorage whenever they change
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem('chat_messages', JSON.stringify(messages));
+        }
+    }, [messages]);
 
     useEffect(() => {
         // Check if Chat is ready (configured)
@@ -37,12 +56,33 @@ export default function ChatPage() {
         }
     }, [isLoading]);
 
+    const handleClearChat = () => {
+        setMessages([]);
+        localStorage.removeItem('chat_messages');
+    };
+
     // Show banner if explicit error OR not ready (after check completes)
     const showBanner = error || (isReady === false);
 
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] bg-zinc-50">
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-4">
+                {/* Header with Clear Button */}
+                <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm text-zinc-500">
+                        {messages.length > 0 ? "Conversation History" : "Start a new conversation"}
+                    </div>
+                    {messages.length > 0 && (
+                        <button
+                            onClick={handleClearChat}
+                            className="text-xs text-red-600 hover:text-red-800 hover:underline px-2 py-1"
+                            title="Clear conversation history"
+                        >
+                            Clear Chat
+                        </button>
+                    )}
+                </div>
+
                 {/* Error Banner */}
                 {showBanner && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
