@@ -31,8 +31,8 @@ export async function GET(
         const { searchParams } = new URL(request.url)
         const onsiteName = searchParams.get('onsiteName')
         const onsitePhone = searchParams.get('onsitePhone')
-
-        const onsiteContact = (onsiteName && onsitePhone) ? { name: onsiteName, phone: onsitePhone } : undefined
+        // Generate Invite Content
+        const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
 
         // Generate content
         const content = await generateInviteContent(meeting as any, onsiteContact)

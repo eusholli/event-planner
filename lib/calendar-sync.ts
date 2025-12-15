@@ -1,5 +1,7 @@
 import { createEvent, EventAttributes } from 'ics'
 
+
+
 export interface Meeting {
     id: string
     title: string
@@ -63,9 +65,13 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
     const attendeesList = meeting.attendees.map(a => a.name).join('\n')
     const attendeesListHtml = meeting.attendees.map(a => a.name).join('<br>')
 
-    const onsiteLine = onsiteContact
-        ? `Onsite Contact: ${onsiteContact.name} (call / text: ${onsiteContact.phone})`
-        : 'Onsite Contact: [Name] (call / text: [Phone])'
+    let onsiteLine = ''
+    if (onsiteContact) {
+        const parts = []
+        if (onsiteContact.name) parts.push(`Contact: ${onsiteContact.name}`)
+        if (onsiteContact.phone) parts.push(`(call / text: ${onsiteContact.phone})`)
+        onsiteLine = parts.join(' ')
+    }
 
     const body = `Subject: ${subject}
 Location: ${locationString}
