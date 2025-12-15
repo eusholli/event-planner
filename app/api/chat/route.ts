@@ -7,8 +7,8 @@ import { canWrite } from '@/lib/roles';
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment';
 import { sendCalendarInvites } from '@/lib/calendar-sync';
 
-// Allow streaming responses up to 30 seconds
-export const maxDuration = 30;
+// Allow streaming responses up to 300 seconds
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
@@ -37,6 +37,17 @@ Event Details:
 
 Use this context to answer questions. If the user mentions "Day 1", it refers to the start date.
 Assume all queries are relative to this event unless specified otherwise.
+
+IMPORTANT:
+- When you receive tool outputs, process them and provide the FINAL ANSWER immediately.
+- Do NOT output status messages like "I am processing", "I have retrieved the data", or "This will take a moment".
+- If the result requires complex analysis, perform the analysis and output the result in a single response.
+
+VERIFICATION & ACCURACY:
+- You must STRICTLY use the data provided by the tools. Do NOT invent meetings, attendees, or details.
+- When performing counts (e.g. "how many meetings"), you MUST manually count the items in the tool output JSON before answering. Double-check your count.
+- If the tool returns no data (empty array), state clearly that there are no results. Do not make up plausible data.
+- Quote specific details from the tool output to support your answer when possible.
 `;
 
         const result = await streamText({
@@ -291,6 +302,59 @@ Assume all queries are relative to this event unless specified otherwise.
                         const rooms = await prisma.room.findMany();
                         return { rooms };
                     }
+                }),
+
+                get_meetings: tool({
+                    description: 'Get meetings with comprehensive filtering options (date, room, status, tags, etc). Use this for complex queries.',
+                    parameters: z.object({
+                        date: z.string().optional().describe('Filter by date (YYYY-MM-DD)'),
+                        roomId: z.string().optional().describe('Filter by Room ID'),
+                        search: z.string().optional().describe('Search term for title, purpose, location, details, attendee names'),
+                        statuses: z.array(z.string()).optional().describe('List of statuses to filter by (e.g. ["STARTED", "COMPLETED"])'),
+                        tags: z.array(z.string()).optional().describe('List of tags to include'),
+                        meetingTypes: z.array(z.string()).optional().describe('List of meeting types to filter by'),
+                        attendeeIds: z.array(z.string()).optional().describe('List of attendee IDs to filter by'),
+                        isApproved: z.boolean().optional().describe('Filter by approval status'),
+                        calendarInviteSent: z.boolean().optional().describe('Filter by calendar invite status'),
+                    }),
+                    execute: async ({ date, roomId, search, statuses, tags, meetingTypes, attendeeIds, isApproved, calendarInviteSent }) => {
+                        const where: any = {};
+
+                        if (date) where.date = date;
+                        if (roomId) where.roomId = roomId;
+
+                        if (statuses && statuses.length > 0) where.status = { in: statuses };
+                        if (tags && tags.length > 0) where.tags = { hasSome: tags };
+                        if (meetingTypes && meetingTypes.length > 0) where.meetingType = { in: meetingTypes };
+                        if (attendeeIds && attendeeIds.length > 0) {
+                            where.attendees = {
+                                some: {
+                                    id: { in: attendeeIds }
+                                }
+                            };
+                        }
+
+                        if (isApproved !== undefined) where.isApproved = isApproved;
+                        if (calendarInviteSent !== undefined) where.calendarInviteSent = calendarInviteSent;
+
+                        if (search) {
+                            where.OR = [
+                                { title: { contains: search, mode: 'insensitive' } },
+                                { purpose: { contains: search, mode: 'insensitive' } },
+                                { location: { contains: search, mode: 'insensitive' } },
+                                { otherDetails: { contains: search, mode: 'insensitive' } },
+                                { attendees: { some: { name: { contains: search, mode: 'insensitive' } } } },
+                            ];
+                        }
+
+                        const meetings = await prisma.meeting.findMany({
+                            where,
+                            include: { room: true, attendees: true },
+                            orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+                        });
+
+                        return { meetings };
+                    },
                 })
             },
             // @ts-ignore
