@@ -11,7 +11,7 @@ For a detailed guide on how to use the application features, please refer to the
 - **Meeting Tracker**: Real-time overview of event statistics with optional PDF Briefing Book export.
 - **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV).
 - **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User).
-- **AI Chat Assistant**: Smart chatbot for event queries, aware of event context and dates.
+- **AI Chat Assistant**: Smart chatbot for event queries and navigation. Generates helper cards for creating/editing resources.
 - **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
 - **Meeting Tags**: Categorize meetings with custom tags (e.g., "Internal", "Client").
 - **Attendee Management**: Add, edit, and track event attendees (Read-only for standard users).
@@ -79,4 +79,5 @@ For a detailed guide on how to use the application features, please refer to the
 - [Next.js](https://nextjs.org/) - React Framework
 - [Prisma](https://www.prisma.io/) - ORM
 - [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [Google Gemini API](https://ai.google.dev/) - AI Integration
+- [Vercel AI SDK](https://sdk.vercel.ai/docs) - AI SDK 5.0 (Core & React)
+- [Google Gemini](https://ai.google.dev/) - LLM Provider

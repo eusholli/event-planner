@@ -65,9 +65,11 @@ The application integrates with Google Gemini to help you quickly fill in profes
 ---
 
 ## AI Chat Assistant
-The built-in **AI Chat** allows you to ask natural language questions about the event.
+The built-in **AI Chat** allows you to ask natural language questions about the event and perform quick actions.
 - **Context Aware**: The AI knows your event's start and end dates and general configuration.
-- **Usage**: Click the chat icon to open the assistant and ask questions like "How do I add an attendee?" or "What acts are performing?".
+- **Smart Actions**: You can say "Create a new meeting" or "Edit the Kickoff meeting", and the AI will generate a specialized **Navigation Card**. Click the card to jump directly to the correct page with details pre-filled (where possible).
+- **Navigation**: Ask "Where can I manage attendees?" to get a direct link to the relevant page.
+- **Security**: The assistant respects your User Role. It will only provide actions and links that you are authorized to use.
 
 ---
 
