@@ -28,7 +28,7 @@ export async function POST(
         }
 
         // Generate Invite Content
-        const onsiteContact = (onsiteName && onsitePhone) ? { name: onsiteName, phone: onsitePhone } : undefined
+        const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
         const content = await generateInviteContent(meeting as any, onsiteContact)
 
         // Send Email
