@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
 import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { useUser } from '@/components/auth'
@@ -20,12 +22,16 @@ interface Attendee {
     type?: string
 }
 
-export default function AttendeesPage() {
+function AttendeesContent() {
     const [attendees, setAttendees] = useState<Attendee[]>([])
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null)
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const { user } = useUser()
     const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
+    const attendeeIdParam = searchParams.get('attendeeId')
 
     // Edit State
     const [editingAttendee, setEditingAttendee] = useState<Attendee | null>(null)
@@ -48,6 +54,36 @@ export default function AttendeesPage() {
         fetchAttendees()
         fetchSettings()
     }, [])
+
+    useEffect(() => {
+        if (attendeeIdParam) {
+            const attendee = attendees.find(a => a.id === attendeeIdParam)
+            if (attendee) {
+                if (!isEditModalOpen && editingAttendee?.id !== attendeeIdParam) {
+                    openEditModal(attendee)
+                }
+            } else {
+                // Not found in list - fetch individually
+                fetch(`/api/attendees/${attendeeIdParam}`)
+                    .then(res => {
+                        if (res.ok) return res.json()
+                        throw new Error('Attendee not found')
+                    })
+                    .then(data => {
+                        // Add to list and open
+                        setAttendees(prev => {
+                            // Check if already exists to avoid dupes if race condition
+                            if (prev.some(a => a.id === data.id)) return prev;
+                            return [...prev, data];
+                        });
+                        openEditModal(data);
+                    })
+                    .catch(err => {
+                        console.error('Failed to fetch deep-linked attendee:', err)
+                    })
+            }
+        }
+    }, [attendees, attendeeIdParam])
 
     const fetchSettings = async () => {
         try {
@@ -107,6 +143,16 @@ export default function AttendeesPage() {
         setIsEditModalOpen(true)
     }
 
+    const closeEditModal = () => {
+        setIsEditModalOpen(false)
+        setEditingAttendee(null)
+        if (attendeeIdParam) {
+            const params = new URLSearchParams(searchParams.toString())
+            params.delete('attendeeId')
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+        }
+    }
+
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!editingAttendee) return
@@ -118,8 +164,7 @@ export default function AttendeesPage() {
                 body: JSON.stringify(editFormData),
             })
             if (res.ok) {
-                setIsEditModalOpen(false)
-                setEditingAttendee(null)
+                closeEditModal()
                 fetchAttendees()
             } else {
                 const data = await res.json()
@@ -443,7 +488,7 @@ export default function AttendeesPage() {
                             <div className="flex justify-end space-x-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setIsEditModalOpen(false)}
+                                    onClick={closeEditModal}
                                     className="btn-secondary"
                                 >
                                     Cancel
@@ -457,5 +502,13 @@ export default function AttendeesPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function AttendeesPage() {
+    return (
+        <Suspense fallback={<div className="p-10 text-center text-zinc-500">Loading attendees...</div>}>
+            <AttendeesContent />
+        </Suspense>
     )
 }

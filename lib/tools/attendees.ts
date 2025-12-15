@@ -4,17 +4,19 @@ import prisma from '@/lib/prisma';
 import { canWrite } from '@/lib/roles';
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment';
 
+const getAttendeesParameters = z.object({
+    search: z.string().optional().describe('Search term for name, title, email, company, bio, description'),
+    company: z.string().optional().describe('Filter by specific company'),
+    title: z.string().optional().describe('Filter by specific title'),
+    types: z.array(z.string()).optional().describe('Filter by attendee types'),
+    isExternal: z.boolean().optional().describe('Filter by external status'),
+    email: z.string().optional().describe('Filter by specific email'),
+});
+
 export const getAttendees = tool({
     description: 'Get attendees with advanced search and filtering. Use this to find people.',
-    parameters: z.object({
-        search: z.string().optional().describe('Search term for name, title, email, company, bio, description'),
-        company: z.string().optional().describe('Filter by specific company'),
-        title: z.string().optional().describe('Filter by specific title'),
-        types: z.array(z.string()).optional().describe('Filter by attendee types'),
-        isExternal: z.boolean().optional().describe('Filter by external status'),
-        email: z.string().optional().describe('Filter by specific email'),
-    }),
-    execute: async ({ search, company, title, types, isExternal, email }) => {
+    inputSchema: getAttendeesParameters,
+    execute: async ({ search, company, title, types, isExternal, email }: z.infer<typeof getAttendeesParameters>) => {
         const where: any = {};
         if (company) where.company = { contains: company, mode: 'insensitive' };
         if (title) where.title = { contains: title, mode: 'insensitive' };
@@ -44,13 +46,13 @@ export const getAttendees = tool({
 
 export const addAttendee = tool({
     description: 'Add a new attendee.',
-    parameters: z.object({
+    inputSchema: z.object({
         name: z.string(),
         email: z.string(),
         title: z.string(),
         company: z.string(),
     }),
-    execute: async ({ name, email, title, company }) => {
+    execute: async ({ name, email, title, company }: { name: string; email: string; title: string; company: string }) => {
         if (!(await canWrite())) {
             return 'Permission Denied: You do not have permission to add attendees.';
         }
@@ -79,13 +81,13 @@ export const addAttendee = tool({
 
 export const checkAttendeeAvailability = tool({
     description: 'Check if a specific attendee is available at a given time.',
-    parameters: z.object({
+    inputSchema: z.object({
         attendeeEmail: z.string(),
         date: z.string().describe('YYYY-MM-DD'),
         startTime: z.string().describe('HH:mm'),
         endTime: z.string().describe('HH:mm'),
     }),
-    execute: async ({ attendeeEmail, date, startTime, endTime }) => {
+    execute: async ({ attendeeEmail, date, startTime, endTime }: { attendeeEmail: string; date: string; startTime: string; endTime: string }) => {
         const attendee = await prisma.attendee.findUnique({
             where: { email: attendeeEmail },
         });

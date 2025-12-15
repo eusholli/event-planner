@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import moment from 'moment'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook, generateScheduleBriefing, generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
@@ -31,7 +32,7 @@ interface DashboardMeeting extends Meeting {
     location?: string | null
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
     const [meetings, setMeetings] = useState<DashboardMeeting[]>([])
     const [rooms, setRooms] = useState<Room[]>([])
     const [allAttendees, setAllAttendees] = useState<Attendee[]>([])
@@ -41,6 +42,10 @@ export default function DashboardPage() {
     const [eventSettings, setEventSettings] = useState<{ startDate?: string, endDate?: string } | null>(null)
     const { user } = useUser()
     const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
+    const meetingIdParam = searchParams.get('meetingId')
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('')
@@ -100,6 +105,68 @@ export default function DashboardPage() {
             // fetchMeetings is handled by the other effects
         })
     }, [])
+
+    // Deep Linking Effect
+    useEffect(() => {
+        if (!loading && meetingIdParam) {
+            const meeting = meetings.find(m => m.id === meetingIdParam)
+            if (meeting) {
+                // Found in existing list
+                if (!isModalOpen && selectedEvent?.id !== meetingIdParam) {
+                    handleEventClick(meeting)
+                }
+            } else {
+                // Not found in list - fetch individually
+                fetch(`/api/meetings/${meetingIdParam}`)
+                    .then(res => {
+                        if (res.ok) return res.json()
+                        throw new Error('Meeting not found')
+                    })
+                    .then(data => {
+                        // Format the fetched meeting to match DashboardMeeting
+                        let start = null
+                        let end = null
+                        if (data.date && data.startTime && data.endTime) {
+                            start = new Date(`${data.date}T${data.startTime}`)
+                            end = new Date(`${data.date}T${data.endTime}`)
+                        } else if (data.date) {
+                            start = new Date(data.date)
+                        }
+
+                        const formattedMeeting: DashboardMeeting = {
+                            id: data.id,
+                            title: data.title,
+                            start,
+                            end,
+                            resourceId: data.roomId || (data.location ? 'external' : null),
+                            location: data.location,
+                            attendees: data.attendees || [],
+                            purpose: data.purpose,
+                            status: data.status || 'STARTED',
+                            tags: data.tags || [],
+                            date: data.date,
+                            startTime: data.startTime,
+                            endTime: data.endTime,
+                            meetingType: data.meetingType,
+                            isApproved: data.isApproved || false,
+                            calendarInviteSent: data.calendarInviteSent || false,
+                            requesterEmail: data.requesterEmail,
+                            otherDetails: data.otherDetails,
+                            createdBy: data.createdBy,
+                            room: data.room
+                        }
+
+                        // Add to list and open
+                        setMeetings(prev => [...prev, formattedMeeting])
+                        handleEventClick(formattedMeeting)
+                    })
+                    .catch(err => {
+                        console.error('Failed to fetch deep-linked meeting:', err)
+                        // Optional: Show toast or error?
+                    })
+            }
+        }
+    }, [loading, meetings, meetingIdParam])
 
     const fetchMeetings = async () => {
         setLoading(true)
@@ -718,7 +785,15 @@ export default function DashboardPage() {
 
             <MeetingModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {
+                    setIsModalOpen(false)
+                    // Clear the meetingId param when closing so it doesn't reopen if we navigate back or similar
+                    if (meetingIdParam) {
+                        const params = new URLSearchParams(searchParams.toString())
+                        params.delete('meetingId')
+                        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+                    }
+                }}
                 event={selectedEvent}
                 onEventChange={setSelectedEvent}
                 rooms={rooms}
@@ -734,5 +809,13 @@ export default function DashboardPage() {
                 readOnly={readOnly}
             />
         </div>
+    )
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={<div className="p-10 text-center text-zinc-500">Loading dashboard...</div>}>
+            <DashboardContent />
+        </Suspense>
     )
 }

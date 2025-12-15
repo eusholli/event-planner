@@ -10,15 +10,15 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@ai-sdk/google": "^0.0.55",
-    "@ai-sdk/react": "^2.0.115",
+    "@ai-sdk/google": "^2.0.0",
+    "@ai-sdk/react": "^2.0.0",
     "@clerk/nextjs": "^6.35.4",
     "@google/generative-ai": "^0.24.1",
     "@types/react-big-calendar": "^1.16.3",
     "@types/react-dnd": "^2.0.36",
     "@types/react-dnd-html5-backend": "^3.0.2",
     "@vercel/speed-insights": "^1.2.0",
-    "ai": "^4.1.48",
+    "ai": "^5.0.0",
     "ics": "^3.8.1",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
@@ -29,6 +29,8 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.2.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {

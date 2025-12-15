@@ -4,20 +4,22 @@ import prisma from '@/lib/prisma';
 import { canWrite } from '@/lib/roles';
 import { sendCalendarInvites } from '@/lib/calendar-sync';
 
+const getMeetingsParameters = z.object({
+    date: z.string().optional().describe('Filter by date (YYYY-MM-DD)'),
+    roomId: z.string().optional().describe('Filter by Room ID'),
+    search: z.string().optional().describe('Search term for title, purpose, location, details, attendee names'),
+    statuses: z.array(z.string()).optional().describe('List of statuses to filter by (e.g. ["STARTED", "COMPLETED"])'),
+    tags: z.array(z.string()).optional().describe('List of tags to include'),
+    meetingTypes: z.array(z.string()).optional().describe('List of meeting types to filter by'),
+    attendeeIds: z.array(z.string()).optional().describe('List of attendee IDs to filter by'),
+    isApproved: z.boolean().optional().describe('Filter by approval status'),
+    calendarInviteSent: z.boolean().optional().describe('Filter by calendar invite status'),
+});
+
 export const getMeetings = tool({
     description: 'Get meetings with comprehensive filtering options. Use this to find meetings by date, room, status, or search text.',
-    parameters: z.object({
-        date: z.string().optional().describe('Filter by date (YYYY-MM-DD)'),
-        roomId: z.string().optional().describe('Filter by Room ID'),
-        search: z.string().optional().describe('Search term for title, purpose, location, details, attendee names'),
-        statuses: z.array(z.string()).optional().describe('List of statuses to filter by (e.g. ["STARTED", "COMPLETED"])'),
-        tags: z.array(z.string()).optional().describe('List of tags to include'),
-        meetingTypes: z.array(z.string()).optional().describe('List of meeting types to filter by'),
-        attendeeIds: z.array(z.string()).optional().describe('List of attendee IDs to filter by'),
-        isApproved: z.boolean().optional().describe('Filter by approval status'),
-        calendarInviteSent: z.boolean().optional().describe('Filter by calendar invite status'),
-    }),
-    execute: async ({ date, roomId, search, statuses, tags, meetingTypes, attendeeIds, isApproved, calendarInviteSent }) => {
+    inputSchema: getMeetingsParameters,
+    execute: async ({ date, roomId, search, statuses, tags, meetingTypes, attendeeIds, isApproved, calendarInviteSent }: z.infer<typeof getMeetingsParameters>) => {
         const where: any = {};
 
         if (date) where.date = date;
@@ -57,18 +59,20 @@ export const getMeetings = tool({
     },
 });
 
+const createMeetingParameters = z.object({
+    title: z.string(),
+    purpose: z.string().optional(),
+    date: z.string().describe('YYYY-MM-DD'),
+    startTime: z.string().describe('HH:mm'),
+    endTime: z.string().describe('HH:mm'),
+    roomId: z.string().optional(),
+    attendeeEmails: z.array(z.string()).optional(),
+});
+
 export const createMeeting = tool({
     description: 'Create a new meeting. Requires Title, Date, Start Time, End Time. Optional: Room, Attendees.',
-    parameters: z.object({
-        title: z.string(),
-        purpose: z.string().optional(),
-        date: z.string().describe('YYYY-MM-DD'),
-        startTime: z.string().describe('HH:mm'),
-        endTime: z.string().describe('HH:mm'),
-        roomId: z.string().optional(),
-        attendeeEmails: z.array(z.string()).optional(),
-    }),
-    execute: async ({ title, purpose, date, startTime, endTime, roomId, attendeeEmails }) => {
+    inputSchema: createMeetingParameters,
+    execute: async ({ title, purpose, date, startTime, endTime, roomId, attendeeEmails }: z.infer<typeof createMeetingParameters>) => {
         if (!(await canWrite())) {
             return 'Permission Denied: You do not have permission to create meetings.';
         }
@@ -121,10 +125,10 @@ export const createMeeting = tool({
 
 export const cancelMeeting = tool({
     description: 'Cancel a meeting by ID.',
-    parameters: z.object({
+    inputSchema: z.object({
         id: z.string(),
     }),
-    execute: async ({ id: meetingId }) => {
+    execute: async ({ id: meetingId }: { id: string }) => {
         if (!(await canWrite())) {
             return 'Permission Denied: You do not have permission to cancel meetings.';
         }
