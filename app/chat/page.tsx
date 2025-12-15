@@ -1,12 +1,13 @@
 'use client';
 
-import { useChat } from 'ai/react';
+import { useChat } from '@ai-sdk/react';
 import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function ChatPage() {
-    const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({
-        api: '/api/chat',
+    const { messages, sendMessage, status, error, setMessages } = useChat({
         onError: (err) => {
             console.error('Chat error:', err);
         }
@@ -14,6 +15,19 @@ export default function ChatPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isReady, setIsReady] = useState<boolean | null>(null);
+    const [input, setInput] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim()) return;
+
+        const messageInput = input.trim();
+        setInput(''); // Clear input immediately for better UX
+        await sendMessage({
+            role: 'user',
+            parts: [{ type: 'text', text: messageInput }],
+        });
+    };
 
     // Load messages from localStorage on mount
     useEffect(() => {
@@ -51,10 +65,10 @@ export default function ChatPage() {
     }, [messages]);
 
     useEffect(() => {
-        if (!isLoading && inputRef.current) {
+        if (status !== 'streaming' && inputRef.current) {
             inputRef.current.focus();
         }
-    }, [isLoading]);
+    }, [status]);
 
     const handleClearChat = () => {
         setMessages([]);
@@ -146,11 +160,166 @@ export default function ChatPage() {
                                 <div className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${m.role === 'user' ? 'text-zinc-400' : 'text-zinc-400'}`}>
                                     {m.role === 'user' ? 'You' : 'Assistant'}
                                 </div>
-                                <div className="whitespace-pre-wrap">{m.content}</div>
+                                <div className="text-sm prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
+                                    {/* Debug Message Structure */}
+                                    {console.log('FULL MESSAGE DEBUG:', JSON.stringify(m, null, 2))}
+                                    {/* Render Parts (Text + Tools) */}
+                                    {m.parts ? (
+                                        m.parts.map((part: any, index: number) => {
+                                            // Handle Text
+                                            if (part.type === 'text') {
+                                                return (
+                                                    <ReactMarkdown
+                                                        key={index}
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            a: ({ node, ...props }) => (
+                                                                <a {...props} className="text-blue-600 hover:underline font-medium" target="_blank" rel="noopener noreferrer" />
+                                                            ),
+                                                            p: ({ node, ...props }) => (
+                                                                <p {...props} className="mb-2 last:mb-0" />
+                                                            ),
+                                                            ul: ({ node, ...props }) => (
+                                                                <ul {...props} className="list-disc pl-4 mb-2 last:mb-0" />
+                                                            ),
+                                                            ol: ({ node, ...props }) => (
+                                                                <ol {...props} className="list-decimal pl-4 mb-2 last:mb-0" />
+                                                            ),
+                                                            li: ({ node, ...props }) => (
+                                                                <li {...props} className="mb-1 last:mb-0" />
+                                                            ),
+                                                            code: ({ node, ...props }) => {
+                                                                const { className, children } = props
+                                                                const match = /language-(\w+)/.exec(className || '')
+                                                                return match ? (
+                                                                    <code {...props} className="block bg-zinc-800 text-zinc-100 p-2 rounded-md my-2 overflow-x-auto text-xs" />
+                                                                ) : (
+                                                                    <code {...props} className="bg-zinc-100 text-zinc-800 px-1 py-0.5 rounded text-xs font-mono border border-zinc-200" />
+                                                                )
+                                                            }
+                                                        }}
+                                                    >
+                                                        {part.text}
+                                                    </ReactMarkdown>
+                                                );
+                                            }
+
+                                            // Handle Tool Calls (Pending/Running)
+                                            if (part.state === 'call' || part.type === 'tool-call') {
+                                                // Extract tool name from type if necessary (e.g. tool-getNavigationLinks)
+                                                // Or rely on implicit naming if backend sends it. 
+                                                // Based on logs, type is "tool-<name>".
+                                                const toolName = part.toolName || part.type.replace('tool-', '');
+                                                return (
+                                                    <div key={index} className="bg-zinc-100 text-zinc-500 text-xs p-2 rounded border border-zinc-200 mt-2 font-mono animate-pulse">
+                                                        Calling tool: {toolName}...
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Handle Tool Results (Output Available)
+                                            // V5 Hook: type="tool-<name>" and state="output-available"
+                                            if (part.state === 'output-available' || part.type === 'tool-result') {
+                                                const toolName = part.toolName || part.type.replace('tool-', '');
+                                                // Handling for getNavigationLinks
+                                                if (toolName === 'getNavigationLinks' && part.output && part.output.url) {
+                                                    const { url } = part.output;
+                                                    return (
+                                                        <div key={index} className="mt-2">
+                                                            <div className="bg-emerald-50 text-emerald-800 text-xs p-2 rounded border border-emerald-100 mb-2 font-mono">
+                                                                ✓ Generated Navigation Link
+                                                            </div>
+                                                            <Link href={url} className="block group">
+                                                                <div className="bg-white border border-zinc-200 rounded-xl p-4 hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-4">
+                                                                    <div className="bg-blue-100 text-blue-600 p-2.5 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <div>
+                                                                        <h4 className="font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors">
+                                                                            {url.includes('new-meeting') ? 'Create New Meeting' : (url.includes('meet') ? 'View Meeting' : 'View Resource')}
+                                                                        </h4>
+                                                                        <p className="text-xs text-zinc-500 mt-0.5">Click to navigate to {url}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </Link>
+                                                        </div>
+                                                    );
+                                                }
+                                                // Generic Success - Hide from UI
+                                                return null;
+                                            }
+
+                                            return null;
+                                        })
+                                    ) : (
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                a: ({ node, ...props }) => (
+                                                    <a {...props} className="text-blue-600 hover:underline font-medium" target="_blank" rel="noopener noreferrer" />
+                                                ),
+                                                p: ({ node, ...props }) => (
+                                                    <p {...props} className="mb-2 last:mb-0" />
+                                                )
+                                            }}
+                                        >
+                                            {m.content}
+                                        </ReactMarkdown>
+                                    )}
+
+                                    {/* Fallback support for toolInvocations (if parts not populated or for legacy/transition) */}
+                                    {(!m.parts || m.parts.length === 0) && m.toolInvocations && (
+                                        <div className="mt-2 space-y-2">
+                                            {m.toolInvocations.map((toolInvocation: any) => {
+                                                const toolCallId = toolInvocation.toolCallId;
+                                                // Check for result to see if completed
+                                                if ('result' in toolInvocation) {
+                                                    if (toolInvocation.toolName === 'getNavigationLinks') {
+                                                        const { url } = toolInvocation.result;
+                                                        return (
+                                                            <div key={toolCallId} className="mt-2">
+                                                                <div className="bg-emerald-50 text-emerald-800 text-xs p-2 rounded border border-emerald-100 mb-2 font-mono">
+                                                                    ✓ Generated Navigation Link
+                                                                </div>
+                                                                <Link href={url} className="block group">
+                                                                    <div className="bg-white border border-zinc-200 rounded-xl p-4 hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-4">
+                                                                        <div className="bg-blue-100 text-blue-600 p-2.5 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors">
+                                                                                {url.includes('new-meeting') ? 'Create New Meeting' : (url.includes('meet') ? 'View Meeting' : 'View Resource')}
+                                                                            </h4>
+                                                                            <p className="text-xs text-zinc-500 mt-0.5">Click to navigate to {url}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </Link>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div key={toolCallId} className="bg-emerald-50 text-emerald-800 text-xs p-2 rounded border border-emerald-100 mt-2 font-mono">
+                                                            ✓ Tool Call Completed: {toolInvocation.toolName}
+                                                        </div>
+                                                    )
+                                                }
+                                                return (
+                                                    <div key={toolCallId} className="bg-zinc-100 text-zinc-500 text-xs p-2 rounded border border-zinc-200 mt-2 font-mono animate-pulse">
+                                                        Calling tool: {toolInvocation.toolName}...
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}
-                    {isLoading && (
+                    {(status === 'submitted' || status === 'streaming') && (
                         <div className="flex justify-start">
                             <div className="bg-zinc-50 text-zinc-500 border border-zinc-100 rounded-2xl rounded-bl-none px-5 py-3 text-sm shadow-sm flex items-center gap-2">
                                 <div className="flex space-x-1">
@@ -173,13 +342,13 @@ export default function ChatPage() {
                             autoFocus
                             className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-sm transition-all"
                             value={input}
-                            onChange={handleInputChange}
-                            disabled={isReady === false || isLoading}
+                            onChange={(e) => setInput(e.target.value)}
+                            disabled={isReady === false || status === 'streaming'}
                             placeholder={isReady === false ? "Chat configuration missing..." : "Ask a question..."}
                         />
                         <button
                             type="submit"
-                            disabled={isReady === false || isLoading || !input.trim()}
+                            disabled={isReady === false || status === 'streaming' || !input.trim()}
                             className="bg-zinc-900 text-white px-5 py-3 rounded-xl text-sm font-semibold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 flex items-center gap-2"
                         >
                             <span>Send</span>
