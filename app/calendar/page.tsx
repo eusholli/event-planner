@@ -29,7 +29,7 @@ interface Attendee {
 
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import MeetingDetailsModal from '@/components/MeetingDetailsModal'
-import { generateBriefingBook } from '@/lib/briefing-book'
+
 
 interface CalendarEvent extends Meeting {
     start: Date
@@ -444,21 +444,7 @@ export default function CalendarPage() {
 
     if (loading) return <div className="p-8 text-center text-zinc-500">Loading calendar...</div>
 
-    const getStatusBadge = (status: string) => {
-        const statusConfig: Record<string, { label: string; className: string }> = {
-            PIPELINE: { label: 'Pipeline', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-            COMMITTED: { label: 'Committed', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-            COMPLETED: { label: 'Completed', className: 'bg-green-50 text-green-700 border-green-200' },
-            CANCELED: { label: 'Canceled', className: 'bg-gray-50 text-gray-700 border-gray-200' },
-        }
-        const config = statusConfig[status] || statusConfig.PIPELINE
-        if (config.label === 'Pipeline') return null
-        return (
-            <span className={`inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium border leading-none ${config.className}`}>
-                {config.label}
-            </span>
-        )
-    }
+
 
     return (
         <div className="h-[calc(100vh-120px)] flex flex-col space-y-6">
@@ -519,52 +505,9 @@ export default function CalendarPage() {
                                     {event.title}
                                 </div>
 
-                                <div className="flex flex-wrap gap-1 mt-0.5">
-                                    {event.meetingType && (
-                                        <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 leading-none">
-                                            {event.meetingType}
-                                        </span>
-                                    )}
-                                    {event.isApproved && (
-                                        <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium bg-green-50 text-green-700 border border-green-100 leading-none">
-                                            Appr.
-                                        </span>
-                                    )}
-                                    {event.calendarInviteSent && (
-                                        <span className="inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium bg-purple-50 text-purple-700 border border-purple-100 leading-none">
-                                            Sent
-                                        </span>
-                                    )}
-                                    {getStatusBadge(event.status)}
-                                </div>
 
-                                {event.purpose && (
-                                    <div className="opacity-80 truncate text-[10px] text-zinc-500 mt-0.5">
-                                        {event.purpose}
-                                    </div>
-                                )}
 
-                                <div className="flex flex-wrap gap-1 mt-auto">
-                                    {event.tags && event.tags.map((tag: string) => (
-                                        <span key={tag} className="inline-flex items-center px-1 py-0.5 rounded-full text-[8px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200 leading-none">
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
 
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        const roomName = rooms.find(r => r.id === event.resourceId)?.name || 'Unknown Room'
-                                        generateBriefingBook(event, roomName)
-                                    }}
-                                    className="absolute top-2 right-2 p-1 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                    title="Export Briefing"
-                                >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </button>
                             </div>
                         )
                     }}
