@@ -36,7 +36,7 @@ export default function SchedulePage() {
         attendeeIds: [] as string[],
         roomId: '',
         location: '',
-        status: 'STARTED', // Default status
+        status: 'PIPELINE', // Default status
         tags: [] as string[],
         requesterEmail: '',
         meetingType: '',
@@ -269,7 +269,8 @@ export default function SchedulePage() {
                                         value={formData.status}
                                         onChange={e => setFormData({ ...formData, status: e.target.value })}
                                     >
-                                        <option value="STARTED">Started</option>
+                                        <option value="PIPELINE">Pipeline</option>
+                                        <option value="COMMITTED">Committed</option>
                                         <option value="COMPLETED">Completed</option>
                                         <option value="CANCELED">Canceled</option>
                                     </select>

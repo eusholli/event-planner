@@ -45,7 +45,8 @@ model Room {
 }
 
 enum MeetingStatus {
-  STARTED
+  PIPELINE
+  COMMITTED
   COMPLETED
   CANCELED
 }
@@ -61,7 +62,7 @@ model Meeting {
   room        Room?         @relation(fields: [roomId], references: [id])
   attendees   Attendee[]    @relation("AttendeeMeetings")
   sequence    Int           @default(0)
-  status      MeetingStatus @default(STARTED)
+  status      MeetingStatus @default(PIPELINE)
   tags        String[]      @default([])
   createdBy   String?
   requesterEmail String?

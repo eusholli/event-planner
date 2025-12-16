@@ -9,7 +9,7 @@ import moment from 'moment'
 interface Meeting {
     id: string
     title: string
-    status: 'STARTED' | 'COMPLETED' | 'CANCELED'
+    status: 'PIPELINE' | 'COMMITTED' | 'COMPLETED' | 'CANCELED'
     meetingType?: string
     tags?: string[]
     attendees: { id: string }[]
@@ -30,7 +30,8 @@ interface EventSettings {
 interface AttendeeStats {
     attendeeId: string
     attendeeName: string
-    started: number
+    pipeline: number
+    committed: number
     completed: number
     canceled: number
     total: number
@@ -121,17 +122,19 @@ export default function ReportsPage() {
                 return true
             })
 
-            const started = attendeeMeetings.filter(m => m.status === 'STARTED').length
+            const pipeline = attendeeMeetings.filter(m => m.status === 'PIPELINE').length
+            const committed = attendeeMeetings.filter(m => m.status === 'COMMITTED').length
             const completed = attendeeMeetings.filter(m => m.status === 'COMPLETED').length
             const canceled = attendeeMeetings.filter(m => m.status === 'CANCELED').length
 
             return {
                 attendeeId: attendee.id,
                 attendeeName: attendee.name,
-                started,
+                pipeline,
+                committed,
                 completed,
                 canceled,
-                total: started + completed + canceled // Or just attendeeMeetings.length if status is always one of these
+                total: pipeline + committed + completed + canceled // Or just attendeeMeetings.length if status is always one of these
             }
         })
 
@@ -161,12 +164,13 @@ export default function ReportsPage() {
     }
 
     const handleExportCSV = () => {
-        const headers = ['Attendee Name', 'Started', 'Canceled', 'Completed', 'Total']
+        const headers = ['Attendee Name', 'Pipeline', 'Committed', 'Completed', 'Canceled', 'Total']
         const rows = tableData.map(row => [
             `"${row.attendeeName.replace(/"/g, '""')}"`,
-            row.started,
-            row.canceled,
+            row.pipeline,
+            row.committed,
             row.completed,
+            row.canceled,
             row.total
         ])
 
@@ -192,14 +196,15 @@ export default function ReportsPage() {
 
         const tableBody = tableData.map(row => [
             row.attendeeName,
-            row.started,
-            row.canceled,
+            row.pipeline,
+            row.committed,
             row.completed,
+            row.canceled,
             row.total
         ])
 
         autoTable(doc, {
-            head: [['Attendee Name', 'Started', 'Canceled', 'Completed', 'Total']],
+            head: [['Attendee Name', 'Pipeline', 'Committed', 'Completed', 'Canceled', 'Total']],
             body: tableBody,
             startY: 35,
             theme: 'striped',
@@ -337,9 +342,10 @@ export default function ReportsPage() {
                                 <tr>
                                     {[
                                         { id: 'attendeeName', label: 'Attendee Name' },
-                                        { id: 'started', label: 'Started' },
-                                        { id: 'canceled', label: 'Canceled' },
+                                        { id: 'pipeline', label: 'Pipeline' },
+                                        { id: 'committed', label: 'Committed' },
                                         { id: 'completed', label: 'Completed' },
+                                        { id: 'canceled', label: 'Canceled' },
                                         { id: 'total', label: 'Total' }
                                     ].map((column) => (
                                         <th
@@ -374,13 +380,16 @@ export default function ReportsPage() {
                                                 {row.attendeeName}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {row.started}
+                                                {row.pipeline}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {row.canceled}
+                                                {row.committed}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {row.completed}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {row.canceled}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                                                 {row.total}

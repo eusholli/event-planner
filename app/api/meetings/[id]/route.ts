@@ -179,6 +179,12 @@ export async function PUT(
             updateData.tags = tags
         }
 
+        // Force clear room and location if status is CANCELED
+        if (status === 'CANCELED') {
+            updateData.roomId = null;
+            updateData.location = null;
+        }
+
         const meeting = await prisma.meeting.update({
             where: { id },
             data: updateData,

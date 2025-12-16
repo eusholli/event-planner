@@ -105,7 +105,7 @@ export async function POST(request: Request) {
             endTime,
             roomId,
             attendeeIds,
-            status = 'STARTED',
+            status = 'PIPELINE',
             tags,
             requesterEmail,
             meetingType,
@@ -128,16 +128,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 })
         }
 
-        // Validate COMPLETED status requirements
-        if (status === 'COMPLETED') {
+        // Validate COMMITTED/COMPLETED status requirements
+        if (['COMMITTED', 'COMPLETED'].includes(status)) {
             if (!date || !startTime || !endTime) {
-                return NextResponse.json({ error: 'Date, Start time, and End time are required for completed meetings' }, { status: 400 })
+                return NextResponse.json({ error: 'Date, Start time, and End time are required for committed/completed meetings' }, { status: 400 })
             }
             if (!roomId && !location) {
-                return NextResponse.json({ error: 'Room or Location is required for completed meetings' }, { status: 400 })
+                return NextResponse.json({ error: 'Room or Location is required for committed/completed meetings' }, { status: 400 })
             }
             if (!attendeeIds || attendeeIds.length === 0) {
-                return NextResponse.json({ error: 'At least one attendee is required for completed meetings' }, { status: 400 })
+                return NextResponse.json({ error: 'At least one attendee is required for committed/completed meetings' }, { status: 400 })
             }
         }
 
@@ -242,6 +242,12 @@ export async function POST(request: Request) {
             meetingData.attendees = {
                 connect: attendeeIds.map((id: string) => ({ id })),
             }
+        }
+
+        // Force clear room and location if status is CANCELED
+        if (status === 'CANCELED') {
+            meetingData.roomId = null;
+            meetingData.location = null;
         }
 
         const meeting = await prisma.meeting.create({
