@@ -599,10 +599,11 @@ export default function MeetingModal({
                             </div>
                             <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
                                 {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
-                                    <label key={attendee.id} className="flex items-center space-x-3 p-1 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer">
+                                    <label key={attendee.id} className={`flex items-center space-x-3 p-1 rounded-lg transition-colors ${readOnly ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-100 cursor-pointer'}`}>
                                         <input
                                             type="checkbox"
-                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                            disabled={readOnly}
+                                            className={`w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500 ${readOnly ? 'cursor-not-allowed' : ''}`}
                                             checked={event.attendees?.some(a => a.id === attendee.id) || false}
                                             onChange={(e) => {
                                                 const currentAttendees = event.attendees || []
@@ -634,10 +635,11 @@ export default function MeetingModal({
                             </label>
                             <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
                                 {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
-                                    <label key={attendee.id} className="flex items-center space-x-3 p-1 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer">
+                                    <label key={attendee.id} className={`flex items-center space-x-3 p-1 rounded-lg transition-colors ${readOnly ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-100 cursor-pointer'}`}>
                                         <input
                                             type="checkbox"
-                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                            disabled={readOnly}
+                                            className={`w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500 ${readOnly ? 'cursor-not-allowed' : ''}`}
                                             checked={event.attendees?.some(a => a.id === attendee.id) || false}
                                             onChange={(e) => {
                                                 const currentAttendees = event.attendees || []
