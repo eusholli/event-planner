@@ -19,7 +19,7 @@ The application serves different types of users with specific access levels:
 
 - **Root**: Full administrative access. Can manage all settings, users, and data. Access to all pages including Settings and Admin User Management.
 - **Admin**: Operational access. Can view Reports, manage Schedules and Attendees, but cannot modify system-wide Settings or User permissions.
-- **User**: Read-only access. Can view Dashboards, Schedules, and Attendees but cannot create new meetings or edit data. Restricted from sensitive areas.
+- **User**: Read-only access. Can view Dashboards, Schedules, and Attendees but cannot create new meetings or edit data. Restricted from sensitive areas like Settings (`/settings`), User Management (`/admin/users`), and Reports (`/reports`).
 
 ---
 
@@ -29,6 +29,7 @@ The **Meeting Tracker** is your landing page. It provides a quick overview of yo
 - **Total Meetings**: The number of scheduled sessions.
 - **Room Utilization**: How effectively your venue space is being used.
 - **Export Options**: Download data as a CSV file or a comprehensive **PDF Briefing Book**.
+- **Generate Invite**: Create calendar invites for meetings (Restricted to **Root** and **Admin** users).
 - **Enhanced Search**: Filter meetings by searching across titles, attendees, rooms, and descriptions.
 
 ---
@@ -69,6 +70,8 @@ The built-in **AI Chat** allows you to ask natural language questions about the 
 - **Context Aware**: The AI knows your event's start and end dates and general configuration.
 - **Smart Actions**: You can say "Create a new meeting" or "Edit the Kickoff meeting", and the AI will generate a specialized **Navigation Card**. Click the card to jump directly to the correct page with details pre-filled (where possible).
 - **Navigation**: Ask "Where can I manage attendees?" to get a direct link to the relevant page.
+- **Persistent Chat**: Your conversation history is saved, so you don't lose context when navigating between pages. Use the **Clear Chat** button to start fresh.
+- **Enhanced Search**: You can search for meetings by attendee name (e.g., "Find meetings with John Doe").
 - **Security**: The assistant respects your User Role. It will only provide actions and links that you are authorized to use.
 
 ---
@@ -83,7 +86,7 @@ Navigate to the **Schedule** page to organize your event agenda.
 4.  Select a **Room**.
 5.  Choose **Attendees** from the list.
 6.  Set the **Date**, **Start Time**, and **Duration**.
-7.  Select the **Status** (Started, Completed, Canceled).
+7.  Select the **Status** (Pipeline, Committed, Completed, Canceled).
 8.  Click **Book Meeting**.
 
 ### Meeting Tags
@@ -95,7 +98,7 @@ You can categorize your meetings using tags.
 1. Click on a meeting block in the calendar.
 2. A modal will appear with the meeting details.
 3. Click **Edit** to modify details or **Delete** to remove the meeting.
-4. If the meeting status is "Started", you only need to provide a title. For "Completed", all fields are required.
+4. If the meeting status is "Pipeline" (formerly Started), you only need to provide a title. For "Committed" (formerly Completed), all fields are required.
 
 **Note**: After booking, you will stay on the page to easily book another meeting. A success message will appear at the top.
 
@@ -110,7 +113,7 @@ You can categorize your meetings using tags.
 *Access: Root and Admin users only.*
 
 The **Reports** page provides deep insights into meeting metrics and attendee engagement.
-- **Analytics Table**: View meetings breakdown (Started, Canceled, Completed) per attendee.
+- **Analytics Table**: View meetings breakdown (Pipeline, Committed, Completed, Canceled) per attendee.
 - **Filtering**: Filter by Attendee Type, Meeting Type, and Tags.
 - **Sorting**: Click column headers to sort data.
 - **Export**: Generate PDF or CSV reports for offline analysis.
