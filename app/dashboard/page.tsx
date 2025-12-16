@@ -49,7 +49,7 @@ function DashboardContent() {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('')
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['STARTED', 'COMPLETED', 'CANCELED'])
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PIPELINE', 'COMMITTED', 'COMPLETED', 'CANCELED'])
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [selectedAttendees, setSelectedAttendees] = useState<string[]>([])
     const [selectedDate, setSelectedDate] = useState('')
@@ -142,7 +142,7 @@ function DashboardContent() {
                             location: data.location,
                             attendees: data.attendees || [],
                             purpose: data.purpose,
-                            status: data.status || 'STARTED',
+                            status: data.status || 'PIPELINE',
                             tags: data.tags || [],
                             date: data.date,
                             startTime: data.startTime,
@@ -212,7 +212,7 @@ function DashboardContent() {
                     location: m.location,
                     attendees: m.attendees,
                     purpose: m.purpose,
-                    status: m.status || 'STARTED',
+                    status: m.status || 'PIPELINE',
                     tags: m.tags || [],
                     date: m.date,
                     startTime: m.startTime,
@@ -257,7 +257,8 @@ function DashboardContent() {
     // Stats
     const stats = useMemo(() => {
         const counts = {
-            STARTED: 0,
+            PIPELINE: 0,
+            COMMITTED: 0,
             COMPLETED: 0,
             CANCELED: 0,
             TOTAL: filteredMeetings.length
@@ -338,7 +339,7 @@ function DashboardContent() {
                     resourceId: savedData.roomId,
                     attendees: savedData.attendees,
                     purpose: savedData.purpose,
-                    status: savedData.status || 'STARTED',
+                    status: savedData.status || 'PIPELINE',
                     tags: savedData.tags || [],
                     date: savedData.date,
                     startTime: savedData.startTime,
@@ -536,7 +537,7 @@ function DashboardContent() {
                     <button
                         onClick={() => {
                             setSearchQuery('')
-                            setSelectedStatuses(['STARTED', 'COMPLETED', 'CANCELED'])
+                            setSelectedStatuses(['PIPELINE', 'COMMITTED', 'COMPLETED', 'CANCELED'])
                             setSelectedTags([])
                             setSelectedAttendees([])
                             setSelectedDate('')
@@ -570,14 +571,18 @@ function DashboardContent() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm">
                     <div className="text-sm font-medium text-zinc-500">Total</div>
                     <div className="mt-2 text-3xl font-bold text-zinc-900">{stats.TOTAL}</div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-blue-100 bg-blue-50/30 shadow-sm">
-                    <div className="text-sm font-medium text-blue-600">Started</div>
-                    <div className="mt-2 text-3xl font-bold text-blue-700">{stats.STARTED}</div>
+                    <div className="text-sm font-medium text-blue-600">Pipeline</div>
+                    <div className="mt-2 text-3xl font-bold text-blue-700">{stats.PIPELINE}</div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-indigo-100 bg-indigo-50/30 shadow-sm">
+                    <div className="text-sm font-medium text-indigo-600">Committed</div>
+                    <div className="mt-2 text-3xl font-bold text-indigo-700">{stats.COMMITTED}</div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-green-100 bg-green-50/30 shadow-sm">
                     <div className="text-sm font-medium text-green-600">Completed</div>
@@ -599,7 +604,7 @@ function DashboardContent() {
                         <div>
                             <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
                             <div className="space-y-2">
-                                {['STARTED', 'COMPLETED', 'CANCELED'].map(status => (
+                                {['PIPELINE', 'COMMITTED', 'COMPLETED', 'CANCELED'].map(status => (
                                     <label key={status} className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="checkbox"

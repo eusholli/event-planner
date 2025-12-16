@@ -8,7 +8,7 @@ const getMeetingsParameters = z.object({
     date: z.string().optional().describe('Filter by date (YYYY-MM-DD)'),
     roomId: z.string().optional().describe('Filter by Room ID'),
     search: z.string().optional().describe('Search term for title, purpose, location, details, attendee names'),
-    statuses: z.array(z.string()).optional().describe('List of statuses to filter by (e.g. ["STARTED", "COMPLETED"])'),
+    statuses: z.array(z.string()).optional().describe('List of statuses to filter by (e.g. ["PIPELINE", "COMMITTED", "COMPLETED", "CANCELED"])'),
     tags: z.array(z.string()).optional().describe('List of tags to include'),
     meetingTypes: z.array(z.string()).optional().describe('List of meeting types to filter by'),
     attendeeIds: z.array(z.string()).optional().describe('List of attendee IDs to filter by'),
@@ -105,7 +105,7 @@ export const createMeeting = tool({
                     startTime,
                     endTime,
                     roomId,
-                    status: 'STARTED',
+                    status: 'PIPELINE',
                     attendees: { connect: attendeeIds.map(id => ({ id })) },
                 },
                 include: { room: true, attendees: true },
@@ -135,7 +135,11 @@ export const cancelMeeting = tool({
         try {
             await prisma.meeting.update({
                 where: { id: meetingId },
-                data: { status: 'CANCELED' },
+                data: {
+                    status: 'CANCELED',
+                    roomId: null,
+                    location: null
+                },
             });
             return { message: `Meeting ${meetingId} canceled successfully` };
         } catch (e: any) {

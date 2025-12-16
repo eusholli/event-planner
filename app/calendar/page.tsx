@@ -50,6 +50,7 @@ export default function CalendarPage() {
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
     const [error, setError] = useState('')
     const [availableTags, setAvailableTags] = useState<string[]>([])
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PIPELINE', 'COMMITTED', 'COMPLETED', 'CANCELED'])
     const [meetingTypes, setMeetingTypes] = useState<string[]>([])
 
     const [date, setDate] = useState(new Date())
@@ -98,7 +99,7 @@ export default function CalendarPage() {
                         endTime: meeting.endTime,
                         attendees: meeting.attendees,
                         purpose: meeting.purpose,
-                        status: meeting.status,
+                        status: meeting.status || 'PIPELINE',
                         tags: meeting.tags,
                         createdBy: meeting.createdBy,
                         requesterEmail: meeting.requesterEmail,
@@ -221,7 +222,7 @@ export default function CalendarPage() {
             end: endDate,
             resourceId: resourceId || rooms[0]?.id,
             attendees: [],
-            status: 'STARTED',
+            status: 'PIPELINE',
             tags: [],
             requesterEmail: '',
             meetingType: '',
@@ -387,7 +388,7 @@ export default function CalendarPage() {
                     resourceId: savedEvent.roomId || (savedEvent.location ? 'external' : null),
                     attendees: savedEvent.attendees,
                     purpose: savedEvent.purpose,
-                    status: savedEvent.status || 'STARTED',
+                    status: savedEvent.status || 'PIPELINE',
                     tags: savedEvent.tags || [],
                     createdBy: savedEvent.createdBy,
                     requesterEmail: savedEvent.requesterEmail,
@@ -445,12 +446,13 @@ export default function CalendarPage() {
 
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { label: string; className: string }> = {
-            STARTED: { label: 'Started', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+            PIPELINE: { label: 'Pipeline', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+            COMMITTED: { label: 'Committed', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
             COMPLETED: { label: 'Completed', className: 'bg-green-50 text-green-700 border-green-200' },
             CANCELED: { label: 'Canceled', className: 'bg-gray-50 text-gray-700 border-gray-200' },
         }
-        const config = statusConfig[status] || statusConfig.STARTED
-        if (config.label === 'Started') return null
+        const config = statusConfig[status] || statusConfig.PIPELINE
+        if (config.label === 'Pipeline') return null
         return (
             <span className={`inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium border leading-none ${config.className}`}>
                 {config.label}

@@ -138,18 +138,18 @@ export default function MeetingModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Client-side validation for COMPLETED status
-        if (event.status === 'COMPLETED') {
+        // Client-side validation for COMMITTED/COMPLETED status
+        if (['COMMITTED', 'COMPLETED'].includes(event.status || '')) {
             if (!event.title || event.title.trim() === '') {
-                setLocalError('Title is required for completed meetings')
+                setLocalError('Title is required for committed meetings')
                 return
             }
             if (!event.date || !event.startTime || !event.endTime) {
-                setLocalError('Date and time are required for completed meetings')
+                setLocalError('Date and time are required for committed meetings')
                 return
             }
             if (!event.resourceId) {
-                setLocalError('Room is required for completed meetings')
+                setLocalError('Room is required for committed meetings')
                 return
             }
             if (event.resourceId === 'external' && !event.location) {
@@ -157,7 +157,7 @@ export default function MeetingModal({
                 return
             }
             if (!event.attendees || event.attendees.length === 0) {
-                setLocalError('At least one attendee is required for completed meetings')
+                setLocalError('At least one attendee is required for committed meetings')
                 return
             }
         }
@@ -405,10 +405,18 @@ export default function MeetingModal({
                             <select
                                 className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 disabled={readOnly}
-                                value={event.status || 'STARTED'}
-                                onChange={e => onEventChange({ ...event, status: e.target.value })}
+                                value={event.status || 'PIPELINE'}
+                                onChange={e => {
+                                    const newStatus = e.target.value
+                                    if (newStatus === 'CANCELED') {
+                                        onEventChange({ ...event, status: newStatus, resourceId: '', location: '' })
+                                    } else {
+                                        onEventChange({ ...event, status: newStatus })
+                                    }
+                                }}
                             >
-                                <option value="STARTED">Started</option>
+                                <option value="PIPELINE">Pipeline</option>
+                                <option value="COMMITTED">Committed</option>
                                 <option value="COMPLETED">Completed</option>
                                 <option value="CANCELED">Canceled</option>
                             </select>
@@ -444,11 +452,11 @@ export default function MeetingModal({
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                    Date{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                    Date{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="date"
-                                    required={event.status === 'COMPLETED'}
+                                    required={['COMMITTED', 'COMPLETED'].includes(event.status || '')}
                                     disabled={readOnly}
                                     className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     value={event.date || ''}
@@ -458,11 +466,11 @@ export default function MeetingModal({
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                    Start Time{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                    Start Time{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="time"
-                                    required={event.status === 'COMPLETED'}
+                                    required={['COMMITTED', 'COMPLETED'].includes(event.status || '')}
                                     disabled={readOnly}
                                     className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     value={event.startTime || ''}
@@ -536,12 +544,12 @@ export default function MeetingModal({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                Room{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                Room{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                             </label>
                             <select
                                 className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 disabled={readOnly}
-                                required={event.status === 'COMPLETED'}
+                                required={['COMMITTED', 'COMPLETED'].includes(event.status || '')}
                                 value={event.resourceId || ''}
                                 onChange={e => onEventChange({ ...event, resourceId: e.target.value })}
                             >
@@ -571,7 +579,7 @@ export default function MeetingModal({
                         )}
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                Internal Attendees{event.status === 'COMPLETED' && <span className="text-red-500">*</span>}
+                                Internal Attendees{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                             </label>
                             <div className="mb-2">
                                 <div className="relative">
