@@ -745,7 +745,7 @@ export default function MeetingModal({
                                 </label>
                             </div>
 
-                            {!isCreating && !readOnly && event.date && event.startTime && event.endTime && (
+                            {!isCreating && !readOnly && event.date && event.startTime && event.endTime && (user?.publicMetadata?.role === 'root' || user?.publicMetadata?.role === 'admin') && (
                                 <button
                                     type="button"
                                     onClick={handleGenerateInvite}

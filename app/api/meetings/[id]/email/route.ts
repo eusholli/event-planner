@@ -7,6 +7,14 @@ export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> } // Correct type for Next.js 15+ dynamic routes
 ) {
+    const { checkRole, Roles } = await import('@/lib/roles')
+    const isRoot = await checkRole(Roles.Root)
+    const isAdmin = await checkRole(Roles.Admin)
+
+    if (!isRoot && !isAdmin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     try {
         const { id } = await params
         const { recipientEmail, onsiteName, onsitePhone } = await request.json()
