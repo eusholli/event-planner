@@ -6,6 +6,14 @@ export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { checkRole, Roles } = await import('@/lib/roles')
+    const isRoot = await checkRole(Roles.Root)
+    const isAdmin = await checkRole(Roles.Admin)
+
+    if (!isRoot && !isAdmin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const id = (await params).id
     try {
         const meeting = await prisma.meeting.findUnique({
