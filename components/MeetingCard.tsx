@@ -26,8 +26,8 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { label: string; className: string }> = {
             PIPELINE: { label: 'Pipeline', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-            COMMITTED: { label: 'Committed', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-            COMPLETED: { label: 'Completed', className: 'bg-green-50 text-green-700 border-green-200' },
+            CONFIRMED: { label: 'Confirmed', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+            OCCURRED: { label: 'Occurred', className: 'bg-green-50 text-green-700 border-green-200' },
             CANCELED: { label: 'Canceled', className: 'bg-gray-50 text-gray-700 border-gray-200' },
         }
         const config = statusConfig[status] || statusConfig.PIPELINE

@@ -9,7 +9,7 @@ For a detailed guide on how to use the application features, please refer to the
 ## Features
 
 - **Meeting Tracker**: Real-time overview of event statistics with optional PDF Briefing Book export.
-- **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV). Tracks **Pipeline**, **Committed**, and **Completed** meetings.
+- **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV). Tracks **Pipeline**, **Confirmed**, and **Occurred** meetings.
 - **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User).
 - **AI Chat Assistant**: Smart chatbot for event queries and navigation. Features **Persistent Chat** history and **Enhanced Search** for attendees. Generates helper cards for creating/editing resources.
 - **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
