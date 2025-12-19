@@ -444,7 +444,8 @@ export default function CalendarPage() {
 
     if (loading) return <div className="p-8 text-center text-zinc-500">Loading calendar...</div>
 
-
+    const minTime = new Date()
+    minTime.setHours(7, 0, 0)
 
     return (
         <div className="h-[calc(100vh-120px)] flex flex-col space-y-6">
@@ -459,6 +460,7 @@ export default function CalendarPage() {
 
             <div className="flex-1 bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100/50">
                 <DnDCalendar
+                    min={minTime}
                     localizer={localizer}
                     events={events}
                     date={date}
