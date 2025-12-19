@@ -9,7 +9,7 @@ import moment from 'moment'
 interface Meeting {
     id: string
     title: string
-    status: 'PIPELINE' | 'COMMITTED' | 'COMPLETED' | 'CANCELED'
+    status: 'PIPELINE' | 'CONFIRMED' | 'OCCURRED' | 'CANCELED'
     meetingType?: string
     tags?: string[]
     attendees: { id: string }[]
@@ -31,8 +31,8 @@ interface AttendeeStats {
     attendeeId: string
     attendeeName: string
     pipeline: number
-    committed: number
-    completed: number
+    confirmed: number
+    occurred: number
     canceled: number
     total: number
 }
@@ -123,18 +123,18 @@ export default function ReportsPage() {
             })
 
             const pipeline = attendeeMeetings.filter(m => m.status === 'PIPELINE').length
-            const committed = attendeeMeetings.filter(m => m.status === 'COMMITTED').length
-            const completed = attendeeMeetings.filter(m => m.status === 'COMPLETED').length
+            const confirmed = attendeeMeetings.filter(m => m.status === 'CONFIRMED').length
+            const occurred = attendeeMeetings.filter(m => m.status === 'OCCURRED').length
             const canceled = attendeeMeetings.filter(m => m.status === 'CANCELED').length
 
             return {
                 attendeeId: attendee.id,
                 attendeeName: attendee.name,
                 pipeline,
-                committed,
-                completed,
+                confirmed,
+                occurred,
                 canceled,
-                total: pipeline + committed + completed + canceled // Or just attendeeMeetings.length if status is always one of these
+                total: pipeline + confirmed + occurred + canceled // Or just attendeeMeetings.length if status is always one of these
             }
         })
 
@@ -164,12 +164,12 @@ export default function ReportsPage() {
     }
 
     const handleExportCSV = () => {
-        const headers = ['Attendee Name', 'Pipeline', 'Committed', 'Completed', 'Canceled', 'Total']
+        const headers = ['Attendee Name', 'Pipeline', 'Confirmed', 'Occurred', 'Canceled', 'Total']
         const rows = tableData.map(row => [
             `"${row.attendeeName.replace(/"/g, '""')}"`,
             row.pipeline,
-            row.committed,
-            row.completed,
+            row.confirmed,
+            row.occurred,
             row.canceled,
             row.total
         ])
@@ -197,14 +197,14 @@ export default function ReportsPage() {
         const tableBody = tableData.map(row => [
             row.attendeeName,
             row.pipeline,
-            row.committed,
-            row.completed,
+            row.confirmed,
+            row.occurred,
             row.canceled,
             row.total
         ])
 
         autoTable(doc, {
-            head: [['Attendee Name', 'Pipeline', 'Committed', 'Completed', 'Canceled', 'Total']],
+            head: [['Attendee Name', 'Pipeline', 'Confirmed', 'Occurred', 'Canceled', 'Total']],
             body: tableBody,
             startY: 35,
             theme: 'striped',
@@ -343,8 +343,8 @@ export default function ReportsPage() {
                                     {[
                                         { id: 'attendeeName', label: 'Attendee Name' },
                                         { id: 'pipeline', label: 'Pipeline' },
-                                        { id: 'committed', label: 'Committed' },
-                                        { id: 'completed', label: 'Completed' },
+                                        { id: 'confirmed', label: 'Confirmed' },
+                                        { id: 'occurred', label: 'Occurred' },
                                         { id: 'canceled', label: 'Canceled' },
                                         { id: 'total', label: 'Total' }
                                     ].map((column) => (
@@ -383,10 +383,10 @@ export default function ReportsPage() {
                                                 {row.pipeline}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {row.committed}
+                                                {row.confirmed}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {row.completed}
+                                                {row.occurred}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {row.canceled}

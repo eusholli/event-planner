@@ -138,18 +138,20 @@ export default function MeetingModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Client-side validation for COMMITTED/COMPLETED status
-        if (['COMMITTED', 'COMPLETED'].includes(event.status || '')) {
+        // Client-side validation for CONFIRMED/OCCURRED status
+        if (['CONFIRMED', 'OCCURRED'].includes(event.status || '')) {
+            const statusLabel = event.status === 'OCCURRED' ? 'occurred' : 'confirmed'
+
             if (!event.title || event.title.trim() === '') {
-                setLocalError('Title is required for committed meetings')
+                setLocalError(`Title is required for ${statusLabel} meetings`)
                 return
             }
             if (!event.date || !event.startTime || !event.endTime) {
-                setLocalError('Date and time are required for committed meetings')
+                setLocalError(`Date and time are required for ${statusLabel} meetings`)
                 return
             }
             if (!event.resourceId) {
-                setLocalError('Room is required for committed meetings')
+                setLocalError(`Room is required for ${statusLabel} meetings`)
                 return
             }
             if (event.resourceId === 'external' && !event.location) {
@@ -157,7 +159,7 @@ export default function MeetingModal({
                 return
             }
             if (!event.attendees || event.attendees.length === 0) {
-                setLocalError('At least one attendee is required for committed meetings')
+                setLocalError(`At least one attendee is required for ${statusLabel} meetings`)
                 return
             }
         }
@@ -416,8 +418,8 @@ export default function MeetingModal({
                                 }}
                             >
                                 <option value="PIPELINE">Pipeline</option>
-                                <option value="COMMITTED">Committed</option>
-                                <option value="COMPLETED">Completed</option>
+                                <option value="CONFIRMED">Confirmed</option>
+                                <option value="OCCURRED">Occurred</option>
                                 <option value="CANCELED">Canceled</option>
                             </select>
                         </div>
@@ -452,11 +454,11 @@ export default function MeetingModal({
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                    Date{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                    Date{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="date"
-                                    required={['COMMITTED', 'COMPLETED'].includes(event.status || '')}
+                                    required={['CONFIRMED', 'OCCURRED'].includes(event.status || '')}
                                     disabled={readOnly}
                                     className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     value={event.date || ''}
@@ -466,11 +468,11 @@ export default function MeetingModal({
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                    Start Time{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                    Start Time{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="time"
-                                    required={['COMMITTED', 'COMPLETED'].includes(event.status || '')}
+                                    required={['CONFIRMED', 'OCCURRED'].includes(event.status || '')}
                                     disabled={readOnly}
                                     className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     value={event.startTime || ''}
@@ -544,12 +546,12 @@ export default function MeetingModal({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                Room{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                Room{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                             </label>
                             <select
                                 className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 disabled={readOnly}
-                                required={['COMMITTED', 'COMPLETED'].includes(event.status || '')}
+                                required={['CONFIRMED', 'OCCURRED'].includes(event.status || '')}
                                 value={event.resourceId || ''}
                                 onChange={e => onEventChange({ ...event, resourceId: e.target.value })}
                             >
@@ -579,7 +581,7 @@ export default function MeetingModal({
                         )}
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                Internal Attendees{['COMMITTED', 'COMPLETED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                Internal Attendees{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                             </label>
                             <div className="mb-2">
                                 <div className="relative">

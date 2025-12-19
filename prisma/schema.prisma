@@ -46,8 +46,8 @@ model Room {
 
 enum MeetingStatus {
   PIPELINE
-  COMMITTED
-  COMPLETED
+  CONFIRMED
+  OCCURRED
   CANCELED
 }
 

@@ -1,0 +1,3 @@
+-- Rename enum values
+ALTER TYPE "MeetingStatus" RENAME VALUE 'COMMITTED' TO 'CONFIRMED';
+ALTER TYPE "MeetingStatus" RENAME VALUE 'COMPLETED' TO 'OCCURRED';

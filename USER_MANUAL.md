@@ -86,7 +86,7 @@ Navigate to the **Schedule** page to organize your event agenda.
 4.  Select a **Room**.
 5.  Choose **Attendees** from the list.
 6.  Set the **Date**, **Start Time**, and **Duration**.
-7.  Select the **Status** (Pipeline, Committed, Completed, Canceled).
+7.  Select the **Status** (Pipeline, Confirmed, Occurred, Canceled).
 8.  Click **Book Meeting**.
 
 ### Meeting Tags
@@ -98,7 +98,7 @@ You can categorize your meetings using tags.
 1. Click on a meeting block in the calendar.
 2. A modal will appear with the meeting details.
 3. Click **Edit** to modify details or **Delete** to remove the meeting.
-4. If the meeting status is "Pipeline" (formerly Started), you only need to provide a title. For "Committed" (formerly Completed), all fields are required.
+4. If the meeting status is "Pipeline" (formerly Started), you only need to provide a title. For "Confirmed" (formerly Completed), all fields are required.
 
 **Note**: After booking, you will stay on the page to easily book another meeting. A success message will appear at the top.
 
@@ -113,7 +113,7 @@ You can categorize your meetings using tags.
 *Access: Root and Admin users only.*
 
 The **Reports** page provides deep insights into meeting metrics and attendee engagement.
-- **Analytics Table**: View meetings breakdown (Pipeline, Committed, Completed, Canceled) per attendee.
+- **Analytics Table**: View meetings breakdown (Pipeline, Confirmed, Occurred, Canceled) per attendee.
 - **Filtering**: Filter by Attendee Type, Meeting Type, and Tags.
 - **Sorting**: Click column headers to sort data.
 - **Export**: Generate PDF or CSV reports for offline analysis.

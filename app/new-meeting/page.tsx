@@ -107,14 +107,14 @@ export default function SchedulePage() {
         }
 
         // Validation based on status
-        if (formData.status === 'COMPLETED') {
+        if (formData.status === 'OCCURRED') {
             if (!formData.date || !formData.startTime) {
-                setError('Date and Start Time are required for completed meetings')
+                setError('Date and Start Time are required for occurred meetings')
                 setLoading(false)
                 return
             }
             if (!formData.roomId) {
-                setError('Room is required for completed meetings')
+                setError('Room is required for occurred meetings')
                 setLoading(false)
                 return
             }
@@ -124,12 +124,12 @@ export default function SchedulePage() {
                 return
             }
             if (formData.attendeeIds.length === 0) {
-                setError('At least one attendee is required for completed meetings')
+                setError('At least one attendee is required for occurred meetings')
                 setLoading(false)
                 return
             }
             if (!formData.duration) {
-                setError('Duration is required for completed meetings')
+                setError('Duration is required for occurred meetings')
                 setLoading(false)
                 return
             }
@@ -189,7 +189,7 @@ export default function SchedulePage() {
                     attendeeIds: [],
                     roomId: '',
                     location: '',
-                    status: 'STARTED',
+                    status: 'PIPELINE',
                     tags: [],
                     requesterEmail: '',
                     meetingType: '',
@@ -270,8 +270,8 @@ export default function SchedulePage() {
                                         onChange={e => setFormData({ ...formData, status: e.target.value })}
                                     >
                                         <option value="PIPELINE">Pipeline</option>
-                                        <option value="COMMITTED">Committed</option>
-                                        <option value="COMPLETED">Completed</option>
+                                        <option value="CONFIRMED">Confirmed</option>
+                                        <option value="OCCURRED">Occurred</option>
                                         <option value="CANCELED">Canceled</option>
                                     </select>
                                 </div>

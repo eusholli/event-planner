@@ -95,7 +95,7 @@ export default function ManualPage() {
                         <li>Select a <strong>Room</strong>.</li>
                         <li>Choose <strong>Attendees</strong> from the list.</li>
                         <li>Set the <strong>Date</strong>, <strong>Start Time</strong>, and <strong>Duration</strong>.</li>
-                        <li>Select the <strong>Status</strong> (Started, Completed, Canceled).</li>
+                        <li>Select the <strong>Status</strong> (Pipeline, Confirmed, Occurred, Canceled).</li>
                         <li>Click <strong>Book Meeting</strong>.</li>
                     </ol>
 
