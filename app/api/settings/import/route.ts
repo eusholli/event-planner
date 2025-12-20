@@ -107,17 +107,39 @@ export async function POST(request: Request) {
                 })
 
                 if (!existing) {
-                    const meetingData = meetingFields
+                    // Explicitly exclude roomId from meetingFields to prevent bad data injection
+                    const { roomId: _rawId, ...cleanMeetingFields } = meetingFields as any
 
-                    await prisma.meeting.create({
-                        data: {
-                            ...meetingData,
-                            roomId: roomId,
-                            attendees: {
-                                connect: attendees
-                            }
+                    console.log(`Creating meeting "${meeting.title}" with roomId: ${roomId}`)
+
+                    if (roomId) {
+                        // Double check if room exists
+                        const roomCheck = await prisma.room.findUnique({ where: { id: roomId } })
+                        if (!roomCheck) {
+                            console.error(`CRITICAL: Room with ID ${roomId} found by name lookup but does not exist in DB!`)
+                            // Fallback to null?
+                            roomId = null
                         }
-                    })
+                    }
+
+                    try {
+                        await prisma.meeting.create({
+                            data: {
+                                ...cleanMeetingFields,
+                                roomId: roomId,
+                                attendees: {
+                                    connect: attendees
+                                }
+                            }
+                        })
+                    } catch (e) {
+                        console.error(`Failed to create meeting "${meeting.title}". Data:`, {
+                            roomId,
+                            attendeesCount: attendees.length,
+                            fields: cleanMeetingFields
+                        })
+                        throw e
+                    }
                 }
             }
         }
