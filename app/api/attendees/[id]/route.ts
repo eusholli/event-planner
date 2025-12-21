@@ -9,7 +9,28 @@ export async function PUT(
     const id = (await params).id
     try {
         const { canWrite } = await import('@/lib/roles')
-        if (!await canWrite()) {
+        const { currentUser } = await import('@clerk/nextjs/server')
+
+        const hasAdminAccess = await canWrite()
+
+        let hasAccess = hasAdminAccess
+
+        if (!hasAccess) {
+            const user = await currentUser()
+            if (user?.emailAddresses?.some(e => e.emailAddress)) {
+                // Check if the user is trying to edit their own record
+                const attendeeToCheck = await prisma.attendee.findUnique({
+                    where: { id },
+                    select: { email: true }
+                })
+
+                if (attendeeToCheck && user.emailAddresses.some(e => e.emailAddress === attendeeToCheck.email)) {
+                    hasAccess = true
+                }
+            }
+        }
+
+        if (!hasAccess) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
         const body = await request.json()
