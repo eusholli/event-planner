@@ -17,9 +17,9 @@ Welcome to the Event Planner application! This guide will help you navigate the 
 ## User Roles & Permissions
 The application serves different types of users with specific access levels:
 
-- **Root**: Full administrative access. Can manage all settings, users, and data. Access to all pages including Settings and Admin User Management.
-- **Admin**: Operational access. Can view Reports, manage Schedules and Attendees, but cannot modify system-wide Settings or User permissions.
-- **User**: Read-only access. Can view Dashboards, Schedules, and Attendees but cannot create new meetings or edit data. Restricted from sensitive areas like Settings (`/settings`), User Management (`/admin/users`), and Reports (`/reports`).
+- **Root**: Full administrative access. Can manage all settings, users, and data. Access to all pages including Settings and Admin User Management. Can generate meeting invites.
+- **Admin**: Operational access. Can view Reports, manage Schedules and Attendees, but cannot modify system-wide Settings or User permissions. Can generate meeting invites.
+- **User**: Read-only access to most features. Can view Dashboards, Schedules, and Attendees but cannot create new meetings or edit data. Cannot add/edit attendees. Restricted from sensitive areas like Settings (`/settings`), User Management (`/admin/users`), and Reports (`/reports`). Cannot generate meeting invites.
 
 ---
 
@@ -70,7 +70,8 @@ The built-in **AI Chat** allows you to ask natural language questions about the 
 - **Context Aware**: The AI knows your event's start and end dates and general configuration.
 - **Smart Actions**: You can say "Create a new meeting" or "Edit the Kickoff meeting", and the AI will generate a specialized **Navigation Card**. Click the card to jump directly to the correct page with details pre-filled (where possible).
 - **Navigation**: Ask "Where can I manage attendees?" to get a direct link to the relevant page.
-- **Persistent Chat**: Your conversation history is saved, so you don't lose context when navigating between pages. Use the **Clear Chat** button to start fresh.
+- **Persistent Chat**: Your conversation history is saved, so you don't lose context when navigating between pages.
+- **Clear Chat**: Use the **Clear Chat** button to wipe the current conversation history and start fresh.
 - **Enhanced Search**: You can search for meetings by attendee name (e.g., "Find meetings with John Doe").
 - **Security**: The assistant respects your User Role. It will only provide actions and links that you are authorized to use.
 
@@ -98,7 +99,7 @@ You can categorize your meetings using tags.
 1. Click on a meeting block in the calendar.
 2. A modal will appear with the meeting details.
 3. Click **Edit** to modify details or **Delete** to remove the meeting.
-4. If the meeting status is "Pipeline" (formerly Started), you only need to provide a title. For "Confirmed" (formerly Completed), all fields are required.
+4. If the meeting status is "Pipeline" (formerly Started), you only need to provide a title. For "Confirmed" (formerly Completed) or "Occurred", additional fields are required.
 
 **Note**: After booking, you will stay on the page to easily book another meeting. A success message will appear at the top.
 
@@ -139,4 +140,4 @@ Upload a JSON configuration file (e.g., `event-config.json`) to add new data or 
 Download a full backup of your current database as a JSON file. The filename will include a timestamp (e.g., `event-config-2025-11-23-10-00.json`) for easy versioning.
 
 #### Delete Database
-**Warning**: This action permanently removes all Attendees, Rooms, and Meetings from the database. It can also optionally delete Event Settings if configured. Use this feature with caution, preferably after creating an [Export](#export-database).
+**Warning**: This action permanently removes all Attendees, Rooms, and Meetings from the database. It will automatically attempt to export a backup before deletion. It can also optionally delete Event Settings if configured. Use this feature with caution.

@@ -9,15 +9,15 @@ For a detailed guide on how to use the application features, please refer to the
 ## Features
 
 - **Meeting Tracker**: Real-time overview of event statistics with optional PDF Briefing Book export.
-- **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV). Tracks **Pipeline**, **Confirmed**, and **Occurred** meetings.
-- **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User).
-- **AI Chat Assistant**: Smart chatbot for event queries and navigation. Features **Persistent Chat** history and **Enhanced Search** for attendees. Generates helper cards for creating/editing resources.
+- **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV). Tracks **Pipeline**, **Confirmed**, **Occurred**, and **Canceled** meetings.
+- **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User). **User** role is read-only for attendees.
+- **AI Chat Assistant**: Smart chatbot for event queries and navigation. Features **Persistent Chat** history, **Clear Chat** functionality, and **Enhanced Search** for attendees. Generates helper cards for creating/editing resources.
 - **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
 - **Meeting Tags**: Categorize meetings with custom tags (e.g., "Internal", "Client").
 - **Attendee Management**: Add, edit, and track event attendees (Read-only for standard users).
 - **AI-Powered Auto Complete**: Use Google Gemini to automatically populate attendee professional details.
 - **Schedule Management**: Drag-and-drop interface for organizing meetings and sessions.
-- **Data Management**: Import, Export, Reset database, and Delete Event Settings capabilities.
+- **Data Management**: Import, Export, and Delete Database (with auto-export backup) capabilities.
 
 ## Getting Started
 
