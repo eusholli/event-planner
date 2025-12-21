@@ -27,7 +27,9 @@ function AttendeesContent() {
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null)
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const { user } = useUser()
-    const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
+    const role = user?.publicMetadata?.role as string
+    const readOnly = !hasWriteAccess(role)
+    const userEmail = user?.primaryEmailAddress?.emailAddress
     const searchParams = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
@@ -205,8 +207,11 @@ function AttendeesContent() {
         }
     }
 
-    const internalAttendees = attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
-    const externalAttendees = attendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
+    const currentUserAttendee = attendees.find(a => userEmail && a.email === userEmail)
+    const otherAttendees = attendees.filter(a => !userEmail || a.email !== userEmail)
+
+    const internalAttendees = otherAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
+    const externalAttendees = otherAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
 
     const renderAttendeeCard = (attendee: Attendee) => (
         <div key={attendee.id} className="card hover:border-zinc-200 group relative flex flex-col">
@@ -239,7 +244,7 @@ function AttendeesContent() {
                     </div>
                 </div>
                 <div className="flex space-x-1">
-                    {!readOnly && (
+                    {(!readOnly || (userEmail && attendee.email === userEmail)) && (
                         <button
                             onClick={() => openEditModal(attendee)}
                             className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
@@ -326,6 +331,21 @@ function AttendeesContent() {
 
                 {/* Attendees List */}
                 <div className="lg:col-span-2 space-y-12">
+                    {/* Current User Profile */}
+                    {currentUserAttendee && (
+                        <div>
+                            <div className="flex items-center mb-6">
+                                <h2 className="text-xl font-bold text-zinc-900">Your Profile</h2>
+                                <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                    You
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {renderAttendeeCard(currentUserAttendee)}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Internal Attendees */}
                     <div>
                         <div className="flex items-center mb-6">
