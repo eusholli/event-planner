@@ -32,12 +32,62 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
         isExternal: false,
         type: ''
     })
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [autoCompleting, setAutoCompleting] = useState(false)
     const [hasApiKey, setHasApiKey] = useState(false)
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<Partial<Attendee> | null>(null)
+
+    const resizeImage = (file: File): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(newFile);
+                        } else {
+                            reject(new Error('Canvas is empty'));
+                        }
+                    }, 'image/jpeg', 0.8);
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    }
 
     useEffect(() => {
         checkSettings()
@@ -98,14 +148,30 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
         setLoading(true)
         setError(null)
         try {
+            const formDataToSend = new FormData()
+            formDataToSend.append('name', formData.name)
+            formDataToSend.append('title', formData.title)
+            formDataToSend.append('email', formData.email)
+            formDataToSend.append('company', formData.company)
+            formDataToSend.append('bio', formData.bio)
+            formDataToSend.append('companyDescription', formData.companyDescription)
+            formDataToSend.append('linkedin', formData.linkedin)
+            formDataToSend.append('imageUrl', formData.imageUrl)
+            formDataToSend.append('isExternal', String(formData.isExternal))
+            formDataToSend.append('type', formData.type)
+
+            if (selectedFile) {
+                formDataToSend.append('imageFile', selectedFile)
+            }
+
             const res = await fetch('/api/attendees', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: formDataToSend,
             })
             const data = await res.json()
             if (res.ok) {
                 setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false, type: '' })
+                setSelectedFile(null)
                 if (onSuccess) {
                     onSuccess(data)
                 }
@@ -131,8 +197,11 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
                 )}
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Photo Input */}
-                    <div className="flex justify-center mb-6">
-                        <div className="relative group">
+                    <div className="flex flex-col items-center mb-6 space-y-3">
+                        <div
+                            className="relative group cursor-pointer"
+                            onClick={() => document.getElementById('add-photo-upload')?.click()}
+                        >
                             <div className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 ${formData.imageUrl ? 'border-indigo-500' : 'border-zinc-200 bg-zinc-50'}`}>
                                 {formData.imageUrl ? (
                                     <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -142,13 +211,43 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
                                     </svg>
                                 )}
                             </div>
+                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <input
+                            type="file"
+                            id="add-photo-upload"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={async (e) => {
+                                if (e.target.files?.[0]) {
+                                    try {
+                                        const resizedFile = await resizeImage(e.target.files[0])
+                                        setSelectedFile(resizedFile)
+                                        setFormData({ ...formData, imageUrl: URL.createObjectURL(resizedFile) })
+                                    } catch (err) {
+                                        console.error("Error resizing image:", err)
+                                    }
+                                }
+                            }}
+                        />
+                        <div className="text-center w-full max-w-xs">
+                            <div className="text-xs text-zinc-500 mb-1">or enter URL</div>
                             <input
                                 type="url"
-                                placeholder="Photo URL"
-                                className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-32 text-xs text-center border border-zinc-200 rounded-full px-2 py-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 bg-white"
-                                value={formData.imageUrl}
-                                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                                placeholder="https://example.com/photo.jpg"
+                                className="input-field text-xs py-1.5"
+                                value={selectedFile ? '' : formData.imageUrl}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, imageUrl: e.target.value })
+                                    setSelectedFile(null)
+                                }}
                             />
+                            {selectedFile && <div className="text-[10px] text-green-600 mt-1">Image selected</div>}
                         </div>
                     </div>
 

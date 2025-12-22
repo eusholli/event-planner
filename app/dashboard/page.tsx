@@ -480,7 +480,7 @@ function DashboardContent() {
         document.body.removeChild(link)
     }
 
-    const handleExportPdf = () => {
+    const handleExportPdf = async () => {
         if (filteredMeetings.length === 0) {
             alert('No meetings to export.')
             return
@@ -519,7 +519,7 @@ function DashboardContent() {
         // Re-checking imports... I will update imports in a separate edit if needed, or rely on previous import update if it included all named exports or wildcard.
         // Expecting: import { ..., generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 
-        generateMultiMeetingBriefingBook(
+        await generateMultiMeetingBriefingBook(
             "Meeting Briefing Book",
             "Detailed Report",
             meetingsForPdf

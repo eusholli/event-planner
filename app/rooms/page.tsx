@@ -124,7 +124,7 @@ export default function RoomsPage() {
                 roomName: room.name
             }))
 
-            generateMultiMeetingBriefingBook(
+            await generateMultiMeetingBriefingBook(
                 `Room Meeting Briefing`,
                 `${room.name} (Capacity: ${room.capacity})`,
                 meetingsForPdf,
