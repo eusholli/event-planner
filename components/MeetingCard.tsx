@@ -115,10 +115,10 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                 </div>
                 <div className="flex flex-col justify-center pl-4 border-l border-zinc-100">
                     <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                             e.stopPropagation()
                             const roomName = meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'Unknown Room')
-                            generateBriefingBook(meeting, roomName)
+                            await generateBriefingBook(meeting, roomName)
                         }}
                         className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         title="Export Briefing"
