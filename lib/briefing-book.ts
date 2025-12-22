@@ -8,7 +8,7 @@ interface Meeting {
     startTime: string | null
     endTime: string | null
     resourceId: string
-    attendees: { id: string, name: string, company?: string, isExternal?: boolean, bio?: string, companyDescription?: string }[]
+    attendees: { id: string, name: string, company?: string, isExternal?: boolean, bio?: string, companyDescription?: string, imageUrl?: string }[]
     purpose: string
     status: string
     tags: string[]
@@ -18,17 +18,43 @@ interface Meeting {
     otherDetails?: string
 }
 
-export const generateBriefingBook = (meeting: Meeting, roomName: string) => {
+const loadImage = (url: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        // Use our own proxy to avoid CORS issues from external storage
+        img.src = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg'));
+            } else {
+                resolve(null);
+            }
+        };
+        img.onerror = () => {
+            console.warn('Failed to load image for PDF:', url);
+            resolve(null);
+        };
+    });
+}
+
+export const generateBriefingBook = async (meeting: Meeting, roomName: string) => {
     const doc = new jsPDF()
-    renderMeetingDetails(doc, meeting, roomName, true)
+    await renderMeetingDetails(doc, meeting, roomName, true)
 
     // Save
     const safeTitle = meeting.title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)
-    const filename = `Briefing_${meeting.date || 'NoDate'}_${safeTitle}.pdf`
+    const timestamp = moment().format('YYYYMMDD-HHmmss')
+    const filename = `Briefing_${safeTitle}_${timestamp}.pdf`
     doc.save(filename)
 }
 
-export const generateMultiMeetingBriefingBook = (title: string, subtitle: string, meetings: { meeting: Meeting, roomName: string }[], filenamePrefix?: string) => {
+export const generateMultiMeetingBriefingBook = async (title: string, subtitle: string, meetings: { meeting: Meeting, roomName: string }[], filenamePrefix?: string) => {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 20
@@ -53,10 +79,10 @@ export const generateMultiMeetingBriefingBook = (title: string, subtitle: string
     doc.text(`Total Meetings: ${meetings.length}`, margin, 90)
 
     // Render each meeting
-    meetings.forEach((item, index) => {
+    for (const item of meetings) {
         doc.addPage()
-        renderMeetingDetails(doc, item.meeting, item.roomName, false)
-    })
+        await renderMeetingDetails(doc, item.meeting, item.roomName, false)
+    }
 
     // Add page numbers
     const pageCount = doc.getNumberOfPages()
@@ -73,172 +99,261 @@ export const generateMultiMeetingBriefingBook = (title: string, subtitle: string
     doc.save(`${safeTitle}_${timestamp}.pdf`)
 }
 
-const renderMeetingDetails = (doc: jsPDF, meeting: Meeting, roomName: string, addPageNumbers: boolean) => {
+const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: string, addPageNumbers: boolean) => {
     const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 20
     let yPos = 20
 
-    // Helper to add text and advance yPos
-    const addText = (text: string, fontSize: number, fontStyle: string = 'normal', color: string = '#000000') => {
-        doc.setFontSize(fontSize)
-        doc.setFont('helvetica', fontStyle)
-        doc.setTextColor(color)
+    // --- Dynamic Spacing Constants ---
+    // These are minimums; actual spacing depends on content
+    const GAP_SMALL = 3
+    const GAP_MEDIUM = 6
+    const GAP_SECTION_TOP = 10
+    const GAP_SECTION_BOTTOM = 5
 
-        const splitText = doc.splitTextToSize(text, pageWidth - (margin * 2))
-        doc.text(splitText, margin, yPos)
-        yPos += (splitText.length * fontSize * 0.5) + 5
-    }
-
-    // Helper to add a section header
-    const addSectionHeader = (title: string) => {
-        yPos += 5
-        doc.setDrawColor(200, 200, 200)
-        doc.line(margin, yPos, pageWidth - margin, yPos)
-        yPos += 10
-        addText(title, 14, 'bold', '#333333')
-        yPos += 2
-    }
-
-    // Helper to check for page break
+    // --- Helper Functions ---
     const checkPageBreak = (heightNeeded: number = 20) => {
-        if (yPos + heightNeeded > doc.internal.pageSize.getHeight() - 20) {
+        if (yPos + heightNeeded > pageHeight - 20) {
             doc.addPage()
             yPos = 20
+            return true
         }
+        return false
     }
 
-    // Helper to add a field
-    const addField = (label: string, value: string | undefined | null) => {
-        if (!value) return
-        checkPageBreak()
-        doc.setFontSize(10)
+    const addSectionHeader = (title: string, marginTop = GAP_SECTION_TOP) => {
+        yPos += marginTop
+        checkPageBreak(15) // Reduced header check requirement
+
+        doc.setFillColor(245, 245, 245)
+        doc.rect(margin, yPos, pageWidth - (margin * 2), 8, 'F') // Smaller header bar
+
+        doc.setFontSize(11)
         doc.setFont('helvetica', 'bold')
-        doc.setTextColor('#555555')
-        doc.text(label + ':', margin, yPos)
+        doc.setTextColor('#333333')
+        doc.text(title.toUpperCase(), margin + 5, yPos + 5.5) // Centered visually
 
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor('#000000')
-        const splitValue = doc.splitTextToSize(value, pageWidth - (margin * 2) - 40)
-        doc.text(splitValue, margin + 40, yPos)
-
-        yPos += (splitValue.length * 5) + 3
+        yPos += 8 + GAP_SECTION_BOTTOM
     }
 
-    // --- Header ---
-    doc.setFillColor(63, 81, 181) // Indigo color
+    // --- Header Banner ---
+    doc.setFillColor(63, 81, 181)
     doc.rect(0, 0, pageWidth, 40, 'F')
 
-    doc.setFontSize(24)
+    doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor('#FFFFFF')
-    doc.text('Meeting Briefing', margin, 25)
+    doc.text('Meeting Briefing', margin, 20)
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor('#E0E0E0')
+    doc.text(`Generated: ${moment().format('MMM D, YYYY')}`, margin, 30)
 
     yPos = 55
 
-    // --- Meeting Overview ---
-    addText(meeting.title, 18, 'bold')
+    // --- Meeting Info Grid ---
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor('#1f2937')
+
+    // Title
+    const titleLines = doc.splitTextToSize(meeting.title, pageWidth - (margin * 2))
+    doc.text(titleLines, margin, yPos)
+    yPos += (titleLines.length * 8) + GAP_MEDIUM
+
+    // Grid Container
+    const gridY = yPos
+    const colWidth = (pageWidth - (margin * 2)) / 2
+
+    // Left Col: Date & Time
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor('#6b7280')
+    doc.text('DATE & TIME', margin, yPos)
+
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor('#111827')
 
     let dateStr = 'Date Not Set'
-    if (meeting.date) {
-        dateStr = moment(meeting.date).format('dddd, MMMM D, YYYY')
-    }
-
     let timeStr = 'Time Not Set'
+    if (meeting.date) {
+        dateStr = moment(meeting.date).format('ddd, MMM D, YYYY')
+    }
     if (meeting.startTime && meeting.endTime) {
-        // Handle both full ISO strings and simple time strings
-        const startM = meeting.startTime.includes('T') ? moment(meeting.startTime) : moment(meeting.date + 'T' + meeting.startTime)
-        const endM = meeting.endTime.includes('T') ? moment(meeting.endTime) : moment(meeting.date + 'T' + meeting.endTime)
+        const startM = meeting.startTime.includes('T') ? moment(meeting.startTime) : moment(`${meeting.date}T${meeting.startTime}`)
+        const endM = meeting.endTime.includes('T') ? moment(meeting.endTime) : moment(`${meeting.date}T${meeting.endTime}`)
         timeStr = `${startM.format('h:mm A')} - ${endM.format('h:mm A')}`
     }
 
-    addText(`${dateStr}  |  ${timeStr}`, 12, 'normal', '#666666')
-    addText(`Location: ${roomName}`, 12, 'normal', '#666666')
+    doc.text(dateStr, margin, yPos + 5)
+    doc.text(timeStr, margin, yPos + 10)
+
+    // Right Col: Location & Type
+    const rightColX = margin + colWidth
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor('#6b7280')
+    doc.text('LOCATION', rightColX, yPos)
+
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor('#111827')
+    doc.text(roomName, rightColX, yPos + 5)
 
     if (meeting.meetingType) {
-        yPos += 2
-        doc.setFillColor(240, 240, 240)
-        doc.roundedRect(margin, yPos - 4, doc.getTextWidth(meeting.meetingType) + 10, 8, 2, 2, 'F')
-        doc.setFontSize(10)
-        doc.setTextColor('#333333')
-        doc.text(meeting.meetingType, margin + 5, yPos + 1)
-        yPos += 10
+        doc.setFontSize(9)
+        doc.setFillColor(238, 242, 255)
+        doc.setDrawColor(199, 210, 254)
+        doc.roundedRect(rightColX, yPos + 9, doc.getTextWidth(meeting.meetingType) + 8, 6, 1.5, 1.5, 'FD')
+        doc.setTextColor(67, 56, 202)
+        doc.text(meeting.meetingType, rightColX + 4, yPos + 13)
     }
 
-    // --- Purpose / Agenda ---
+    // Determine grid height based on content
+    // Date/Time (2 lines) vs Location (1 line) + Tag
+    // Base is 3 lines text -> approx 15 height + label
+    const gridContentHeight = meeting.meetingType ? 20 : 15
+    yPos += gridContentHeight + GAP_SECTION_TOP
+
+    // --- Purpose ---
     if (meeting.purpose) {
-        addSectionHeader('Purpose & Agenda')
-        addText(meeting.purpose, 11)
+        doc.setDrawColor(229, 231, 235)
+        doc.line(margin, yPos, pageWidth - margin, yPos)
+        yPos += GAP_MEDIUM
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor('#6b7280')
+        doc.text('PURPOSE', margin, yPos)
+        yPos += 5
+
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor('#374151')
+        const purposeLines = doc.splitTextToSize(meeting.purpose, pageWidth - (margin * 2))
+        doc.text(purposeLines, margin, yPos)
+        yPos += (purposeLines.length * 5) // Tight line spacing
     }
 
     // --- Attendees ---
-    checkPageBreak(40)
-    addSectionHeader('Attendees')
-
     const internalAttendees = meeting.attendees.filter(a => !a.isExternal)
     const externalAttendees = meeting.attendees.filter(a => a.isExternal)
 
     if (externalAttendees.length > 0) {
-        checkPageBreak()
-        addText('External Guests', 11, 'bold', '#444444')
+        // Only add top margin if we had predecessor content
+        addSectionHeader('External Guests', GAP_SECTION_TOP)
 
-        externalAttendees.forEach(a => {
+        for (const a of externalAttendees) {
             checkPageBreak(30)
-            let text = `• ${a.name}`
-            if (a.company) text += ` (${a.company})`
-            addText(text, 10, 'bold')
 
-            if (a.bio) {
-                addText(`  Bio: ${a.bio}`, 9, 'italic', '#555555')
+            const cardStartY = yPos
+            let contentStartX = margin
+
+            // Image
+            const IMG_SIZE = 22
+            if (a.imageUrl) {
+                try {
+                    const imgData = await loadImage(a.imageUrl)
+                    if (imgData) {
+                        doc.addImage(imgData, 'JPEG', margin, yPos, IMG_SIZE, IMG_SIZE)
+                        doc.setDrawColor(229, 231, 235)
+                        doc.rect(margin, yPos, IMG_SIZE, IMG_SIZE)
+                        contentStartX += (IMG_SIZE + GAP_MEDIUM)
+                    }
+                } catch (e) {
+                    console.error('Failed to load image', e)
+                }
             }
-            yPos += 2 // Add some spacing between attendees
-        })
-        yPos += 5
+
+            // Name
+            doc.setFontSize(11)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor('#111827')
+            doc.text(`${a.name}`, contentStartX, yPos + 4)
+
+            let metaY = yPos + 9
+            if (a.company) {
+                doc.setFontSize(9)
+                doc.setFont('helvetica', 'bold')
+                doc.setTextColor('#4b5563')
+                doc.text(a.company.toUpperCase(), contentStartX, metaY)
+                metaY += 5
+            }
+
+            // Bio
+            let bioHeight = 0
+            if (a.bio) {
+                doc.setFontSize(9)
+                doc.setFont('helvetica', 'italic')
+                doc.setTextColor('#6b7280')
+                const bioLines = doc.splitTextToSize(a.bio, pageWidth - contentStartX - margin)
+                doc.text(bioLines, contentStartX, metaY)
+                bioHeight = bioLines.length * 3.5
+            }
+
+            // Dynamic Row Height Calculation
+            const textHeight = (metaY - yPos) + bioHeight
+            // If image exists, row must be at least image height
+            // If no image, row is just text height
+            const contentHeight = a.imageUrl ? Math.max(IMG_SIZE, textHeight) : textHeight
+
+            // Add minimal padding between rows (4 units)
+            yPos += contentHeight + 4
+        }
     }
 
     if (internalAttendees.length > 0) {
-        checkPageBreak()
-        addText('Internal Attendees', 11, 'bold', '#444444')
-        internalAttendees.forEach(a => {
-            checkPageBreak()
-            addText(`• ${a.name}`, 10)
-            yPos -= 2 // Tighten list
-        })
-        yPos += 5
-    }
+        addSectionHeader('Internal Attendees', GAP_SECTION_TOP)
 
-    if (meeting.attendees.length === 0) {
-        addText('No attendees listed.', 10, 'italic', '#888888')
-    }
+        for (const a of internalAttendees) {
+            checkPageBreak(12)
 
-    // --- Participating Companies ---
-    const companies = new Map<string, string>()
-    externalAttendees.forEach(a => {
-        if (a.company && a.companyDescription) {
-            companies.set(a.company, a.companyDescription)
+            let contentStartX = margin
+            const IMG_SIZE = 16
+            if (a.imageUrl) {
+                try {
+                    const imgData = await loadImage(a.imageUrl)
+                    if (imgData) {
+                        doc.addImage(imgData, 'JPEG', margin, yPos, IMG_SIZE, IMG_SIZE)
+                        doc.setDrawColor(229, 231, 235)
+                        doc.rect(margin, yPos, IMG_SIZE, IMG_SIZE)
+                        contentStartX += (IMG_SIZE + GAP_SMALL)
+                    }
+                } catch (e) { }
+            }
+
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor('#111827')
+
+            // Calculate width using the correct Bold/10 font settings BEFORE changing them
+            const nameWidth = doc.getTextWidth(a.name)
+            doc.text(a.name, contentStartX, yPos + 4)
+
+            if (a.company) {
+                doc.setFontSize(9)
+                doc.setFont('helvetica', 'normal')
+                doc.setTextColor('#6b7280')
+                // Use the pre-calculated width + padding (replaced dash with clean spacing)
+                doc.text(a.company, contentStartX + nameWidth + 5, yPos + 4)
+            }
+
+            const contentHeight = a.imageUrl ? Math.max(IMG_SIZE, 5) : 5
+            yPos += contentHeight + GAP_SMALL
         }
-    })
-
-    if (companies.size > 0) {
-        checkPageBreak(40)
-        addSectionHeader('Participating Companies')
-        companies.forEach((description, company) => {
-            checkPageBreak(30)
-            addText(company, 11, 'bold', '#444444')
-            addText(description, 10, 'normal', '#000000')
-            yPos += 3
-        })
     }
 
-
-
+    // --- Footer Pagination ---
     if (addPageNumbers) {
         const pageCount = doc.getNumberOfPages()
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i)
             doc.setFontSize(8)
-            doc.setTextColor('#AAAAAA')
-            doc.text(`Generated on ${moment().format('MMM D, YYYY h:mm A')}`, margin, doc.internal.pageSize.getHeight() - 10)
-            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, doc.internal.pageSize.getHeight() - 10)
+            doc.setTextColor('#9ca3af')
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, pageHeight - 10)
         }
     }
 }
