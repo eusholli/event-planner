@@ -29,15 +29,11 @@ jobs:
           # Dump the database and compress it
           pg_dump "$POSTGRES_URL_NON_POOLING" | gzip > "$FILENAME"
 
-      - name: Configure AWS/R2 Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-          
       - name: Upload to R2
         env:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1 # Required by AWS CLI, ignored by R2
         run: |
           aws s3 cp "${{ env.FILENAME }}" "s3://db-backups/${{ env.FILENAME }}" --endpoint-url "$R2_ENDPOINT"
