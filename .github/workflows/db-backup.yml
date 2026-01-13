@@ -25,12 +25,21 @@ jobs:
           POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
         run: |
           set -o pipefail
+          
+          # Debugging: Check versions
+          echo "--- DEBUG INFO ---"
+          echo "Default pg_dump path: $(which pg_dump)"
+          echo "Default pg_dump version: $(pg_dump --version)"
+          echo "Listing available postgres versions:"
+          ls -ls /usr/lib/postgresql/
+          echo "--- END DEBUG ---"
+
           TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
           FILENAME="backup-${TIMESTAMP}.sql.gz"
           echo "FILENAME=${FILENAME}" >> $GITHUB_ENV
           
-          # Dump the database and compress it
-          pg_dump "$POSTGRES_URL_NON_POOLING" | gzip > "$FILENAME"
+          # Force use of version 17 binary
+          /usr/lib/postgresql/17/bin/pg_dump "$POSTGRES_URL_NON_POOLING" | gzip > "$FILENAME"
 
       - name: Upload to R2
         env:
