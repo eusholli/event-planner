@@ -1,0 +1,39 @@
+name: Database Backup via API to R2
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  backup:
+    name: Backup Database via API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Backup
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          BACKUP_SECRET_KEY: ${{ secrets.BACKUP_SECRET_KEY }}
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
+          # Use event-config- prefix to match the API's filename format roughly, or just use backup-
+          FILENAME="backup-${TIMESTAMP}.json"
+          echo "FILENAME=${FILENAME}" >> $GITHUB_ENV
+          
+          # Call the API with the secret key header
+          # -f fails on HTTP errors
+          echo "Initiating backup from $APP_URL..."
+          curl -f -v "$APP_URL/api/settings/export" \
+            -H "x-backup-key: $BACKUP_SECRET_KEY" \
+            -o "$FILENAME"
+          
+          echo "Backup downloaded successfully. Size: $(du -h $FILENAME | cut -f1)"
+
+      - name: Upload to R2
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1 # Required by AWS CLI, ignored by R2
+        run: |
+          aws s3 cp "${{ env.FILENAME }}" "s3://db-backups/${{ env.FILENAME }}" --endpoint-url "$R2_ENDPOINT"
