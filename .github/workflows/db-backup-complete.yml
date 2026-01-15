@@ -1,0 +1,62 @@
+name: Combined Database Backup to R2
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  backup:
+    name: Backup Database (SQL & JSON)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17 libpq-dev
+
+      - name: Generate SQL Backup (pg_dump)
+        env:
+          POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+        run: |
+          set -o pipefail
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
+          SQL_FILENAME="backup-${TIMESTAMP}.sql.gz"
+          echo "SQL_FILENAME=${SQL_FILENAME}" >> $GITHUB_ENV
+          
+          echo "Creating SQL dump..."
+          /usr/lib/postgresql/17/bin/pg_dump "$POSTGRES_URL_NON_POOLING" | gzip > "$SQL_FILENAME"
+          echo "SQL dump created: $SQL_FILENAME"
+
+      - name: Generate JSON Backup (API)
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          BACKUP_SECRET_KEY: ${{ secrets.BACKUP_SECRET_KEY }}
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
+          # We use the same timestamp for consistency
+          JSON_FILENAME="backup-${TIMESTAMP}.json"
+          echo "JSON_FILENAME=${JSON_FILENAME}" >> $GITHUB_ENV
+          
+          echo "Fetching JSON export from $APP_URL..."
+          curl -f -v "$APP_URL/api/settings/export" \
+            -H "x-backup-key: $BACKUP_SECRET_KEY" \
+            -o "$JSON_FILENAME"
+          echo "JSON export created: $JSON_FILENAME"
+
+      - name: Upload to R2
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          echo "Uploading files to R2..."
+          aws s3 cp "${{ env.SQL_FILENAME }}" "s3://db-backups/${{ env.SQL_FILENAME }}" --endpoint-url "$R2_ENDPOINT"
+          aws s3 cp "${{ env.JSON_FILENAME }}" "s3://db-backups/${{ env.JSON_FILENAME }}" --endpoint-url "$R2_ENDPOINT"
+          echo "Upload complete."

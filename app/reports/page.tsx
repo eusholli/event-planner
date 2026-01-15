@@ -19,6 +19,7 @@ interface Attendee {
     id: string
     name: string
     type?: string
+    isExternal: boolean
 }
 
 interface EventSettings {
@@ -52,6 +53,7 @@ export default function ReportsPage() {
     const [selectedAttendeeTypes, setSelectedAttendeeTypes] = useState<string[]>([])
     const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
     const [selectedTags, setSelectedTags] = useState<string[]>([])
+    const [externalFilter, setExternalFilter] = useState<'all' | 'internal' | 'external'>('all')
 
     // Sort State
     const [sortColumn, setSortColumn] = useState<keyof AttendeeStats>('total')
@@ -107,8 +109,15 @@ export default function ReportsPage() {
     const tableData = useMemo(() => {
         // 1. Filter Attendees
         const filteredAttendees = attendees.filter(a => {
-            if (selectedAttendeeTypes.length === 0) return true
-            return a.type && selectedAttendeeTypes.includes(a.type)
+            if (selectedAttendeeTypes.length > 0 && (!a.type || !selectedAttendeeTypes.includes(a.type))) {
+                return false
+            }
+
+            // External Filter
+            if (externalFilter === 'internal' && a.isExternal) return false
+            if (externalFilter === 'external' && !a.isExternal) return false
+
+            return true
         })
 
         // 2. Calculate Stats
@@ -152,7 +161,7 @@ export default function ReportsPage() {
             return 0
         })
 
-    }, [meetings, attendees, selectedAttendeeTypes, selectedMeetingTypes, selectedTags, sortColumn, sortDirection])
+    }, [meetings, attendees, selectedAttendeeTypes, selectedMeetingTypes, selectedTags, externalFilter, sortColumn, sortDirection])
 
     const handleSort = (column: keyof AttendeeStats) => {
         if (sortColumn === column) {
@@ -251,6 +260,29 @@ export default function ReportsPage() {
                     <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm space-y-6">
                         <h3 className="font-semibold text-zinc-900">Filters</h3>
 
+                        {/* Attendee Status */}
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
+                            <div className="flex bg-zinc-100 p-1 rounded-lg">
+                                {[
+                                    { id: 'all', label: 'All' },
+                                    { id: 'internal', label: 'Internal' },
+                                    { id: 'external', label: 'External' }
+                                ].map(option => (
+                                    <button
+                                        key={option.id}
+                                        onClick={() => setExternalFilter(option.id as any)}
+                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${externalFilter === option.id
+                                            ? 'bg-white text-indigo-600 shadow-sm'
+                                            : 'text-zinc-500 hover:text-zinc-700'
+                                            }`}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Attendee Types */}
                         <div>
                             <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Attendee Types</label>
@@ -326,6 +358,7 @@ export default function ReportsPage() {
                                 setSelectedAttendeeTypes([])
                                 setSelectedMeetingTypes([])
                                 setSelectedTags([])
+                                setExternalFilter('all')
                             }}
                             className="w-full px-4 py-2 mt-4 text-sm text-zinc-600 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
                         >

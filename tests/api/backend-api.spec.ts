@@ -57,6 +57,36 @@ test.describe('Backend API Tests', () => {
             expect(body.some((r: any) => r.id === createdRoomId)).toBeTruthy();
         });
 
+        test('should list rooms sorted alphabetically', async ({ request }) => {
+            // Create additional rooms to test sorting
+            const roomNames = [`Zebra Room ${Date.now()}`, `Alpha Room ${Date.now()}`, `Beta Room ${Date.now()}`];
+            for (const name of roomNames) {
+                await request.post('/api/rooms', {
+                    data: {
+                        name: name,
+                        capacity: 10,
+                        type: 'conference',
+                    }
+                });
+            }
+
+            const response = await request.get('/api/rooms');
+            expect(response.ok()).toBeTruthy();
+            const body = await response.json();
+
+            // Extract room names from the response
+            const responseNames = body.map((r: any) => r.name);
+
+            // Filter only the rooms we just created to verify their relative order
+            const relevantRooms = responseNames.filter((name: string) => roomNames.includes(name));
+
+            // Expected order is alphabetical: Alpha, Beta, Zebra
+            const sortedRoomNames = [...roomNames].sort();
+
+            // They should appear in the response in the sorted order
+            expect(relevantRooms).toEqual(sortedRoomNames);
+        });
+
         test('should update a room', async ({ request }) => {
             if (!createdRoomId) test.skip();
             const newName = `Updated Room ${Date.now()}`;
