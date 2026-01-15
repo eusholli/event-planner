@@ -25,6 +25,17 @@ export default clerkMiddleware(async (auth, req) => {
         return;
     }
     if (isProtectedRoute(req)) {
+        // Allow backup key bypass for export route
+        const backupKey = process.env.BACKUP_SECRET_KEY;
+        const headerKey = req.headers.get('x-backup-key');
+        if (
+            backupKey &&
+            headerKey === backupKey &&
+            req.nextUrl.pathname === '/api/settings/export'
+        ) {
+            return NextResponse.next();
+        }
+
         await auth.protect();
 
         const { sessionClaims } = await auth();
