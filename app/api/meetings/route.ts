@@ -62,6 +62,7 @@ export async function GET(request: Request) {
                 { location: { contains: searchQuery, mode: 'insensitive' } },
                 { otherDetails: { contains: searchQuery, mode: 'insensitive' } },
                 { requesterEmail: { contains: searchQuery, mode: 'insensitive' } },
+                { createdBy: { contains: searchQuery, mode: 'insensitive' } },
                 // Search in attendees
                 {
                     attendees: {

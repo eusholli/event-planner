@@ -629,7 +629,7 @@ function DashboardContent() {
                             <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Search</label>
                             <input
                                 type="text"
-                                placeholder="Search requester,text, room, attendees, other details..."
+                                placeholder="Search requester, creator, text, room, attendees, other details..."
                                 className="input-field text-sm"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
