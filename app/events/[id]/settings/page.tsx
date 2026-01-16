@@ -1,0 +1,413 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { EventAIScraper } from '@/components/EventAIScraper'
+import { Save, Trash2, Download, Upload, AlertTriangle, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+
+interface EventSettings {
+    id: string
+    name: string
+    startDate: string
+    endDate: string
+    region: string
+    url: string
+    budget: number
+    targetCustomers: string
+    expectedRoi: string
+    requesterEmail: string
+    status: string
+    tags: string[]
+    meetingTypes: string[]
+    attendeeTypes: string[]
+    address: string
+    timezone: string
+}
+
+export default function EventSettingsPage({ params }: { params: Promise<{ id: string }> }) {
+    const [event, setEvent] = useState<EventSettings | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [message, setMessage] = useState('')
+    const router = useRouter()
+
+    // Unwrapped params
+    const [id, setId] = useState<string>('')
+
+    useEffect(() => {
+        params.then(p => setId(p.id))
+    }, [params])
+
+    useEffect(() => {
+        if (!id) return
+        fetch(`/api/events/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                setEvent({
+                    ...data,
+                    startDate: data.startDate ? data.startDate.split('T')[0] : '',
+                    endDate: data.endDate ? data.endDate.split('T')[0] : '',
+                    // Ensure arrays
+                    tags: data.tags || [],
+                    meetingTypes: data.meetingTypes || [],
+                    attendeeTypes: data.attendeeTypes || []
+                })
+                setLoading(false)
+            })
+            .catch(err => {
+                console.error(err)
+                setLoading(false)
+            })
+    }, [id])
+
+    const calculateBudgetFromAI = (desc: string) => {
+        // Mock logic: if description mentions money, parse it? 
+        // For now just return 0 if not explicit.
+        return 0
+    }
+
+    const handleAIFill = (data: any) => {
+        if (!event) return
+        setEvent(prev => ({
+            ...prev!,
+            name: data.name || prev!.name,
+            startDate: data.startDate || prev!.startDate,
+            endDate: data.endDate || prev!.endDate,
+            address: data.address || prev!.address,
+            region: data.region || prev!.region,
+            // Simple heuristics for missing fields
+            targetCustomers: data.description || prev!.targetCustomers
+        }))
+        setMessage('Auto-filled fields from AI analysis')
+    }
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaving(true)
+        setMessage('')
+
+        try {
+            const res = await fetch(`/api/events/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event)
+            })
+
+            if (!res.ok) throw new Error('Failed to save')
+
+            setMessage('Settings saved successfully')
+        } catch (err) {
+            setMessage('Error saving settings')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return
+
+        const res = await fetch(`/api/events/${id}`, { method: 'DELETE' })
+        if (res.ok) {
+            router.push('/events')
+        } else {
+            alert('Failed to delete event')
+        }
+    }
+
+    const handleListChange = (key: 'tags' | 'meetingTypes' | 'attendeeTypes', value: string) => {
+        setEvent(prev => ({
+            ...prev!,
+            [key]: value.split(',').map(s => s.trim()).filter(Boolean)
+        }))
+    }
+
+    if (loading || !event) return <div className="p-10 text-center">Loading settings...</div>
+
+    return (
+        <div className="max-w-4xl mx-auto p-8 space-y-8">
+            <Link href={`/events`} className="text-sm text-neutral-500 hover:text-neutral-900 flex items-center gap-1 mb-4">
+                <ArrowLeft className="w-4 h-4" /> Back to Portfolio
+            </Link>
+
+            <div className="flex justify-between items-start border-b border-neutral-200 pb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-neutral-900">Event Configuration</h1>
+                    <p className="text-neutral-500">Manage lifecycle, details, and data scope.</p>
+                </div>
+                {message && (
+                    <div className="bg-green-50 text-green-700 px-4 py-2 rounded-md text-sm font-medium animate-in fade-in">
+                        {message}
+                    </div>
+                )}
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-8">
+                {/* Section 1: Core Details */}
+                <section className="space-y-4">
+                    <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                        Core Details
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700">Event Name</label>
+                            <input
+                                type="text"
+                                value={event.name}
+                                onChange={e => setEvent({ ...event, name: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Event URL</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="url"
+                                    value={event.url || ''}
+                                    onChange={e => setEvent({ ...event, url: e.target.value })}
+                                    placeholder="https://example.com"
+                                    className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                />
+                                <div className="mt-1">
+                                    <EventAIScraper url={event.url} onFill={handleAIFill} currentData={event} />
+                                </div>
+                            </div>
+                            <p className="text-xs text-neutral-500 mt-1">Provide URL to enable AI auto-fill.</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Status</label>
+                            <select
+                                value={event.status}
+                                onChange={e => setEvent({ ...event, status: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            >
+                                <option value="PIPELINE">Pipeline</option>
+                                <option value="COMMITTED">Committed</option>
+                                <option value="OCCURRED">Occurred</option>
+                                <option value="CANCELED">Canceled</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Start Date</label>
+                            <input
+                                type="date"
+                                value={event.startDate}
+                                onChange={e => setEvent({ ...event, startDate: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">End Date</label>
+                            <input
+                                type="date"
+                                value={event.endDate}
+                                onChange={e => setEvent({ ...event, endDate: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Region</label>
+                            <select
+                                value={event.region || ''}
+                                onChange={e => setEvent({ ...event, region: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            >
+                                <option value="">Select Region...</option>
+                                <option value="NA">North America (NA)</option>
+                                <option value="SA">South America (SA)</option>
+                                <option value="EU/UK">Europe / UK</option>
+                                <option value="MEA">Middle East & Africa</option>
+                                <option value="APAC">Asia Pacific</option>
+                                <option value="Japan">Japan</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Address / Location</label>
+                            <input
+                                type="text"
+                                value={event.address || ''}
+                                onChange={e => setEvent({ ...event, address: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                <hr className="border-neutral-200" />
+
+                {/* Section 2: Strategy */}
+                <section className="space-y-4">
+                    <h2 className="text-lg font-semibold text-neutral-900">Strategy & Budget</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Requester Email</label>
+                            <input
+                                type="email"
+                                value={event.requesterEmail || ''}
+                                onChange={e => setEvent({ ...event, requesterEmail: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700">Target Budget ($)</label>
+                            <input
+                                type="number"
+                                value={event.budget || ''}
+                                onChange={e => setEvent({ ...event, budget: parseFloat(e.target.value) })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700">Target Customers</label>
+                            <textarea
+                                value={event.targetCustomers || ''}
+                                onChange={e => setEvent({ ...event, targetCustomers: e.target.value })}
+                                rows={2}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700">Expected ROI</label>
+                            <textarea
+                                value={event.expectedRoi || ''}
+                                onChange={e => setEvent({ ...event, expectedRoi: e.target.value })}
+                                rows={2}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                <hr className="border-neutral-200" />
+
+                {/* Section 3: Lists (Dictionaries) */}
+                <section className="space-y-4">
+                    <h2 className="text-lg font-semibold text-neutral-900">Classification Lists</h2>
+                    <p className="text-sm text-neutral-500">Manage drop-down values for this event. Enter as comma-separated values.</p>
+
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700">Meeting Tags</label>
+                        <input
+                            type="text"
+                            value={event.tags.join(', ')}
+                            onChange={e => handleListChange('tags', e.target.value)}
+                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700">Meeting Types</label>
+                        <input
+                            type="text"
+                            value={event.meetingTypes.join(', ')}
+                            onChange={e => handleListChange('meetingTypes', e.target.value)}
+                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700">Attendee Types</label>
+                        <input
+                            type="text"
+                            value={event.attendeeTypes.join(', ')}
+                            onChange={e => handleListChange('attendeeTypes', e.target.value)}
+                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                        />
+                    </div>
+                </section>
+
+                <div className="flex items-center gap-4 pt-4">
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                        <Save className="w-4 h-4" />
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+
+            <hr className="border-neutral-200" />
+
+            {/* Section 4: Data Management */}
+            <section className="space-y-6 pt-4">
+                <h2 className="text-lg font-semibold text-neutral-900 text-red-600 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Danger Zone
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="border border-neutral-200 p-4 rounded-lg bg-white">
+                        <h3 className="font-medium text-neutral-900">Export Event Data</h3>
+                        <p className="text-sm text-neutral-500 mb-4">Download a JSON backup of this event.</p>
+                        <button
+                            onClick={() => {
+                                window.location.href = `/api/events/${id}/export`
+                            }}
+                            className="text-sm border border-neutral-300 bg-white px-3 py-1.5 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2"
+                        >
+                            <Download className="w-4 h-4" /> Export
+                        </button>
+                    </div>
+
+                    <div className="border border-neutral-200 p-4 rounded-lg bg-white">
+                        <h3 className="font-medium text-neutral-900">Import Data</h3>
+                        <p className="text-sm text-neutral-500 mb-4">Restore or merge data from JSON.</p>
+                        <label className="text-sm border border-neutral-300 bg-white px-3 py-1.5 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2 cursor-pointer">
+                            <Upload className="w-4 h-4" /> Import
+                            <input
+                                type="file"
+                                accept=".json"
+                                className="hidden"
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0]
+                                    if (!file) return
+
+                                    const text = await file.text()
+                                    try {
+                                        const json = JSON.parse(text)
+                                        const res = await fetch(`/api/events/${id}/import`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(json)
+                                        })
+                                        if (res.ok) {
+                                            alert('Import successful')
+                                            window.location.reload()
+                                        } else {
+                                            alert('Import failed')
+                                        }
+                                    } catch (err) {
+                                        alert('Invalid JSON file')
+                                    }
+                                }}
+                            />
+                        </label>
+                    </div>
+
+                    <div className="border border-red-200 bg-red-50 p-4 rounded-lg">
+                        <h3 className="font-medium text-red-900">Delete Event</h3>
+                        <p className="text-sm text-red-700 mb-4">Permanently remove this event and all its data.</p>
+                        <button
+                            onClick={handleDelete}
+                            className="text-sm bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 w-full flex items-center justify-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" /> Delete Event
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    )
+}

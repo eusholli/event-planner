@@ -30,20 +30,38 @@ export async function POST(request: Request) {
             return newObj
         }
 
-        // 1. Update Event Settings
-        if (config.event) {
-            const existingSettings = await prisma.eventSettings.findFirst()
-            const eventData = parseDates(config.event)
+        // 1. Update System Settings
+        if (config.system) {
+            const existingSettings = await prisma.systemSettings.findFirst()
+            // Only update fields that exist in SystemSettings (geminiApiKey)
+            const { geminiApiKey } = config.system
 
             if (existingSettings) {
-                await prisma.eventSettings.update({
+                await prisma.systemSettings.update({
                     where: { id: existingSettings.id },
-                    data: eventData
+                    data: { geminiApiKey }
                 })
             } else {
-                await prisma.eventSettings.create({
-                    data: eventData
+                await prisma.systemSettings.create({
+                    data: { geminiApiKey }
                 })
+            }
+        }
+
+        // 1b. Import Events
+        if (config.events && Array.isArray(config.events)) {
+            for (const evt of config.events) {
+                const parsedEvt = parseDates(evt)
+                // Use name as unique key? Or just create always?
+                const existing = await prisma.event.findFirst({ where: { name: parsedEvt.name } })
+                if (existing) {
+                    await prisma.event.update({
+                        where: { id: existing.id },
+                        data: parsedEvt
+                    })
+                } else {
+                    await prisma.event.create({ data: parsedEvt })
+                }
             }
         }
 
@@ -51,8 +69,18 @@ export async function POST(request: Request) {
         if (config.rooms && Array.isArray(config.rooms)) {
             for (const room of config.rooms) {
                 const existing = await prisma.room.findFirst({ where: { name: room.name } })
+
+                // Fix strategy: Look for event.
+                const evt = await prisma.event.findFirst()
+                const eventId = evt?.id
+
                 if (!existing) {
-                    await prisma.room.create({ data: room })
+                    await prisma.room.create({ data: { ...room, eventId } })
+                } else {
+                    // Update link if missing?
+                    if (!existing.eventId && eventId) {
+                        await prisma.room.update({ where: { id: existing.id }, data: { eventId } })
+                    }
                 }
             }
         }
@@ -61,10 +89,14 @@ export async function POST(request: Request) {
         if (config.attendees && Array.isArray(config.attendees)) {
             for (const attendee of config.attendees) {
                 const existing = await prisma.attendee.findUnique({ where: { email: attendee.email } })
+
+                // Link to event?
+                const evt = await prisma.event.findFirst()
+                const eventId = evt?.id
+
                 if (!existing) {
-                    await prisma.attendee.create({ data: attendee })
+                    await prisma.attendee.create({ data: { ...attendee, eventId } })
                 } else {
-                    // Update existing attendee with new fields if present
                     await prisma.attendee.update({
                         where: { email: attendee.email },
                         data: attendee
@@ -96,8 +128,6 @@ export async function POST(request: Request) {
                 }
 
                 // Check if meeting exists (by title and date/startTime)
-                // We need to be careful with dynamic fields here. 
-                // For now, we'll stick to title and startTime/date as unique identifiers if they exist.
                 const whereClause: any = { title: meeting.title }
                 if (meeting.startTime) whereClause.startTime = meeting.startTime
                 if (meeting.date) whereClause.date = meeting.date
@@ -106,18 +136,18 @@ export async function POST(request: Request) {
                     where: whereClause
                 })
 
+                // Link to event?
+                const evt = await prisma.event.findFirst()
+                const eventId = evt?.id
+
                 if (!existing) {
                     // Explicitly exclude roomId from meetingFields to prevent bad data injection
                     const { roomId: _rawId, ...cleanMeetingFields } = meetingFields as any
-
-                    console.log(`Creating meeting "${meeting.title}" with roomId: ${roomId}`)
 
                     if (roomId) {
                         // Double check if room exists
                         const roomCheck = await prisma.room.findUnique({ where: { id: roomId } })
                         if (!roomCheck) {
-                            console.error(`CRITICAL: Room with ID ${roomId} found by name lookup but does not exist in DB!`)
-                            // Fallback to null?
                             roomId = null
                         }
                     }
@@ -127,18 +157,14 @@ export async function POST(request: Request) {
                             data: {
                                 ...cleanMeetingFields,
                                 roomId: roomId,
+                                eventId: eventId,
                                 attendees: {
                                     connect: attendees
                                 }
                             }
                         })
                     } catch (e) {
-                        console.error(`Failed to create meeting "${meeting.title}". Data:`, {
-                            roomId,
-                            attendeesCount: attendees.length,
-                            fields: cleanMeetingFields
-                        })
-                        throw e
+                        console.error('Import meeting error', e)
                     }
                 }
             }

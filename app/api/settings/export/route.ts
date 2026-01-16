@@ -3,7 +3,8 @@ import prisma from '@/lib/prisma'
 
 export async function GET() {
     try {
-        const settings = await prisma.eventSettings.findFirst()
+        const settings = await prisma.systemSettings.findFirst()
+        const events = await prisma.event.findMany()
         const attendees = await prisma.attendee.findMany()
         const rooms = await prisma.room.findMany()
         const meetings = await prisma.meeting.findMany({
@@ -21,7 +22,8 @@ export async function GET() {
         }
 
         const exportData = {
-            event: settings ? cleanData(settings) : null,
+            system: settings ? cleanData(settings) : null,
+            events: events.map(e => cleanData(e)),
             attendees: attendees.map(a => cleanData(a)),
             rooms: rooms.map(r => cleanData(r)),
             meetings: meetings.map(m => {
@@ -35,7 +37,7 @@ export async function GET() {
         }
 
         const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-        const filename = `event-config-${date}.json`
+        const filename = `system-backup-${date}.json`
 
         return new NextResponse(JSON.stringify(exportData, null, 2), {
             headers: {

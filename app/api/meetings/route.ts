@@ -9,6 +9,11 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
+        const eventId = searchParams.get('eventId')
+
+        if (!eventId) {
+            return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
+        }
 
         // Extract filters
         const date = searchParams.get('date')
@@ -22,7 +27,9 @@ export async function GET(request: Request) {
         const calendarInviteSent = searchParams.get('calendarInviteSent')
 
         // Build Where Clause
-        const where: any = {}
+        const where: any = {
+            eventId // Scoped to Event
+        }
 
         if (date) {
             where.date = date
@@ -113,8 +120,13 @@ export async function POST(request: Request) {
             location,
             otherDetails,
             isApproved,
-            calendarInviteSent
+            calendarInviteSent,
+            eventId
         } = body
+
+        if (!eventId) {
+            return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
+        }
 
         let createdBy = null
         if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
@@ -159,13 +171,9 @@ export async function POST(request: Request) {
 
         // 1. Check Room Availability (only if room, date, and times are provided)
         if (roomId && date && startTime && endTime) {
-            // We need to check for overlaps. Since we store strings, we can compare them if date is same.
-            // But to be safe and handle potential cross-day events (though we only have one date field now),
-            // let's assume single-day events for now as implied by the schema.
-            // Actually, string comparison "HH:mm" works for time ranges on the same day.
-
             const roomConflicts = await prisma.meeting.findMany({
                 where: {
+                    eventId, // Ensure check is within event scope
                     roomId,
                     date: date,
                     OR: [
@@ -183,6 +191,7 @@ export async function POST(request: Request) {
         if (attendeeIds && attendeeIds.length > 0 && date && startTime && endTime) {
             const attendeeConflicts = await prisma.meeting.findMany({
                 where: {
+                    eventId, // Ensure check is within event scope
                     attendees: {
                         some: {
                             id: { in: attendeeIds },
@@ -230,7 +239,8 @@ export async function POST(request: Request) {
             location,
             otherDetails,
             isApproved,
-            calendarInviteSent
+            calendarInviteSent,
+            eventId
         }
 
         // Only add room if provided
