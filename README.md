@@ -10,6 +10,9 @@ For a detailed guide on how to use the application features, please refer to the
 
 - **Meeting Tracker**: Real-time overview of event statistics with optional PDF Briefing Book export.
 - **Reports**: Comprehensive analytics with filtering, sorting, and export capabilities (PDF/CSV). Tracks **Pipeline**, **Confirmed**, **Occurred**, and **Canceled** meetings.
+- **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
+- **Authentication**: Secure user authentication and management provided by [Clerk](https://clerk.com/).
+- **Monitoring**: Application performance monitoring and error tracking with [Sentry](https://sentry.io/).
 - **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User). **User** role is read-only for attendees.
 - **AI Chat Assistant**: Smart chatbot for event queries and navigation. Features **Persistent Chat** history, **Clear Chat** functionality, and **Enhanced Search** for attendees. Generates helper cards for creating/editing resources.
 - **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
@@ -25,6 +28,8 @@ For a detailed guide on how to use the application features, please refer to the
 
 - Node.js (v18 or higher)
 - PostgreSQL database
+- Clerk Account (for authentication)
+- Sentry Account (optional, for monitoring)
 - Google Gemini API Key (optional, for Auto Complete feature)
 
 ### Installation
@@ -44,6 +49,15 @@ For a detailed guide on how to use the application features, please refer to the
     Create a `.env` file in the root directory and add your database connection string:
     ```env
     DATABASE_URL="postgresql://user:password@localhost:5432/event_planner?schema=public"
+    
+    # Clerk Authentication
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+    CLERK_SECRET_KEY=sk_test_...
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+    
+    # Sentry (Optional)
+    SENTRY_AUTH_TOKEN=...
     ```
 
 4.  **Initialize Database**:

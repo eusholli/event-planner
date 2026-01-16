@@ -21,6 +21,9 @@ The application serves different types of users with specific access levels:
 - **Admin**: Operational access. Can view Reports, manage Schedules and Attendees, but cannot modify system-wide Settings or User permissions. Can generate meeting invites.
 - **User**: Read-only access to most features. Can view Dashboards, Schedules, and Attendees but cannot create new meetings or edit data. Cannot add/edit attendees. Restricted from sensitive areas like Settings (`/settings`), User Management (`/admin/users`), and Reports (`/reports`). Cannot generate meeting invites.
 
+### Managing User Roles
+User roles are managed by **Root** users via the **User Administration** page (`/admin/users`). From here, you can assign roles (Root, Admin, User) to registered users or delete users from the system.
+
 ---
 
 ## Meeting Tracker
@@ -141,3 +144,6 @@ Download a full backup of your current database as a JSON file. The filename wil
 
 #### Delete Database
 **Warning**: This action permanently removes all Attendees, Rooms, and Meetings from the database. It will automatically attempt to export a backup before deletion. It can also optionally delete Event Settings if configured. Use this feature with caution.
+
+### Automated Backups
+The system is configured to perform automated backups of the database to ensure data safety. These backups are triggered periodically and stored securely.
