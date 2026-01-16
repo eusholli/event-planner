@@ -1,0 +1,122 @@
+
+> event-planner@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.9 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.1.197:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     · clientTraceMetadata
+
+ ✓ Starting...
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+ ✓ Ready in 1220ms
+ GET /api/settings/export 200 in 278ms (compile: 163ms, proxy.ts: 74ms, render: 42ms)
+ GET /api/events/cmkh0v8920000y0h4msxm7e8e/export 200 in 792ms (compile: 768ms, proxy.ts: 7ms, render: 17ms)
+ DELETE /api/events/cmkh0v8920000y0h4msxm7e8e 200 in 435ms (compile: 420ms, proxy.ts: 6ms, render: 9ms)
+Attendee import skip Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].attendee.upsert()` invocation in
+/Users/eusholli/dev/event-planner/.next/dev/server/chunks/[root-of-the-server]__756aed9a._.js:252:151
+
+  249 if (data.attendees && Array.isArray(data.attendees)) {
+  250     for (const att of data.attendees){
+  251         // Check unique constraint [email, eventId]
+→ 252         await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].attendee.upsert({
+                where: {
+                  email_eventId: {
+                    email: "test1@exportCheck.com",
+                    eventId: "cmkh0v97l0005y0h43e9vv1xi"
+                  }
+                },
+                create: {
+                  id: undefined,
+                  name: "Test Attendee 1",
+                  title: "Tester",
+                  email: "test1@exportCheck.com",
+                  bio: null,
+                  company: "Test Corp",
+                  companyDescription: null,
+                  linkedin: null,
+                  imageUrl: null,
+                  isExternal: false,
+                  type: null,
+                  eventId: "cmkh0v97l0005y0h43e9vv1xi",
+                  meetings: [
+                    {
+                      id: "cmkh0v8970004y0h4y12fs260",
+                      title: "Test Meeting for Export",
+                      purpose: null,
+                      date: null,
+                      startTime: "2025-01-02T10:00:00.000Z",
+                      endTime: "2025-01-02T11:00:00.000Z",
+                      roomId: "cmkh0v8920001y0h43fr228eg",
+                      sequence: 0,
+                      status: "PIPELINE",
+                      tags: [],
+                      createdBy: null,
+                      requesterEmail: null,
+                      meetingType: null,
+                      location: null,
+                      otherDetails: null,
+                      isApproved: false,
+                      calendarInviteSent: false,
+                      eventId: "cmkh0v8920000y0h4msxm7e8e"
+                    }
+                  ]
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                },
+                update: {
+                  id: undefined,
+                  name: "Test Attendee 1",
+                  title: "Tester",
+                  email: "test1@exportCheck.com",
+                  bio: null,
+                  company: "Test Corp",
+                  companyDescription: null,
+                  linkedin: null,
+                  imageUrl: null,
+                  isExternal: false,
+                  type: null,
+                  eventId: undefined,
+                  meetings: [
+                    {
+                      id: "cmkh0v8970004y0h4y12fs260",
+                      title: "Test Meeting for Export",
+                      purpose: null,
+                      date: null,
+                      startTime: "2025-01-02T10:00:00.000Z",
+                      endTime: "2025-01-02T11:00:00.000Z",
+                      roomId: "cmkh0v8920001y0h43fr228eg",
+                      sequence: 0,
+                      status: "PIPELINE",
+                      tags: [],
+                      createdBy: null,
+                      requesterEmail: null,
+                      meetingType: null,
+                      location: null,
+                      otherDetails: null,
+                      isApproved: false,
+                      calendarInviteSent: false,
+                      eventId: "cmkh0v8920000y0h4msxm7e8e"
+                    }
+                  ]
+                }
+              })
+
+Argument `meetings`: Invalid value provided. Expected MeetingUncheckedCreateNestedManyWithoutAttendeesInput, provided (Object).
+    at <unknown> (lib/actions/event.ts:175:35)
+    at async importEventData (lib/actions/event.ts:175:13)
+    at async POST (app/api/events/[id]/import/route.ts:17:24)
+  173 |         for (const att of data.attendees) {
+  174 |             // Check unique constraint [email, eventId]
+> 175 |             await prisma.attendee.upsert({
+      |                                   ^
+  176 |                 where: {
+  177 |                     email_eventId: {
+  178 |                         email: att.email, {
+  clientVersion: '5.22.0'
+}
+ POST /api/events/cmkh0v97l0005y0h43e9vv1xi/import 200 in 699ms (compile: 590ms, proxy.ts: 5ms, render: 104ms)
+ GET /api/settings/export 200 in 27ms (compile: 2ms, proxy.ts: 5ms, render: 20ms)
+[?25h

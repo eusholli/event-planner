@@ -5,9 +5,23 @@ export const dynamic = 'force-dynamic'
 
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url)
+        const eventId = searchParams.get('eventId')
+
+        if (!eventId) {
+            // Option: return all if root? Or fail?
+            // Safer to return empty or error if no context provided.
+            // But legacy code might call without eventId?
+            // Legacy code is broken by this refactor until frontend is updated.
+            return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
+        }
+
         const attendees = await prisma.attendee.findMany({
+            where: {
+                eventId
+            },
             orderBy: {
                 name: 'asc'
             }
@@ -39,6 +53,11 @@ export async function POST(request: Request) {
         let linkedin = formData.get('linkedin') as string
         const isExternal = formData.get('isExternal') === 'true'
         const type = formData.get('type') as string
+        const eventId = formData.get('eventId') as string
+
+        if (!eventId) {
+            return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
+        }
 
         // Image Handling
         const imageFile = formData.get('imageFile') as File | null
@@ -96,6 +115,7 @@ export async function POST(request: Request) {
                 imageUrl: finalImageUrl || null,
                 isExternal,
                 type,
+                eventId
             },
         })
         return NextResponse.json(attendee)

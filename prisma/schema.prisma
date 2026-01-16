@@ -12,16 +12,39 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING") // Uses Direct (5432) for Migrations
 }
 
-model EventSettings {
-  id        String   @id @default(cuid())
-  name      String   @default("My Event")
-  startDate DateTime @default(now())
-  endDate   DateTime @default(now())
+// Global System Settings (Singleton logic enforced by app)
+model SystemSettings {
+  id           String  @id @default(cuid())
   geminiApiKey String?
-  tags      String[] @default([])
-  meetingTypes String[] @default([])
-  attendeeTypes String[] @default([])
-  timezone      String?
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  name            String   @default("My Event")
+  startDate       DateTime @default(now())
+  endDate         DateTime @default(now())
+  
+  // Lists
+  tags            String[] @default([])
+  meetingTypes    String[] @default([])
+  attendeeTypes   String[] @default([])
+  
+  timezone        String?
+  
+  // New Fields
+  url             String?
+  address         String?
+  requesterEmail  String?
+  region          String?  // NA, SA, EU_UK, MEA, APAC, JAPAN
+  budget          Float?
+  targetCustomers String?
+  expectedRoi     String?
+  status          String   @default("PIPELINE") // PIPELINE, COMMITTED, CANCELED, OCCURRED
+
+  // Relations
+  attendees       Attendee[]
+  rooms           Room[]
+  meetings        Meeting[]
 }
 
 model Attendee {
@@ -36,13 +59,19 @@ model Attendee {
   imageUrl           String?
   isExternal         Boolean   @default(false)
   type               String?
+  eventId            String? // Optional for migration, will make required later or handle in code
+  event              Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   meetings           Meeting[] @relation("AttendeeMeetings")
+  
+  @@unique([email, eventId])
 }
 
 model Room {
   id       String    @id @default(cuid())
   name     String
   capacity Int
+  eventId  String?
+  event    Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   meetings Meeting[]
 }
 
@@ -73,4 +102,7 @@ model Meeting {
   otherDetails String?
   isApproved  Boolean       @default(false)
   calendarInviteSent Boolean @default(false)
+  
+  eventId     String?
+  event       Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

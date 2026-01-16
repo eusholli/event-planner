@@ -17,9 +17,10 @@ interface Attendee {
 
 interface AddAttendeeFormProps {
     onSuccess?: (attendee: Attendee) => void
+    eventId: string
 }
 
-export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
+export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormProps) {
     const [formData, setFormData] = useState({
         name: '',
         title: '',
@@ -159,6 +160,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
             formDataToSend.append('imageUrl', formData.imageUrl)
             formDataToSend.append('isExternal', String(formData.isExternal))
             formDataToSend.append('type', formData.type)
+            formDataToSend.append('eventId', eventId)
 
             if (selectedFile) {
                 formDataToSend.append('imageFile', selectedFile)

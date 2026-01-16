@@ -11,24 +11,48 @@ export default function Navigation() {
     const pathname = usePathname()
     const { user } = useUser()
 
-    const allLinks = [
-        { href: '/dashboard', label: 'Meeting Tracker' },
-        { href: '/new-meeting', label: 'New Meeting', roles: [Roles.Root, Roles.Admin] },
-        { href: '/attendees', label: 'Attendees' },
-        { href: '/rooms', label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
-        { href: '/calendar', label: 'Calendar' },
-        { href: '/chat', label: 'Chat' },
-        { href: '/settings', label: 'Settings', roles: [Roles.Root] },
+    // Extract Event ID from path: /events/[id]/...
+    const eventIdMatch = pathname?.match(/^\/events\/([^\/]+)/)
+    const eventId = eventIdMatch ? eventIdMatch[1] : null
+
+    // Core Links (Global)
+    const portfolioLink = { href: '/events', label: 'Events' }
+
+    // Event Links (Scoped)
+    const eventLinks = eventId ? [
+        { href: `/events/${eventId}/dashboard`, label: 'Dashboard' },
+        { href: `/events/${eventId}/calendar`, label: 'Schedule' }, // Renamed from New Meeting? No, Calendar is Schedule.
+        { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/attendees`, label: 'Attendees' },
+        { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/chat`, label: 'Chat' },
+        { href: `/events/${eventId}/reports`, label: 'Reports', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/settings`, label: 'Settings', roles: [Roles.Root, Roles.Admin] }, // Event Settings
+    ] : []
+
+    // Admin Links (Global)
+    const adminLinks = [
         { href: '/admin/users', label: 'Users', roles: [Roles.Root] },
-        { href: '/reports', label: 'Reports', roles: [Roles.Root] },
+        { href: '/admin/system', label: 'System', roles: [Roles.Root] }, // New System Settings
     ]
 
-    const links = allLinks.filter(link => {
+    // Determine which links to show
+    let linksToShow: any[] = []
+
+    if (eventId) {
+        // We are in an event
+        linksToShow = [portfolioLink, ...eventLinks]
+    } else {
+        // Global View
+        linksToShow = [portfolioLink, ...adminLinks]
+    }
+
+    const links = linksToShow.filter(link => {
         if (!link.roles) return true
         return user?.publicMetadata?.role && link.roles.includes(user.publicMetadata.role as string)
     })
 
-    const isActive = (path: string) => pathname === path
+    const isActive = (path: string) => pathname === path || pathname?.startsWith(`${path}/`)
 
     return (
         <nav className="fixed top-0 w-full z-50 glass">
@@ -36,7 +60,7 @@ export default function Navigation() {
                 <div className="flex justify-between h-16">
                     <div className="flex">
                         <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" className="text-xl font-bold tracking-tight text-zinc-900">
+                            <Link href="/events" className="text-xl font-bold tracking-tight text-zinc-900">
                                 AI Event Planner
                             </Link>
                         </div>

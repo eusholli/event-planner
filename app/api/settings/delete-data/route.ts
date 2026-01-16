@@ -7,7 +7,6 @@ export async function DELETE() {
         await prisma.meeting.deleteMany()
         await prisma.attendee.deleteMany()
         await prisma.room.deleteMany()
-        await prisma.eventSettings.deleteMany()
 
         return NextResponse.json({ success: true })
     } catch (error) {
