@@ -5,8 +5,8 @@ import React from 'react'
 interface Event {
     id: string
     name: string
-    startDate: string
-    endDate: string
+    startDate: string | null
+    endDate: string | null
     region: string | null
     status: string
 }
@@ -66,10 +66,13 @@ export function EventCalendar({ events }: { events: Event[] }) {
                     {/* Events Track */}
                     <div className="flex-1 relative">
                         {events
-                            .filter(e => e.region === region)
+                            .filter(e => e.region === region && e.startDate && e.endDate)
                             .map(event => {
-                                const left = Math.max(0, Math.min(100, getPosition(event.startDate)))
-                                const width = Math.min(100 - left, getWidth(event.startDate, event.endDate))
+                                // We filtered above, so casting is safe or just let TS infer
+                                const start = event.startDate!
+                                const end = event.endDate!
+                                const left = Math.max(0, Math.min(100, getPosition(start)))
+                                const width = Math.min(100 - left, getWidth(start, end))
 
                                 return (
                                     <div
@@ -80,7 +83,7 @@ export function EventCalendar({ events }: { events: Event[] }) {
                                             width: `${width}%`,
                                             backgroundColor: event.status === 'COMMITTED' ? '#10b981' : event.status === 'PIPELINE' ? '#f59e0b' : '#ef4444'
                                         }}
-                                        title={`${event.name} (${new Date(event.startDate).toLocaleDateString()})`}
+                                        title={`${event.name} (${new Date(start).toLocaleDateString()})`}
                                     >
                                         {event.name}
                                     </div>

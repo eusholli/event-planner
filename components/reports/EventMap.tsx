@@ -17,6 +17,8 @@ interface Event {
     address: string | null
     region: string | null
     status: string
+    startDate?: string | null
+    endDate?: string | null
 }
 
 // Map component

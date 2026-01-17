@@ -41,12 +41,13 @@ export async function PATCH(
             where: { id },
             data: {
                 name: json.name,
-                startDate: json.startDate,
-                endDate: json.endDate,
+                startDate: json.startDate ? new Date(json.startDate) : json.startDate,
+                endDate: json.endDate ? new Date(json.endDate) : json.endDate,
                 status: json.status,
+                address: json.address, // Added missing address field
                 region: json.region,
                 url: json.url,
-                budget: json.budget ? parseFloat(json.budget) : undefined,
+                budget: json.budget !== undefined && json.budget !== null ? parseFloat(json.budget) : undefined, // Fix 0 being treated as false
                 targetCustomers: json.targetCustomers,
                 expectedRoi: json.expectedRoi,
                 requesterEmail: json.requesterEmail,

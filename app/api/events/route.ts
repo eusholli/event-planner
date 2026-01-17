@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
         const event = await prisma.event.create({
             data: {
-                name: json.name || 'New Event',
+                name: json.name ?? 'New Event',
                 startDate: json.startDate,
                 endDate: json.endDate,
                 status: json.status || 'PIPELINE',

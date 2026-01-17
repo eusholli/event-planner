@@ -9,8 +9,8 @@ import Link from 'next/link'
 interface EventSettings {
     id: string
     name: string
-    startDate: string
-    endDate: string
+    startDate: string | null
+    endDate: string | null
     region: string
     url: string
     budget: number
@@ -46,8 +46,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
             .then(data => {
                 setEvent({
                     ...data,
-                    startDate: data.startDate ? data.startDate.split('T')[0] : '',
-                    endDate: data.endDate ? data.endDate.split('T')[0] : '',
+                    startDate: data.startDate ? data.startDate.split('T')[0] : null,
+                    endDate: data.endDate ? data.endDate.split('T')[0] : null,
                     // Ensure arrays
                     tags: data.tags || [],
                     meetingTypes: data.meetingTypes || [],
@@ -74,10 +74,14 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
             name: data.name || prev!.name,
             startDate: data.startDate || prev!.startDate,
             endDate: data.endDate || prev!.endDate,
-            address: data.address || prev!.address,
+            address: data.address || data.location || prev!.address, // added location fallback
             region: data.region || prev!.region,
-            // Simple heuristics for missing fields
-            targetCustomers: data.description || prev!.targetCustomers
+            targetCustomers: data.targetCustomers || prev!.targetCustomers,
+            budget: data.budget ? parseFloat(data.budget) : prev!.budget,
+            expectedRoi: data.expectedRoi || prev!.expectedRoi,
+            tags: data.tags ? [...new Set([...prev!.tags, ...data.tags])] : prev!.tags,
+            meetingTypes: data.meetingTypes ? [...new Set([...prev!.meetingTypes, ...data.meetingTypes])] : prev!.meetingTypes,
+            attendeeTypes: data.attendeeTypes ? [...new Set([...prev!.attendeeTypes, ...data.attendeeTypes])] : prev!.attendeeTypes,
         }))
         setMessage('Auto-filled fields from AI analysis')
     }
@@ -150,9 +154,12 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        {/* 1. Name - First Priority */}
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-neutral-700">Event Name</label>
+                            <label htmlFor="name" className="block text-sm font-medium text-neutral-700">Event Name</label>
                             <input
+                                id="name"
                                 type="text"
                                 value={event.name}
                                 onChange={e => setEvent({ ...event, name: e.target.value })}
@@ -160,26 +167,37 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             />
                         </div>
 
-                        <div>
+                        {/* 2. URL - Second Priority */}
+                        <div className="col-span-2">
                             <label className="block text-sm font-medium text-neutral-700">Event URL</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="url"
-                                    value={event.url || ''}
-                                    onChange={e => setEvent({ ...event, url: e.target.value })}
-                                    placeholder="https://example.com"
-                                    className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                                />
-                                <div className="mt-1">
-                                    <EventAIScraper url={event.url} onFill={handleAIFill} currentData={event} />
-                                </div>
-                            </div>
-                            <p className="text-xs text-neutral-500 mt-1">Provide URL to enable AI auto-fill.</p>
+                            <input
+                                type="url"
+                                value={event.url || ''}
+                                onChange={e => setEvent({ ...event, url: e.target.value })}
+                                placeholder="https://example.com"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                            <p className="text-xs text-neutral-500 mt-1">Optional: Provide URL for better AI accuracy.</p>
+                        </div>
+
+                        {/* 3. AI Action Button - Prominent */}
+                        <div className="col-span-2">
+                            <EventAIScraper
+                                url={event.url}
+                                currentData={event}
+                                onFill={handleAIFill}
+                                className="w-full"
+                            />
+                            <p className="text-xs text-neutral-500 text-center mt-2 italic">
+                                💡 Tip: Enter an Event Name or URL, then click above to auto-fill details using AI.
+                                The AI uses all fields you've filled so far as context.
+                            </p>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700">Status</label>
+                            <label htmlFor="status" className="block text-sm font-medium text-neutral-700">Status</label>
                             <select
+                                id="status"
                                 value={event.status}
                                 onChange={e => setEvent({ ...event, status: e.target.value })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
@@ -192,28 +210,9 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700">Start Date</label>
-                            <input
-                                type="date"
-                                value={event.startDate}
-                                onChange={e => setEvent({ ...event, startDate: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700">End Date</label>
-                            <input
-                                type="date"
-                                value={event.endDate}
-                                onChange={e => setEvent({ ...event, endDate: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700">Region</label>
+                            <label htmlFor="region" className="block text-sm font-medium text-neutral-700">Region</label>
                             <select
+                                id="region"
                                 value={event.region || ''}
                                 onChange={e => setEvent({ ...event, region: e.target.value })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
@@ -229,8 +228,31 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700">Address / Location</label>
+                            <label htmlFor="startDate" className="block text-sm font-medium text-neutral-700">Start Date</label>
                             <input
+                                id="startDate"
+                                type="date"
+                                value={event.startDate || ''}
+                                onChange={e => setEvent({ ...event, startDate: e.target.value || null })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="endDate" className="block text-sm font-medium text-neutral-700">End Date</label>
+                            <input
+                                id="endDate"
+                                type="date"
+                                value={event.endDate || ''}
+                                onChange={e => setEvent({ ...event, endDate: e.target.value || null })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label htmlFor="address" className="block text-sm font-medium text-neutral-700">Address / Location</label>
+                            <input
+                                id="address"
                                 type="text"
                                 value={event.address || ''}
                                 onChange={e => setEvent({ ...event, address: e.target.value })}
@@ -247,8 +269,9 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     <h2 className="text-lg font-semibold text-neutral-900">Strategy & Budget</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700">Requester Email</label>
+                            <label htmlFor="requesterEmail" className="block text-sm font-medium text-neutral-700">Requester Email</label>
                             <input
+                                id="requesterEmail"
                                 type="email"
                                 value={event.requesterEmail || ''}
                                 onChange={e => setEvent({ ...event, requesterEmail: e.target.value })}
@@ -257,8 +280,9 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700">Target Budget ($)</label>
+                            <label htmlFor="budget" className="block text-sm font-medium text-neutral-700">Target Budget ($)</label>
                             <input
+                                id="budget"
                                 type="number"
                                 value={event.budget || ''}
                                 onChange={e => setEvent({ ...event, budget: parseFloat(e.target.value) })}
@@ -267,8 +291,9 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-neutral-700">Target Customers</label>
+                            <label htmlFor="targetCustomers" className="block text-sm font-medium text-neutral-700">Target Customers</label>
                             <textarea
+                                id="targetCustomers"
                                 value={event.targetCustomers || ''}
                                 onChange={e => setEvent({ ...event, targetCustomers: e.target.value })}
                                 rows={2}
@@ -277,8 +302,9 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-neutral-700">Expected ROI</label>
+                            <label htmlFor="expectedRoi" className="block text-sm font-medium text-neutral-700">Expected ROI</label>
                             <textarea
+                                id="expectedRoi"
                                 value={event.expectedRoi || ''}
                                 onChange={e => setEvent({ ...event, expectedRoi: e.target.value })}
                                 rows={2}
