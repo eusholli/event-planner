@@ -123,6 +123,7 @@ export async function POST(request: Request) {
                         if (att.email !== undefined) attUpdate.email = att.email
                         if (att.title !== undefined) attUpdate.title = att.title
                         if (att.company !== undefined) attUpdate.company = att.company
+                        if (att.companyDescription !== undefined) attUpdate.companyDescription = att.companyDescription
                         if (att.bio !== undefined) attUpdate.bio = att.bio
                         if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
                         if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
@@ -137,6 +138,7 @@ export async function POST(request: Request) {
                                 email: att.email,
                                 title: att.title,
                                 company: att.company,
+                                companyDescription: att.companyDescription,
                                 bio: att.bio,
                                 linkedin: att.linkedin,
                                 imageUrl: att.imageUrl,
@@ -163,6 +165,7 @@ export async function POST(request: Request) {
 
                         const mtgUpdate: any = {}
                         if (mtg.title !== undefined) mtgUpdate.title = mtg.title
+                        if (mtg.purpose !== undefined) mtgUpdate.purpose = mtg.purpose
                         if (mtg.date !== undefined) mtgUpdate.date = mtg.date
                         if (mtg.startTime !== undefined) mtgUpdate.startTime = mtg.startTime
                         if (mtg.endTime !== undefined) mtgUpdate.endTime = mtg.endTime
@@ -170,6 +173,17 @@ export async function POST(request: Request) {
                         if (attendeeConnects !== undefined) {
                             mtgUpdate.attendees = { set: attendeeConnects }
                         }
+                        // Add missing fields for update
+                        if (mtg.sequence !== undefined) mtgUpdate.sequence = mtg.sequence
+                        if (mtg.status !== undefined) mtgUpdate.status = mtg.status
+                        if (mtg.tags !== undefined) mtgUpdate.tags = mtg.tags
+                        if (mtg.calendarInviteSent !== undefined) mtgUpdate.calendarInviteSent = mtg.calendarInviteSent
+                        if (mtg.createdBy !== undefined) mtgUpdate.createdBy = mtg.createdBy
+                        if (mtg.isApproved !== undefined) mtgUpdate.isApproved = mtg.isApproved
+                        if (mtg.meetingType !== undefined) mtgUpdate.meetingType = mtg.meetingType
+                        if (mtg.otherDetails !== undefined) mtgUpdate.otherDetails = mtg.otherDetails
+                        if (mtg.requesterEmail !== undefined) mtgUpdate.requesterEmail = mtg.requesterEmail
+                        if (mtg.location !== undefined) mtgUpdate.location = mtg.location
 
                         const createConnects = mtg.attendees?.map((a: any) => {
                             if (typeof a === 'string') return { id: a }
@@ -188,7 +202,19 @@ export async function POST(request: Request) {
                                 roomId: mtg.roomId,
                                 attendees: {
                                     connect: createConnects
-                                }
+                                },
+                                // Add missing fields for create
+                                sequence: mtg.sequence || 0,
+                                status: mtg.status || 'PIPELINE',
+                                tags: mtg.tags || [],
+                                calendarInviteSent: mtg.calendarInviteSent || false,
+                                createdBy: mtg.createdBy,
+                                isApproved: mtg.isApproved || false,
+                                meetingType: mtg.meetingType,
+                                otherDetails: mtg.otherDetails,
+                                requesterEmail: mtg.requesterEmail,
+                                location: mtg.location,
+                                purpose: mtg.purpose
                             },
                             update: mtgUpdate
                         }).catch(e => console.warn('Meeting skip', e))

@@ -231,6 +231,2664 @@
       "rooms": [],
       "attendees": [],
       "meetings": []
+    },
+    {
+      "name": "MWC BCN 2026",
+      "startDate": "2026-03-02T00:00:00.000Z",
+      "endDate": "2026-03-05T00:00:00.000Z",
+      "geminiApiKey": "AIzaSyD3l8j-JEukPjNFhVZcV2HlWMLpMn2o734",
+      "tags": [
+        "APAC",
+        "Americas",
+        "Cloud",
+        "Europe",
+        "Global",
+        "IS",
+        "Japan Enterprise",
+        "LATAM",
+        "MEA",
+        "OSS",
+        "Open RAN MoU",
+        "Partner",
+        "RAN",
+        "RMI"
+      ],
+      "meetingTypes": [
+        "Channel Partner",
+        "Govt",
+        "Other",
+        "PR Engagement",
+        "Sales/Customer",
+        "Technology Partner",
+        "Vendor Partner"
+      ],
+      "attendeeTypes": [
+        "BU Cloud",
+        "BU IS",
+        "BU OSS",
+        "BU RAN",
+        "Customer",
+        "Customer Success",
+        "Marketing",
+        "Partner",
+        "Press / Analyst",
+        "Sales",
+        "Staff",
+        "Vendor"
+      ],
+      "timezone": "CET",
+      "id": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8",
+      "rooms": [
+        {
+          "name": "Meeting Room 1 (Mickey)",
+          "capacity": 10,
+          "id": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Meeting Room 3",
+          "capacity": 6,
+          "id": "26ea8448-d8c7-4392-a036-48b2e9e0242a",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Meeting Room 4",
+          "capacity": 6,
+          "id": "206bbccc-55bd-46ca-82a3-fe378d58b023",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Meeting Room 5",
+          "capacity": 6,
+          "id": "84687071-98de-4af2-a539-d54bad597128",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Meeting Room 6",
+          "capacity": 6,
+          "id": "47d59050-399a-4722-9bad-fb413afe8dab",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Meeting Room 2 (Sharad)",
+          "capacity": 8,
+          "id": "82921730-cbd5-449a-bd2f-a33307366289",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        }
+      ],
+      "attendees": [
+        {
+          "name": "Google Exec",
+          "title": "Googlge",
+          "email": "xxx@google.com",
+          "bio": "Google Exec is a seasoned professional at Google. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/google-exec)",
+          "company": "Google",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/google-exec",
+          "imageUrl": null,
+          "isExternal": false,
+          "type": "Partner",
+          "id": "e4b96d1e-a760-448b-a198-989bfba09771",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Fahad Kananen",
+          "title": "OSS Sales- USA",
+          "email": "fahad.kananeh@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "9abe2190-5def-4643-bdd0-9718dcbe3fc6",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Nirmal Sodani",
+          "title": "APAC Sales",
+          "email": "nirmal.sodani@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "31c54730-5c5a-49e9-9daa-904dc21687e9",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Brijesh Yadav",
+          "title": "Architecture",
+          "email": "brijesh.yadav@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "d53b2a99-5b9b-4e4c-8a0c-ba868d5d35e3",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sudhakar Pandey",
+          "title": "RAN",
+          "email": "sudhakar.pandey@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU RAN",
+          "id": "f189bbba-28db-4735-a4af-dc96706e7c81",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mitsuhiro Kuchitsu",
+          "title": "Subsidy",
+          "email": "mitsuhiro.kuchitsu@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "c183d5c4-7819-414e-b44d-50ae6b607a5f",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Tadashi Tsukamoto",
+          "title": "Device",
+          "email": "tadashi.a.tsukamoto@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "a21b46aa-5092-424c-999d-1e5cc7693693",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Ryo Watanabe",
+          "title": "Core Network",
+          "email": "ryo.watanabe@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "750df86f-1c44-43fa-a84c-81920f76d37c",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Frederick Pion",
+          "title": "Regional Director - Sales",
+          "email": "frederic.pion@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "de6f3eb1-553b-4df9-bb18-151e1621b769",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Matan Barth",
+          "title": "CPaaS Sales",
+          "email": "matan.barth@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "7d12f9ea-86da-4409-becc-d65f0caf1cb0",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mickey Mikitani",
+          "title": "Group CEO",
+          "email": "rsus-RS_marketing@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Group",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sharad Sriwistawa",
+          "title": "Co-CEO, President",
+          "email": "sharad.sriwastawa@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Group",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "f0588bec-2265-493f-9d5a-6ff65c47faae",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Puneet Handa",
+          "title": "Head of Business Strategy",
+          "email": "puneet.handa@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "b18c88ee-d58c-415f-a706-5c7e5b23e83b",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Wayoh Suzuki",
+          "title": "Co-CEO",
+          "email": "wayoh.suzuki@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "29841736-335a-4d62-939a-bb2fc5aeac65",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sachin Verma",
+          "title": "CDAIO",
+          "email": "sachin.verma@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "d9d47a60-9ad0-47dc-a5a4-98e5596adb37",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mahmoud Elsakhawy",
+          "title": "VP",
+          "email": "mahmoud.elsakhawy@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "6676f8ea-450c-4a5c-8dac-2209990bcdc2",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Shailesh Gupta",
+          "title": "Director, Network Operations (SXC) Supervisory Department",
+          "email": "shailesh.b.gupta@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "fa07ac09-918f-464f-8ba5-35682e892605",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Masato Tani",
+          "title": "CEO Office (under Sakuma san )",
+          "email": "masato.tani@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Group",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "2ead4a49-f158-4b0e-8843-6d9552cbec70",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Udai Kanukolanu",
+          "title": "Global Sales Head",
+          "email": "udai.kanukolanu@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Partha Seetala",
+          "title": "BU Head",
+          "email": "partha.seetala@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU Cloud",
+          "id": "5de71e77-1bb2-4e26-95bd-690dff815b8c",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Anil Sawkar",
+          "title": "BU Head",
+          "email": "anil.sawkar@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU RAN",
+          "id": "4ec707b2-14d0-4d56-bd2e-df53eae11cd6",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Vivek Murthy",
+          "title": "BU Head",
+          "email": "vivek.murthy@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU OSS",
+          "id": "0dc5d453-99b8-484b-a71d-63fc8ee1f692",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Ryan Son",
+          "title": "BU Head",
+          "email": "ryan.son@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU IS",
+          "id": "c4547bb7-5045-4f8c-8a3e-faf1c126fec4",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Geoff Hollingworth",
+          "title": "CMO",
+          "email": "geoffre.hollingworth@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Marketing",
+          "id": "e998ad18-ff90-4938-8821-02f0abecdfc1",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Stefan Winter",
+          "title": "RSDE MD",
+          "email": "stefan.winter@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "49ad658d-43e3-4932-b708-aa14a5a4376d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Masaki Koichi",
+          "title": "RSJP MD",
+          "email": "koichi.b.masaki@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "cb31ad31-a362-48a3-9cbd-064d0c725aaf",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Faiq Khan",
+          "title": "OSS Sales",
+          "email": "faiq.khan@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "dc4f824d-b56c-4f92-a891-470e8a641925",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Anshul Bhatt",
+          "title": "OSS Sales",
+          "email": "anshul.bhatt@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "db2708c5-3faa-42fb-8c57-8508a5981944",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mina Nicola",
+          "title": "OSS PreSales",
+          "email": "mina.nicola@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "610eeb13-d740-438b-80ab-675e466a13b8",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Khalid El Rumman",
+          "title": "OSS PreSales",
+          "email": "khalid.elrumman@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "510081a9-af19-49a4-ab1a-287effc3eb40",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Faisal Ghazaleh",
+          "title": "OSS PreSales",
+          "email": "faisal.ghazaleh@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "d9a13504-380e-4146-b2a8-65aefc478ffa",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Ahmed Abdelaziz",
+          "title": "OSS PreSales",
+          "email": "ahmed.abdelaziz@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "1ee62953-e093-4bd2-b47a-7a6a0e548f58",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Nirav Salot",
+          "title": "RAN Product & Presales",
+          "email": "nirav.salot@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "47f7bbe9-63ac-4dc6-808a-215579b46bfb",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Neeraj Patel",
+          "title": "RAN Sales",
+          "email": "neeraj.a.patel@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "324d69f8-1eb5-4793-8a5d-00febd7ec25f",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Chris Alvis",
+          "title": "IS BU- CTO",
+          "email": "chris.alvis@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU IS",
+          "id": "9c9fa59d-285e-4d3c-8d1c-a2a13e927e1d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Vivek Chadha",
+          "title": "TSP Sales",
+          "email": "vivek.chadha@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "ce206241-af6c-4ba3-8944-5a0eeb1e617c",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Raul Carubelli",
+          "title": "TSP Sales- EU",
+          "email": "raul.carubelli@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "54e30573-82b7-437b-87ba-a94a3a443b25",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Alberto Mendez",
+          "title": "TSP- PreSales for Demos",
+          "email": "alberto.mendez@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "15e45865-4094-436f-9fec-c5cda5d9af8b",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Anirban (Oni) Chakravartti",
+          "title": "Enterprise Cloud",
+          "email": "anirban.chakravartti@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU Cloud",
+          "id": "72b83948-0654-4747-b89a-611a246fdd84",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Padmarajan Narayanan",
+          "title": "Enterprise Cloud",
+          "email": "padmarajan.narayanan@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU Cloud",
+          "id": "3d995c59-76c4-4fd3-8359-9bf943aa15b7",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Subha Shrinivasan",
+          "title": "Customer Success",
+          "email": "subha.shrinivasan@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "BU Cloud",
+          "id": "0ad266a0-825c-42eb-9e05-258e3abab8c7",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sandeep Arora",
+          "title": "APAC Sales",
+          "email": "sandeep.arora@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Rishi Shukla",
+          "title": "APAC Sales",
+          "email": "rishi.shukla@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Shadi Sayed",
+          "title": "MEA Sales",
+          "email": "shadi.sayed@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Talaat Mohamed",
+          "title": "MEA Sales",
+          "email": "talaat.mohamed@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "2b728659-a698-4900-b52f-dd29fa5b0deb",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Swamy Vasudevan",
+          "title": "US Sales",
+          "email": "swamy.vasudevan@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "f31e1a57-fb90-4850-946d-38f2029ec5f3",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sachin Mahajan",
+          "title": "Canada & partner Sales- Customer/Partner meetings",
+          "email": "sachin.mahajan@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "d2aaa315-0e37-44f9-8391-c159779d5925",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Alberto Rivas",
+          "title": "LATAM Sales- Customer/Partner meetings",
+          "email": "ts-alberto.rivas@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "0a064696-0c17-4dcd-808d-8ffaf1a6a565",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Richard Thalluri",
+          "title": "LATAM Sales- Demo & Theatre Sessions",
+          "email": "richard.thalluri@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "2e5ece45-d7cf-429c-873b-a49c7a4c1500",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Thomas Riedel",
+          "title": "EU Sales- Customer meetings",
+          "email": "thomas.riedel@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "7f957053-4a14-4f64-8860-b8760d58b362",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "MiguelAngel Sanchez",
+          "title": "EU Sales- Customer Meetings (Telefonica and South Europe Operators)",
+          "email": "miguelangel.sanchez@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "99ccf86a-02fd-4c62-a40b-127230c5a502",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Wasim Saddique",
+          "title": "EU Sales- Customer Meetings (UK/IRL and Nordic Operators)",
+          "email": "wasim.saddique@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "90410664-4787-4a69-96cc-6d6c3c182302",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Jason King",
+          "title": "Partner Mktg and Theatre Sessions",
+          "email": "jason.king@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Marketing",
+          "id": "f6179eea-d4ee-4f4a-aa98-d29d13ab8533",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Christina James",
+          "title": "Demos and Operations",
+          "email": "christina.pjames@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Marketing",
+          "id": "4f72bce5-0543-471f-bbc9-ea198bf5eb21",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sheheryar Khakwani",
+          "title": "Partner Collaboration",
+          "email": "sheheryar.khakwani@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "913568b8-5a62-4324-97d0-91455e498140",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Shima Zeinali",
+          "title": "Partner Collaboration",
+          "email": "shima.a.zeinali@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "787f87bb-7c58-45b4-9f4c-14dabfe8496c",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Chetan Wani",
+          "title": "President Office",
+          "email": "chetan.wani@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "179dad05-0199-4688-8844-e5976125610f",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Vishvesh Potdar",
+          "title": "RS Japan Enterprise Sales",
+          "email": "vishvesh.potdar@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": "Sales",
+          "id": "8a802cf9-1451-4333-8f74-5dbf4a24b459",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Hiren Joshi",
+          "title": "RS EU CTO",
+          "email": "hiren.joshi@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "70c958c7-b88b-49f4-b35c-3e8da9b7779d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Nagendra Bykampadi",
+          "title": "Security- Speaking slot",
+          "email": "nagendra.bykampadi@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "a05fe442-9fd0-43ce-8055-2eca2f9b17e3",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Devesh Gautam",
+          "title": "Solution Architecture",
+          "email": "devesh.gautam@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Symphony",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "0f4e739d-553e-49fc-a7bf-012b8ffbf2dc",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Tarek Zeid",
+          "title": "International Wholesale Business RMI",
+          "email": "tarek.zeid@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "cb352e85-cb56-488f-a000-1c27379fde78",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Manal Rifki",
+          "title": "International Wholesale Business RMI",
+          "email": "ts-manal.rifki@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "62ab7b0a-50b4-4dc6-a069-565d8a5b82af",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Polina Gardo",
+          "title": "International Wholesale Business RMI",
+          "email": "ts-polina.gardo@rakuten.com",
+          "bio": "",
+          "company": "Rakuten Mobile",
+          "companyDescription": "",
+          "linkedin": "",
+          "imageUrl": "",
+          "isExternal": false,
+          "type": null,
+          "id": "55ca6570-a02c-4577-8243-e02392c9f53a",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Alper Tunga Burak",
+          "title": "Founder & CEO",
+          "email": "tbd@odine.com",
+          "bio": "Alper Tunga Burak is the Founder and CEO of Odine, a leading Telco Cloud-Native OSS/BSS Systems Integrator. He has extensive experience in the telecommunications sector, driving the company's vision to provide virtualized and cloud-native solutions. Under his leadership, Odine partners with global Tier-1 operators to accelerate their digital transformation and network modernization.",
+          "company": "Odine",
+          "companyDescription": "Odine is a global telecommunications technology company specializing in cloud-native, virtualized OSS/BSS and orchestration solutions for Tier-1 telecom operators worldwide. They enable operators to modernize their infrastructure, streamline wholesale voice and data operations, and accelerate their digital transformation journey.",
+          "linkedin": "https://www.linkedin.com/in/alpertungaburak/",
+          "imageUrl": "https://image.aieventplanner.work/07312eee-9158-4d3f-a8e5-ddb1363bb0c6.jpeg",
+          "isExternal": true,
+          "type": "BU Cloud",
+          "id": "c38a8a04-f97e-4dff-92aa-e11fa9cde0e7",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Reiner",
+          "title": "Hogen",
+          "email": "Reiner.Hogen@fujitsu.com",
+          "bio": "Reiner is a seasoned professional at Fujitsu. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/reiner)",
+          "company": "Fujitsu",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/reiner",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "39119d99-25b0-43a5-ab16-d4e01a9467a7",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Chuck Robbins",
+          "title": "CEO",
+          "email": "tuutran@cisco.com",
+          "bio": "For over 25 years at Cisco, Robbins has demonstrated a keen understanding of the rapidly evolving business landscape and the critical role of technology in addressing both customer and global challenges. \r\n\r\nRobbins has championed initiatives across the company to enhance employee experience and culture, contributing to Cisco earning the top spot on World’s Best Workplaces, Fortune’s 100 Best Companies to Work For, People’s Companies that Care, and various other lists throughout his tenure.\r\n\r\nPrior to becoming CEO, Robbins led Cisco’s global sales organization. He also held various leadership roles in regional sales, as well as Cisco’s partner organization, where he was instrumental in building one of the industry’s most robust partner programs.",
+          "company": "Cisco",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/chuck-robbins",
+          "imageUrl": "https://image.aieventplanner.work/66e6a2c5-f227-497b-8ba1-bd1935c6c8d2.jpeg",
+          "isExternal": true,
+          "type": "Partner",
+          "id": "a50d401b-06be-4d74-8285-1feb2828fa6e",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Hatem",
+          "title": "CEO",
+          "email": "hatem@eand.com",
+          "bio": "Hatem is a seasoned professional at E& Group. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/hatem)",
+          "company": "E& Group",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/hatem",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "aa8f6320-bbf6-4315-b845-6d88e477e7f0",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Hatem",
+          "title": " e& Group CEO",
+          "email": "anina@eand.com",
+          "bio": "Hatem is a seasoned professional at E& Group. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/hatem)",
+          "company": "E& Group",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/hatem",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "9a5cab93-5786-4b5f-8941-6ebb479a11ac",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mr. Fahad Al Hassawi",
+          "title": "dU CEO ",
+          "email": "Amel.mohammed@du.ae",
+          "bio": "Mr. Fahad Al Hassawi is a seasoned professional at dU. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/mr.-fahad-al-hassawi)",
+          "company": "dU",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/mr.-fahad-al-hassawi",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "",
+          "id": "87c73f1d-49e9-4fab-9974-c40aded3232f",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Ralph Mopito",
+          "title": "MTN Group CEO",
+          "email": "Ralph.Mupita@mtn.com",
+          "bio": "Ralph Mopito is a seasoned professional at MTN Group. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/ralph-mopito)",
+          "company": "MTN Group",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/ralph-mopito",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "",
+          "id": "6681ca37-0851-476b-b1e7-34a0f1a6c33c",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Kevork Kechichian",
+          "title": "Executive Vice President & General Manager, Data Center Group",
+          "email": "ryohei.murata@intel.com",
+          "bio": "Kevork Kechichian is executive vice president and general manager of the Data Center Group (DCG) at Intel Corporation. He is responsible for Intel’s data center business, including profit and loss, roadmap, and product planning, positioning and execution.  \r\n\r\n Kevork is a proven leader with 30 years of semiconductor experience. Prior to joining Intel in 2025, he served as EVP of Solutions Engineering at Arm, where he led technology development with partner ecosystems and managed the company's transformation from IP to solutions-based approaches. He previously served as EVP of MCU/MPU Engineering at NXP Semiconductors, where he led the company’s global architecture and system-on-chip (SoC) design. He also served as SVP of Engineering at Qualcomm, where he managed the Snapdragon SoC and Technology teams and was responsible for delivering more than 100 SoCs. \r\n\r\nKevork holds a master’s in electrical engineering from Concordia University in Montreal, and a bachelor’s in electrical engineering from American University of Beirut. \r\n\r\n",
+          "company": "Intel",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/kevork-kechichian-981833",
+          "imageUrl": "https://image.aieventplanner.work/4e249cdb-a5b9-4590-b9e9-943a253ea898.jpeg",
+          "isExternal": true,
+          "type": "Partner",
+          "id": "5a569527-0cfe-417e-bac9-da3b1e187b3d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Vivek Sood",
+          "title": "Group CEO",
+          "email": "vivek@axiata.com",
+          "bio": "Vivek Sood is a seasoned professional at Axia. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/vivek-sood)",
+          "company": "Axia",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/vivek-sood",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "403b6c30-3012-48dd-81ab-783defabf456",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Dr Tomek Gerszberg",
+          "title": "Technology Strategy",
+          "email": "tomek@axiata.com",
+          "bio": "Dr Tomek Gerszberg is a seasoned professional at Axiata. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/dr-tomek-gerszberg)",
+          "company": "Axiata",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/dr-tomek-gerszberg",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "bbc0ee8f-f21c-4d03-853d-82d11e383470",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Anthony Rodrigo",
+          "title": "Group CIO /CEO Axiata Digital Labs",
+          "email": "anthony.rodrigo@axiata.com",
+          "bio": "Anthony Rodrigo is a seasoned professional at Axiata Digital Labs. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/anthony-rodrigo)",
+          "company": "Axiata Digital Labs",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/anthony-rodrigo",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "aca2989a-ac3f-45dd-aab6-2dfb2798b36e",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Gregory Ernst ",
+          "title": "Corporate Vice President & Chief Revenue Officer, General Manager of Sales and Marketing Group",
+          "email": "TBD@intel.com",
+          "bio": "Gregory (Greg) Ernst is corporate vice president, chief revenue officer and general manager of the Sales and Marketing Group at Intel Corporation. In his role, Ernst oversees Intel’s global sales, marketing, customer support and customer success teams. He leads the company’s efforts to deepen customer relationships, drive customer and partner success, and foster sales and marketing approaches that broaden Intel’s business opportunities.\r\n\r\nErnst joined Intel in 1999. Throughout his career at Intel, he has held leadership roles across Intel’s Cisco, Dell, Hewlett-Packard Enterprise and HP Inc. sales account teams. He has also served as vice president in the Sales and Marketing Group and as general manager of United States sales.\r\n\r\nPrior to his role as chief revenue officer, Ernst served as corporate vice president and general manager of the Americas region for Intel. In this role, he led the team of sellers and marketers that support all Americas-based customers and partners.\r\n\r\nErnst holds a bachelor’s degree in electrical engineering from the University of Texas at Austin.",
+          "company": "Intel",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/gregory-ernst-",
+          "imageUrl": "https://image.aieventplanner.work/e832457a-48e9-4b6c-958c-ae215a5d1548.jpeg",
+          "isExternal": true,
+          "type": "Partner",
+          "id": "743f3c2a-3329-47b1-90bf-fff15a94130d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Kumar N Sivarajan",
+          "title": "CTO Tejas Networks",
+          "email": "kumar@tejasnetworks.com",
+          "bio": "Kumar N Sivarajan is a seasoned professional at Tejas Networks. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/kumar-n-sivarajan)",
+          "company": "Tejas Networks",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/kumar-n-sivarajan",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "",
+          "id": "7cac459f-2134-40c8-9755-23380fffe620",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Dr. Mothilal de Silva",
+          "title": "Chairman",
+          "email": "Chairman@slt.com.lk",
+          "bio": "Dr. Mothilal de Silva is a seasoned professional at SriLanka Telecom. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/dr.-mothilal-de-silva)",
+          "company": "SriLanka Telecom",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/dr.-mothilal-de-silva",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "a9668476-9fad-4733-aa89-a817217d66ca",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sudharshana Geeganage",
+          "title": "COO",
+          "email": "sudharshanag@mobitel.lk",
+          "bio": "Sudharshana Geeganage is a seasoned professional at SriLanka Telecom. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/sudharshana-geeganage)",
+          "company": "SriLanka Telecom",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/sudharshana-geeganage",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "0c09d475-9042-4c82-b0fa-7c930206a13c",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Indika Asurappulige",
+          "title": "Head of Networks",
+          "email": "indikan@mobitel.lk",
+          "bio": "Indika Asurappulige is a seasoned professional at SriLanka Telecom. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/indika-asurappulige)",
+          "company": "SriLanka Telecom",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/indika-asurappulige",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "9a58fb76-43ab-432e-a689-e1b48dcac52d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Abbi Pilapitiya",
+          "title": "CEO",
+          "email": "abbi.pilapitiya@sierra.lk",
+          "bio": "Abbi Pilapitiya is a seasoned professional at SIERRA. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/abbi-pilapitiya)",
+          "company": "SIERRA",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/abbi-pilapitiya",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Partner",
+          "id": "13921a30-c16c-4335-bced-20403443dd85",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Rade Kovacevic",
+          "title": "Head of Sourcing",
+          "email": "rade.kovacevic@telenor.com",
+          "bio": "Rade Kovacevic is a seasoned professional at Telenor. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/rade-kovacevic)",
+          "company": "Telenor",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/rade-kovacevic",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "ae34b5ad-5f2e-47a5-b512-edc88d48137d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mr.Raja Halder",
+          "title": "Head of Network Sourcing ",
+          "email": "raja.haldar@telenor.com",
+          "bio": "Mr.Raja Halder is a seasoned professional at Telenor Procurement Company. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/mr.raja-halder)",
+          "company": "Telenor Procurement Company",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/mr.raja-halder",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "6c999c4c-c7ee-44ae-9c01-081e87fc0558",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Shanshil Ahmed Shibly",
+          "title": "Asia Technology Head ",
+          "email": "shanshil.shibly@telenor.com",
+          "bio": "Shanshil Ahmed Shibly is a seasoned professional at Telenor. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/shanshil-ahmed-shibly)",
+          "company": "Telenor",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/shanshil-ahmed-shibly",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "047255d3-0594-453e-8983-ddd4c863a690",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Daaij Al-Oud",
+          "title": "CTO",
+          "email": "daaij.aloud@kw.zain.com",
+          "bio": "Daaij Al-Oud is a seasoned professional at Zain Kuwait. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/daaij-al-oud)",
+          "company": "Zain Kuwait",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/daaij-al-oud",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "c5dd1fc1-65e0-4a03-8719-1968e4ccf90e",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Nawaf Algharabally",
+          "title": "CEO",
+          "email": "nawaf.algharabally@kw.zain.com",
+          "bio": "Nawaf Algharabally is a seasoned professional at Zain Kuwait. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/nawaf-algharabally)",
+          "company": "Zain Kuwait",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/nawaf-algharabally",
+          "imageUrl": null,
+          "isExternal": false,
+          "type": "Customer",
+          "id": "ccb66685-9bdd-4ede-8be1-e98c6d3e1354",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Thomas Hundt",
+          "title": "Group CTO",
+          "email": "thomas.hundt@axiata.com",
+          "bio": "Thomas Hundt is a seasoned professional at Axiata. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/thomas-hundt)",
+          "company": "Axiata",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/thomas-hundt",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "a3616d64-5075-4847-b211-ba081fb6aac0",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Olayan M. Alwetaid",
+          "title": "CEO",
+          "email": "uwetaid@stc.com.sa",
+          "bio": "Olayan M. Alwetaid is a seasoned professional at STC. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/olayan-m.-alwetaid)",
+          "company": "STC",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/olayan-m.-alwetaid",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "8f975388-1810-4c3c-8eac-7c369e3f4dc5",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mr. Abdulrahman Al Moaiqe",
+          "title": "COO",
+          "email": "amoaiqel@tawal.com.sa",
+          "bio": "Mr. Abdulrahman Al Moaiqe is a seasoned professional at Tawal. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/mr.-abdulrahman-al-moaiqe)",
+          "company": "Tawal",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/mr.-abdulrahman-al-moaiqe",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "7705edcb-292d-46ef-a855-d9438aa809c4",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Aziz Aluthman Fakhroo",
+          "title": "Group CEO",
+          "email": "afakhroo@qm.org.qa",
+          "bio": "Aziz Aluthman Fakhroo is a seasoned professional at Ooredoo. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/aziz-aluthman-fakhroo)",
+          "company": "Ooredoo",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/aziz-aluthman-fakhroo",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "8e75cb33-f589-4860-8d83-52705f8b2260",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Sunil Taldar",
+          "title": "CEO",
+          "email": "sunil.taldar@africa.airtel.com",
+          "bio": "Sunil Taldar is a seasoned professional at Airtel Africa. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/sunil-taldar)",
+          "company": "Airtel Africa",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/sunil-taldar",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "18f9ccbf-8548-4375-b128-d142cb430169",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Shashwat sharma",
+          "title": "CEO",
+          "email": "shashwat.sharma@airtel.com",
+          "bio": "Shashwat sharma is a seasoned professional at Airtel. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/shashwat-sharma)",
+          "company": "Airtel",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/shashwat-sharma",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "156cf858-e607-48b7-8e78-17295cc0f007",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Mr.Vinh Tuan Bao",
+          "title": "CTO",
+          "email": "bao.vinh@mobifone.vn",
+          "bio": "Mr.Vinh Tuan Bao is a seasoned professional at Mobifone. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/mr.vinh-tuan-bao)",
+          "company": "Mobifone",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/mr.vinh-tuan-bao",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "975bca9a-6f2a-42ea-99b6-1ca408eac7ad",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Desmond Cheung",
+          "title": "CTO",
+          "email": "desmond.cheung@ioh.co.id",
+          "bio": "Desmond Cheung is a seasoned professional at IOH. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/desmond-cheung)",
+          "company": "IOH",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/desmond-cheung",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "f81be2a0-0700-47dd-bcd0-a0e840c104ff",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Luthfi Auzan",
+          "title": "VP Network Operations",
+          "email": "luthfi.auzan@ioh.co.id",
+          "bio": "Luthfi Auzan is a seasoned professional at IOH. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/luthfi-auzan)",
+          "company": "IOH",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/luthfi-auzan",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "492f40d9-eddd-4770-bba9-874d45aa3599",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Nikhil Eapen",
+          "title": "CEO",
+          "email": "nikhile@starhub.com",
+          "bio": "Nikhil Eapen is a seasoned professional at StarHub. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/nikhil-eapen)",
+          "company": "StarHub",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/nikhil-eapen",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "2ac6e423-bfea-44f0-b138-df78e954f58b",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Yuen Kuan Moon",
+          "title": "CEO",
+          "email": "kmyuen@singtel.com",
+          "bio": "Yuen Kuan Moon is a seasoned professional at Singtel. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/yuen-kuan-moon)",
+          "company": "Singtel",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/yuen-kuan-moon",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "3e568a16-49cc-4a23-9651-0010919c7296",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Jorge Fernandes",
+          "title": "CTO",
+          "email": "jorge.fernandes@singtel.com",
+          "bio": "Jorge Fernandes is a seasoned professional at Sing. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/jorge-fernandes)",
+          "company": "Sing",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/jorge-fernandes",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "1cc7d4bf-2e92-419a-8a2e-fef033082c7d",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Jai Prakash",
+          "title": "CTO",
+          "email": "jai.prakash@grameenphone.com",
+          "bio": "Jai Prakash is a seasoned professional at Grameenphone. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/jai-prakash)",
+          "company": "Grameenphone",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/jai-prakash",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "7826d556-c046-4c05-81ae-ba53e71cd959",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "name": "Md. Abu Baker Shibly",
+          "title": "Technology Strategy & Transformation Technology",
+          "email": "abshibly@grameenphone.com",
+          "bio": "Md. Abu Baker Shibly is a seasoned professional at Grameenphone. With a strong background in their field, they bring valuable expertise and leadership to the team. (Generated from https://www.linkedin.com/in/md.-abu-baker-shibly)",
+          "company": "Grameenphone",
+          "companyDescription": "",
+          "linkedin": "https://www.linkedin.com/in/md.-abu-baker-shibly",
+          "imageUrl": null,
+          "isExternal": true,
+          "type": "Customer",
+          "id": "79cb2d34-2220-4c0c-9efa-5c86dbda1cc4",
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        }
+      ],
+      "meetings": [
+        {
+          "title": "Rakuten - E& Group",
+          "purpose": "PURPOSE:\nExecutive Trust & Relationship Established\nCommitment to Tokyo HQ visit confirmed\n90-day acceleration plan agreed\nStrategic partnership discussions initiated\nClear differentiation from vendor relationships\n\nAGENDA:\nWelcome & Context\nRakuten Group, Rakuten Mobile & Symphony\ne& Group's Strategic Vision & Priorities\nStrategic Partnership Framework & Next Steps\n",
+          "date": "2026-03-02",
+          "startTime": "14:00",
+          "endTime": "14:30",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "d71ea0e3-17f4-4d4c-b6e2-f02c0380aeb7",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "aa8f6320-bbf6-4315-b845-6d88e477e7f0"
+            },
+            {
+              "id": "9a5cab93-5786-4b5f-8941-6ebb479a11ac"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Oracle x Rakuten",
+          "purpose": "Ongoing Business with rakuten , Global experience and Roadmap Oracle ",
+          "date": null,
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [],
+          "createdBy": "yuno.kido@rakuten.com",
+          "requesterEmail": "anil.munde@oracle.com",
+          "meetingType": "Vendor Partner",
+          "location": null,
+          "otherDetails": "Purpose /Objective   -  Executive catch up ,Oracle Technology  Roadmap with Open AI .\n\nRequestor  -  Anil Munde  -Regional Sales Director\n\nAttendee -\n\n  Payam Sharifi  - SVP - Head Of Sales CGIU\n\n  Nuno Saraiva - VP  Sales Consulting\n\n  Alex Hunte   -  Senior Director, Head of Communication GIU Sales, \n\n  JAPAC.\n\nLocation /Booth   - Oracle Booth as per invitation letter attached or Rakuten Booth \n\n Duration -    30 min \n\n Date   -  2 March / 3 March 2026\n\nBackground --  Ongoing Business with rakuten , Global experience and Roadmap Oracle ",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "913457c7-a8fb-412d-b351-b8c8887736ee",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Gigs x Rakuten ",
+          "purpose": "Rakuten Mobile executive team asked to meet with Gigs in December after introduction from Rakuten Capital. The initial context of the December 22nd meeting was to primarily scope working with Rakuten Mobile as a carrier - for international roaming or in the future for a larger relationship in Japan. This was an intorductory meeting between both parties. As a follow-up Sharad and Hermann wanted to use the opportunity at MWC to meet in-person to foster executive strategic alignment in the future.  ",
+          "date": null,
+          "startTime": null,
+          "endTime": null,
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [],
+          "createdBy": "yuno.kido@rakuten.com",
+          "requesterEmail": "nandi@gigs.com",
+          "meetingType": "Vendor Partner",
+          "location": null,
+          "otherDetails": "■Purpose/Objective: Executive Meeting with Gigs CEO as a follow-up from meeting on December 22nd \n\n■Requestor: Nandi Radmer (Gigs)\n\n■Attendees(with title): Hermann (Gigs CEO and Co-Founder), Nandi (Lead Strategic Projects), Lo (Chief of Staff to Hermann)\n\n■Location(Booth): Rakuten booth\n\n■Duration: 30mins\n\n■Date: March 3rd or 4th mid-morning or early afternoon\n\n■Background (If possible): Rakuten Mobile executive team asked to meet with Gigs in December after introduction from Rakuten Capital. The initial context of the December 22nd meeting was to primarily scope working with Rakuten Mobile as a carrier - for international roaming or in the future for a larger relationship in Japan. This was an intorductory meeting between both parties. As a follow-up Sharad and Hermann wanted to use the opportunity at MWC to meet in-person to foster executive strategic alignment in the future.  ",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "df8640d0-2af8-40bd-b984-e7272a34405c",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Fujitsu / Rakuten Symphony",
+          "purpose": "",
+          "date": "2026-03-03",
+          "startTime": "09:30",
+          "endTime": "10:00",
+          "sequence": 2,
+          "status": "CONFIRMED",
+          "tags": [
+            "Europe"
+          ],
+          "createdBy": "monica.cuellar@rakuten.com",
+          "requesterEmail": "thomas.riedel@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "From Fujitsu side will also attend Lytsikas, Lambis",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "a5533394-7a03-43d9-9e4c-7770a3212fe9",
+          "roomId": "206bbccc-55bd-46ca-82a3-fe378d58b023",
+          "attendees": [
+            {
+              "id": "7f957053-4a14-4f64-8860-b8760d58b362"
+            },
+            {
+              "id": "39119d99-25b0-43a5-ab16-d4e01a9467a7"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "MTG with NSSOL/ Masaki & Vishvesh",
+          "purpose": "・Introduction\n・Exchanging Industry information\n・Discussions on collaboration/ partnership opportunities in Japan. ",
+          "date": "2026-03-02",
+          "startTime": "13:00",
+          "endTime": "14:00",
+          "sequence": 2,
+          "status": "CONFIRMED",
+          "tags": [
+            "Japan Enterprise"
+          ],
+          "createdBy": "tharusha.mukundadura@rakuten.com",
+          "requesterEmail": "tharusha.mukundadura@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "Participant details:\nRS: Japan Enterprise_ Masaki & Vishvesh\nNSSOL side: Noro, Miura, Nishi",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "2a48ca80-8d63-465c-8ba6-9255052129b2",
+          "roomId": "26ea8448-d8c7-4392-a036-48b2e9e0242a",
+          "attendees": [
+            {
+              "id": "cb31ad31-a362-48a3-9cbd-064d0c725aaf"
+            },
+            {
+              "id": "8a802cf9-1451-4333-8f74-5dbf4a24b459"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Rakuten -  Tejas",
+          "purpose": "Agenda:\nDU and CU – design and manufacturing for low ARPU mkt\nRU availability in n77 and n50 band\nLTE – OPEN RAN like 5G\n2G support\nGTM Model with RACI between RS and Tejas\nPrivate 5G discussion",
+          "date": "2026-03-03",
+          "startTime": "10:00",
+          "endTime": "10:30",
+          "sequence": 3,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Vendor Partner",
+          "location": null,
+          "otherDetails": "Rakuten Booth #2C70 ",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "a7247a96-eb9d-4299-8d90-f4035f665092",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "31c54730-5c5a-49e9-9daa-904dc21687e9"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "7cac459f-2134-40c8-9755-23380fffe620"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Odine x Rakuten Symphony",
+          "purpose": "",
+          "date": null,
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "sequence": 6,
+          "status": "PIPELINE",
+          "tags": [
+            "Cloud"
+          ],
+          "createdBy": "jessica.cheng@rakuten.com",
+          "requesterEmail": "anirban.chakravartti@rakuten.com",
+          "meetingType": "Channel Partner",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "5042579b-3157-4dca-8e06-19a11d1fccee",
+          "attendees": [
+            {
+              "id": "5de71e77-1bb2-4e26-95bd-690dff815b8c"
+            },
+            {
+              "id": "72b83948-0654-4747-b89a-611a246fdd84"
+            },
+            {
+              "id": "c38a8a04-f97e-4dff-92aa-e11fa9cde0e7"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Cisco x Rakuten",
+          "purpose": "- Executive connect on project status\n- Key partner of FY2026\n- Group photos (end-of-meeting)",
+          "date": "2026-03-03",
+          "startTime": "10:00",
+          "endTime": "10:30",
+          "sequence": 2,
+          "status": "PIPELINE",
+          "tags": [
+            "Global"
+          ],
+          "createdBy": "jessica.cheng@rakuten.com",
+          "requesterEmail": "bcamoens@cisco.com",
+          "meetingType": "Technology Partner",
+          "location": null,
+          "otherDetails": "Cisco provides networking hardware, software, telecommunications equipment and other high-technology services and products. RMI has been deployed Cisco SP router, Edge Switches, DC Switches, Packet Core, and closely work with Cisco CX team to develop and operate. ",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "58f77dfc-78f3-4989-9b5c-cbf0d177bc52",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "a50d401b-06be-4d74-8285-1feb2828fa6e"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Google x Sharad Executive Dinner",
+          "purpose": "",
+          "date": "2026-03-03",
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "sequence": 3,
+          "status": "PIPELINE",
+          "tags": [],
+          "createdBy": "yuno.kido@rakuten.com",
+          "requesterEmail": "jessica.cheng@rakuten.com",
+          "meetingType": "Other",
+          "location": null,
+          "otherDetails": "Date/time: Mar 3, Tuesday @ 7pm CET\nLocation: TBD \nGoogle Executives:\nManinder S - VP and Head and Google Cloud Product and GM\nManu Batra - Head of Product for Google DC servers\nRS attendees:\nSharad\nPartha\nOni",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "b9a70d07-93d7-4e24-98db-5727f877f447",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "5de71e77-1bb2-4e26-95bd-690dff815b8c"
+            },
+            {
+              "id": "72b83948-0654-4747-b89a-611a246fdd84"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "SLT & Sierra - Rakuten Symphony",
+          "purpose": "Agenda:\nGreetings and appreciation for SLT/Mobitel leadership’s time at MWC\nBrief introductions of delegations\nContext setting: strategic engagement between SLT/Mobitel and Rakuten Symphony\nShared vision for future-ready mobile networks\nSLT/Mobitel’s intent to:\nExpand mobile network capacity and coverage\nDiversify vendor ecosystem with non-Chinese suppliers\nAccelerate network automation and AI-driven operation",
+          "date": "2026-03-02",
+          "startTime": "15:00",
+          "endTime": "15:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "c85372ca-dbe7-4241-9aab-043684ea3070",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "31c54730-5c5a-49e9-9daa-904dc21687e9"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "a9668476-9fad-4733-aa89-a817217d66ca"
+            },
+            {
+              "id": "0c09d475-9042-4c82-b0fa-7c930206a13c"
+            },
+            {
+              "id": "9a58fb76-43ab-432e-a689-e1b48dcac52d"
+            },
+            {
+              "id": "13921a30-c16c-4335-bced-20403443dd85"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "dU -Rakuten",
+          "purpose": "PURPOSE:\nExecutive trust and relationship established\nCommitment to Tokyo HQ visit confirmed\n90-day acceleration plan agreed\nStrategic partnership discussions initiated\nClear differentiation from vendor relationships\n\nAGENDA\nWelcome & Context\nRakuten Group , Rakuten Mobile & Symphony\ndU's Strategic Vision & Priorities\nStrategic Partnership Framework & Next Steps",
+          "date": "2026-03-03",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "sequence": 3,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "4a0114bb-8c89-41bb-8b66-3a98bfcdf2be",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "87c73f1d-49e9-4fab-9974-c40aded3232f"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Telenor - Rakuten Symphony",
+          "purpose": " strengthening engagement and aligning on future network strategy\n   Telenor’s focus on:\nScalable and cost-efficient mobile network expansion of ongoing Graeenphone POC\nccelerated adoption of cloud-native, Open RAN, and automation-led networks",
+          "date": "2026-03-02",
+          "startTime": "14:30",
+          "endTime": "15:00",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "40b4d393-d59c-484a-95d5-52bf6a0ebb95",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "ae34b5ad-5f2e-47a5-b512-edc88d48137d"
+            },
+            {
+              "id": "6c999c4c-c7ee-44ae-9c01-081e87fc0558"
+            },
+            {
+              "id": "047255d3-0594-453e-8983-ddd4c863a690"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Thales DIS Japan x Rakuten",
+          "purpose": "For strong partnership with Rakuten in 2026, Thales wants to listen the requirement from Rakuten(support, new technology, innovation for Rakuten,,,)\n\nFrom Thales, we will plan to share eSIM/IoT global trend update",
+          "date": null,
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "sequence": 3,
+          "status": "PIPELINE",
+          "tags": [],
+          "createdBy": "yuno.kido@rakuten.com",
+          "requesterEmail": "daisuke.sasaki@thalesgroup.com",
+          "meetingType": "Vendor Partner",
+          "location": null,
+          "otherDetails": "■Purpose/Objective : For strong partnership with Rakuten in 2026, Thales wants to listen the requirement from Rakuten(support, new technology, innovation for Rakuten,,,)\nFrom Thales, we will plan to share eSIM/IoT global trend update\n\n■Requestor : Mr. Daisuke Sasaki - Thales DIS Japan\n\n■Attendees(with title) : -RUDIN Eva (VP, Head of Mobile Connectivity Solutions)\n\n-OUILLET Jean-Francois (Global Head of Sales, Mobile Connectivity Solutions)\n\n-MICHAUX Bertrand (Vice President, Sales Mobile Connectivity Solutions Japan)\n\n \n\n■Location(Booth) : Rakuten Booth (?)\n\n■Duration : 30min\n\n■Date : We would like to know the current available slots of Mr.Sharad\n\n■Background (If possible) : Our management (Eva/JFO)met Mr.Sharad on May 2025 at Rakuten office and we would like to keep our strong relationship with Rakuten with arranging  \n\nthe  meeting.",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "e8bdcbdb-92db-4db4-a1d3-6e8b926f8aee",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Intel x Rakuten Symphony",
+          "purpose": "This would be the first meeting opportunity for both executives with Mickey-san and Sharad.\nWhile I understand they have already met with our CEO Lip Bu Tan, we believe MWC'26 presents an excellent opportunity to further strengthen our executive relationships\n",
+          "date": "2026-03-03",
+          "startTime": "11:00",
+          "endTime": "11:30",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [
+            "Partner"
+          ],
+          "createdBy": "jessica.cheng@rakuten.com",
+          "requesterEmail": "ryohei.murata@intel.com",
+          "meetingType": "Technology Partner",
+          "location": null,
+          "otherDetails": "Executive Capabilities:\nKevork leads our Intel® Xeon® 6 Processors business unit and would provide valuable insights on product feedback and future collaboration opportunities\nGreg heads our Sales organization and could discuss the strategic sales support needed\nAdditionally, Cristina Rodriguez, our former GM of the Network and Edge Group(now all under Kevork), is also planned to attend and could join these discussions.",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "6e3d42c6-ba56-4caf-812f-935b63d62822",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "5a569527-0cfe-417e-bac9-da3b1e187b3d"
+            },
+            {
+              "id": "743f3c2a-3329-47b1-90bf-fff15a94130d"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Cisco (Masum) x Rakuten",
+          "purpose": "In order to follow up together about Rakuten 5GC project and Rakuten Symphony partnership on executive level.",
+          "date": "2026-03-04",
+          "startTime": "11:00",
+          "endTime": "11:45",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [],
+          "createdBy": "yuno.kido@rakuten.com",
+          "requesterEmail": "shusui@cisco.com",
+          "meetingType": "Vendor Partner",
+          "location": null,
+          "otherDetails": "3.Sharad - Masum (Head of Mobility business unit)\n\n■Date/Time : Wed - Mar 04, 11:00 AM - 11:45 AM\n\n■Purpose/Objective : Update RMI 5GC Project and Rakuten Symphony ORAN partnership \n\n■Requestor : Shibasaki-san (Cisco)\n\n■Attendees(with title) :\n・Masum Mir（SVP/GM, Provider Mobility, Cisco）\n・Vish Iyer（SVP APJ SP, Cisco）\n・Bob Everson（Chief Architect, Cisco）\n・Toshimichi Kida（Managing Director, Japan SP, Cisco）\n・Hiroshi Tokai（Client Director, Rakuten, Cisco）\n・Mohammed Awad（Leader, Global Sales, Cisco）\n・Yoshiki Yamada（JP SE Manager, Cisco）\n\n■Location(Booth) : Rakuten booth\n\n We secured a meeting room just in case. Locations of Rakuten & Cisco booths are actually nearby.\n\n■Background (If possible) :\nIn order to follow up together about Rakuten 5GC project and Rakuten Symphony partnership on executive level.",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "04c5c381-6137-4183-8eb2-276b8a944ca6",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Grameenphone - ",
+          "purpose": "",
+          "date": "2026-03-02",
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "",
+          "meetingType": "",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "4b013224-3c0e-4ca8-8217-a5ab5040145d",
+          "attendees": [],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Zain Kuwait - Rakuten Symphony",
+          "purpose": "Open RAN deployment roadmap progression following initial engagement, defining Phase 2 rollout plans with Symphony orchestration for multi-vendor integration and network modernization across Kuwait operations. Network efficiency optimization and OpEx reduction strategy through AI-driven autonomous operations, plus cloud infrastructure and ecosystem partnerships to enhance digital services portfolio and drive new revenue opportunities.",
+          "date": "2026-03-03",
+          "startTime": "13:30",
+          "endTime": "14:00",
+          "sequence": 2,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "3c1e82a2-8b17-4229-851e-689afee94bbf",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "c5dd1fc1-65e0-4a03-8719-1968e4ccf90e"
+            },
+            {
+              "id": "ccb66685-9bdd-4ede-8be1-e98c6d3e1354"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "STC - Rakuten Symphony",
+          "purpose": "Vision 2030 alignment through Open RAN and autonomous network transformation, positioning STC as regional technology leader with Symphony-powered AI-driven operations and network intelligence. Strategic cloud infrastructure partnership for enterprise and consumer digital services expansion, with ecosystem collaboration opportunities in smart cities, IoT, and emerging technology ventures across Saudi Arabia and beyond.",
+          "date": "2026-03-02",
+          "startTime": "11:00",
+          "endTime": "11:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "fb2d88ec-ea60-4f67-822c-93897fb5e6fb",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "8f975388-1810-4c3c-8eac-7c369e3f4dc5"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Tawal - Rakuten Symphony",
+          "purpose": "Open RAN in-building active infrastructure sharing model for Saudi Arabia's three MNOs (STC, Mobily, Zain), leveraging Symphony platform for multi-tenant orchestration and neutral host deployment economics. Business case development for Open RAN-based active sharing across commercial buildings, malls, and venues with focus on capex reduction, network slicing capabilities, and new revenue streams from shared infrastructure.",
+          "date": "2026-03-04",
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "0be63a70-390b-4bef-b546-416fa00b3677",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "7705edcb-292d-46ef-a855-d9438aa809c4"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Ooredoo Group - Rakuten Symphony",
+          "purpose": "",
+          "date": "2026-03-03",
+          "startTime": "16:00",
+          "endTime": "16:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "dc43fe38-f584-43c5-ab73-a40e9fcca79c",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "8e75cb33-f589-4860-8d83-52705f8b2260"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Aritel Africa- Rakuten Symphony",
+          "purpose": "Open RAN economics and deployment roadmap for Africa operations, leveraging Rakuten's learnings to reduce capex/opex while improving network performance through Symphony automation. Autonomous network capabilities for operational efficiency at scale, plus cloud infrastructure partnerships to strengthen Airtel Payments Bank, digital services, and enterprise solutions ecosystem.",
+          "date": "2026-03-03",
+          "startTime": "15:30",
+          "endTime": "16:00",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "9c162431-745f-4d46-bd99-2200ec7a929b",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "18f9ccbf-8548-4375-b128-d142cb430169"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Axiata - Rakuten Symphony",
+          "purpose": "For RAN SMO RFP, Rakuten Symphony is a shortlisted Vendor. Axiata Group is planning to deploy in 3 OPCOs the RAN SMO with RIC capability to enhance their operation",
+          "date": "2026-03-02",
+          "startTime": "10:00",
+          "endTime": "10:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "5cf85738-317f-43ee-85ca-cbb89c9ec2fc",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "403b6c30-3012-48dd-81ab-783defabf456"
+            },
+            {
+              "id": "a3616d64-5075-4847-b211-ba081fb6aac0"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Mobifone - Rakuten Symphony",
+          "purpose": "We are doing a 5G POC and in discussion to expand the footprint in ORAN in Mobifone network. Objective is to strengthen the relationship and to agree on next phase",
+          "date": "2026-03-03",
+          "startTime": "14:30",
+          "endTime": "15:00",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "4101f84d-1d29-4f78-a20a-fff0fad0ef69",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "975bca9a-6f2a-42ea-99b6-1ca408eac7ad"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "BSNL - Rakuten Symphony",
+          "purpose": "We are engaged with BSNL for ORAN POC and looking at expansion and strengthening the relationship in",
+          "date": "2026-03-03",
+          "startTime": "09:30",
+          "endTime": "10:00",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "e391babd-0057-4f69-9157-061c2a211d52",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "IOH - Rakuten Symphony",
+          "purpose": "Multiple discussion on AI and Automation in multiple domains of the network. Objective is to discuss next level of partnership and Executive level connect.  ",
+          "date": "2026-03-03",
+          "startTime": "15:00",
+          "endTime": "15:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "7dbeae94-3025-49c9-84de-2f9ea6ec0117",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "f81be2a0-0700-47dd-bcd0-a0e840c104ff"
+            },
+            {
+              "id": "492f40d9-eddd-4770-bba9-874d45aa3599"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "StarHub - Rakuten Symphony",
+          "purpose": "We are engaged in Network Automation discussions. We are looking at taking this to next level Strategic Partnership and Executive connect.   ",
+          "date": "2026-03-04",
+          "startTime": "09:30",
+          "endTime": "10:00",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "bc50465a-f1c6-4237-a307-39e419cce4e2",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "2ac6e423-bfea-44f0-b138-df78e954f58b"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Singtel - Rakuten Symphony",
+          "purpose": "We are engaged in multiple RFPs for network automation. In discussion for POC. We are looking at taking this to next level Strategic Partnership and Executive connect.  ",
+          "date": "2026-03-04",
+          "startTime": "10:00",
+          "endTime": "10:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "ba00b990-6425-476d-bc53-8e8840157fe0",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "3e568a16-49cc-4a23-9651-0010919c7296"
+            },
+            {
+              "id": "1cc7d4bf-2e92-419a-8a2e-fef033082c7d"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "MTN Group - Rakuten  ",
+          "purpose": "PURPOSE:\nExecutive trust and relationship established\nCommitment to Tokyo HQ visit confirmed\n 90-day acceleration plan agreed\nStrategic partnership discussions initiated\nClear differentiation from vendor relationships\nAGENDA\n1. Welcome & Context\n2. Rakuten Group\n3. Rakuten Mobile & Symphony\n4. MTN Group's Strategic Vision & Priorities\n5. Strategic Partnership Framework & Next Steps",
+          "date": "2026-03-03",
+          "startTime": "11:30",
+          "endTime": "12:00",
+          "sequence": 2,
+          "status": "PIPELINE",
+          "tags": [
+            "MEA"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "shadi.sayed@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "7a3061c0-ce29-49b5-97c2-2871b1377253",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "dc4f824d-b56c-4f92-a891-470e8a641925"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "f0411bba-7a24-4214-a950-7dbc7efdbc9d"
+            },
+            {
+              "id": "6681ca37-0851-476b-b1e7-34a0f1a6c33c"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Axiata Digital Lab - Rakuten Symphony",
+          "purpose": "For RAN SMO RFP, Rakuten Symphony is a shortlisted Vendor. ADL is our partner which is Axiata Subsidiary. Axiata CIO and VP Strategy intend to discuss broader alliance with Rakuten Symphony on Automation, AI capability development.",
+          "date": "2026-03-03",
+          "startTime": "13:00",
+          "endTime": "13:30",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "327991d5-3f77-433d-a1a7-08c5e2f8b7fb",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "0dc5d453-99b8-484b-a71d-63fc8ee1f692"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "bbc0ee8f-f21c-4d03-853d-82d11e383470"
+            },
+            {
+              "id": "aca2989a-ac3f-45dd-aab6-2dfb2798b36e"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Grameenphone -  Rakuten Symphony",
+          "purpose": "We are doing 5G POC. Discussion around 5G expansion once the Government issue 5G licenses. ",
+          "date": "2026-03-03",
+          "startTime": "14:00",
+          "endTime": "14:30",
+          "sequence": 0,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "dd3a14e5-58e0-44ef-85ff-6f2a2d6d3436",
+          "roomId": "82921730-cbd5-449a-bd2f-a33307366289",
+          "attendees": [
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "7826d556-c046-4c05-81ae-ba53e71cd959"
+            },
+            {
+              "id": "79cb2d34-2220-4c0c-9efa-5c86dbda1cc4"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Airtel - Rakuten Symphony",
+          "purpose": "Multiple engagements are taking place related to Automation, AI site analytics, and small cells. The objective is to strengthen our relationship and future engagement.  ",
+          "date": "2026-03-02",
+          "startTime": "13:30",
+          "endTime": "14:00",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [
+            "APAC"
+          ],
+          "createdBy": "ts-deepa.shanker@rakuten.com",
+          "requesterEmail": "rishi.shukla@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "0ea07382-b8a6-41fb-a1db-2777cb6e6d02",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "5b36a359-2e5e-40e2-b74a-1de40e0694f6"
+            },
+            {
+              "id": "14f6fedd-f50e-4c40-94af-5a95a2654a33"
+            },
+            {
+              "id": "156cf858-e607-48b7-8e78-17295cc0f007"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        },
+        {
+          "title": "Xplore x Rakuten Symphony",
+          "purpose": "TBD",
+          "date": "2026-03-03",
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "sequence": 1,
+          "status": "PIPELINE",
+          "tags": [
+            "Americas"
+          ],
+          "createdBy": "jessica.cheng@rakuten.com",
+          "requesterEmail": "sachin.mahajan@rakuten.com",
+          "meetingType": "Sales/Customer",
+          "location": null,
+          "otherDetails": "Rakuten Symphony has been working closely with the Xplore team across a couple of initiatives spanning Open RAN and OSS. ",
+          "isApproved": false,
+          "calendarInviteSent": false,
+          "id": "72e3aa0e-ec60-4e11-aa35-92ecfe30dfae",
+          "roomId": "5a72897e-be72-47e4-9ee5-b034d85127be",
+          "attendees": [
+            {
+              "id": "06c6ed3a-7029-4940-8772-efc15d7a3d2e"
+            },
+            {
+              "id": "f0588bec-2265-493f-9d5a-6ff65c47faae"
+            },
+            {
+              "id": "6f41c6a6-433b-4d33-8fe7-bf118ac0ffbd"
+            },
+            {
+              "id": "d2aaa315-0e37-44f9-8391-c159779d5925"
+            },
+            {
+              "id": "2e5ece45-d7cf-429c-873b-a49c7a4c1500"
+            }
+          ],
+          "eventId": "e7d07d7a-fd0a-4cac-a98a-db2d695435c8"
+        }
+      ]
     }
   ],
   "exportedAt": "2026-01-17T14:52:33.376Z",
