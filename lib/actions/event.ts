@@ -231,6 +231,7 @@ export async function importEventData(eventId: string, data: any) {
             if (att.email !== undefined) attUpdate.email = att.email
             if (att.title !== undefined) attUpdate.title = att.title
             if (att.company !== undefined) attUpdate.company = att.company
+            if (att.companyDescription !== undefined) attUpdate.companyDescription = att.companyDescription
             if (att.bio !== undefined) attUpdate.bio = att.bio
             if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
             if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
@@ -245,6 +246,7 @@ export async function importEventData(eventId: string, data: any) {
                     email: att.email,
                     title: att.title,
                     company: att.company,
+                    companyDescription: att.companyDescription,
                     bio: att.bio,
                     linkedin: att.linkedin,
                     imageUrl: att.imageUrl,
@@ -271,6 +273,7 @@ export async function importEventData(eventId: string, data: any) {
 
             const mtgUpdate: any = {}
             if (mtg.title !== undefined) mtgUpdate.title = mtg.title
+            if (mtg.purpose !== undefined) mtgUpdate.purpose = mtg.purpose
             if (mtg.date !== undefined) mtgUpdate.date = mtg.date
             if (mtg.startTime !== undefined) mtgUpdate.startTime = mtg.startTime
             if (mtg.endTime !== undefined) mtgUpdate.endTime = mtg.endTime
