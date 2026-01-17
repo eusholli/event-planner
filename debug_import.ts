@@ -57,26 +57,25 @@ async function debugImport() {
     console.log('Starting debug import...')
 
     try {
-        // 1. Update Event Settings
+        // 1. Update System Settings (Global)
         console.log('Importing settings...')
-        if (config.event) {
-            const existingSettings = await prisma.eventSettings.findFirst()
+        if (config.event && config.event.geminiApiKey) {
+            const existingSettings = await prisma.systemSettings.findFirst()
             const data = {
-                name: config.event.name,
-                startDate: new Date(config.event.startDate),
-                endDate: new Date(config.event.endDate),
-                geminiApiKey: config.event.geminiApiKey,
-                tags: (config.event as any).tags || []
+                geminiApiKey: config.event.geminiApiKey
             }
 
             if (existingSettings) {
-                await prisma.eventSettings.update({
+                await prisma.systemSettings.update({
                     where: { id: existingSettings.id },
                     data
                 })
             } else {
-                await prisma.eventSettings.create({
-                    data
+                await prisma.systemSettings.create({
+                    data: {
+                        ...data,
+                        defaultTags: (config.event as any).tags || []
+                    }
                 })
             }
         }

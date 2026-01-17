@@ -13,20 +13,18 @@ export async function seed() {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
         console.log('Seeding database from event-config.json...')
 
-        // 1. Seed Event Settings
+        // 1. Seed System Settings
         if (config.event) {
-            const existingSettings = await prisma.eventSettings.findFirst()
+            const existingSettings = await prisma.systemSettings.findFirst()
             if (!existingSettings) {
-                await prisma.eventSettings.create({
+                await prisma.systemSettings.create({
                     data: {
-                        name: config.event.name,
-                        startDate: new Date(config.event.startDate),
-                        endDate: new Date(config.event.endDate),
+                        geminiApiKey: config.event.geminiApiKey,
                     },
                 })
-                console.log('Seeded Event Settings')
+                console.log('Seeded System Settings')
             } else {
-                console.log('Event Settings already exist, skipping.')
+                console.log('System Settings already exist, skipping.')
             }
         }
 

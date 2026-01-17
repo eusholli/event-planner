@@ -305,20 +305,22 @@ function NewMeetingContent({ eventId }: { eventId: string }) {
                                     />
                                 </div>
 
-                                <div className="col-span-full">
-                                    <label htmlFor="meetingType" className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
-                                    <select
-                                        id="meetingType"
-                                        className="input-field"
-                                        value={formData.meetingType}
-                                        onChange={e => setFormData({ ...formData, meetingType: e.target.value })}
-                                    >
-                                        <option value="">Select Type...</option>
-                                        {meetingTypes.map(type => (
-                                            <option key={type} value={type}>{type}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                {meetingTypes.length > 0 && (
+                                    <div className="col-span-full">
+                                        <label htmlFor="meetingType" className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
+                                        <select
+                                            id="meetingType"
+                                            className="input-field"
+                                            value={formData.meetingType}
+                                            onChange={e => setFormData({ ...formData, meetingType: e.target.value })}
+                                        >
+                                            <option value="">Select Type...</option>
+                                            {meetingTypes.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div className="col-span-full">
                                     <label htmlFor="purpose" className="block text-sm font-medium text-zinc-700 mb-1.5">Purpose / Agenda</label>

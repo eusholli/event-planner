@@ -436,20 +436,22 @@ export default function MeetingModal({
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
-                            <select
-                                className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                disabled={readOnly}
-                                value={event.meetingType || ''}
-                                onChange={e => onEventChange({ ...event, meetingType: e.target.value })}
-                            >
-                                <option value="">Select Type...</option>
-                                {meetingTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {meetingTypes.length > 0 && (
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Meeting Type</label>
+                                <select
+                                    className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                    disabled={readOnly}
+                                    value={event.meetingType || ''}
+                                    onChange={e => onEventChange({ ...event, meetingType: e.target.value })}
+                                >
+                                    <option value="">Select Type...</option>
+                                    {meetingTypes.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div className="md:col-span-2">

@@ -92,9 +92,22 @@ function AttendeesContent({ eventId }: { eventId: string }) {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch('/api/settings')
-            const data = await res.json()
-            setAttendeeTypes(data.attendeeTypes || [])
+            let types: string[] = []
+
+            // Fetch event settings for Attendee Types
+            try {
+                const eventRes = await fetch(`/api/events/${eventId}`)
+                if (eventRes.ok) {
+                    const eventData = await eventRes.json()
+                    if (eventData.attendeeTypes && Array.isArray(eventData.attendeeTypes)) {
+                        types = eventData.attendeeTypes
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch event settings:", e)
+            }
+
+            setAttendeeTypes(types)
         } catch (error) {
             console.error('Error fetching settings:', error)
         }

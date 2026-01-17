@@ -25,20 +25,27 @@ export async function POST(request: Request) {
         if (!allow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
         const json = await request.json()
-        const { geminiApiKey } = json
+        const { geminiApiKey, defaultTags, defaultMeetingTypes, defaultAttendeeTypes } = json
 
         // Upsert logic
         const existing = await prisma.systemSettings.findFirst()
 
         let settings
+        const data = {
+            geminiApiKey,
+            defaultTags: defaultTags || [],
+            defaultMeetingTypes: defaultMeetingTypes || [],
+            defaultAttendeeTypes: defaultAttendeeTypes || []
+        }
+
         if (existing) {
             settings = await prisma.systemSettings.update({
                 where: { id: existing.id },
-                data: { geminiApiKey }
+                data
             })
         } else {
             settings = await prisma.systemSettings.create({
-                data: { geminiApiKey }
+                data
             })
         }
 

@@ -114,10 +114,21 @@ export async function exportEventData(eventId: string) {
 
     if (!event) throw new Error('Event not found')
 
-    // Clean up circular refs if necessary or just return raw JSON structure
-    // Prisma returns POJOs, so JSON.stringify should handle it unless there are deeply nested circular connects not handled by Next.js serialization
-    // Actually, we want a clean export format.
+    // Normalize data to reduce size and duplication (Version 2.1)
+    const normalizedAttendees = event.attendees.map(attendee => {
+        const { meetings, ...rest } = attendee
+        return rest
+    })
 
+    const normalizedMeetings = event.meetings.map(meeting => {
+        const { attendees, room, ...rest } = meeting
+        return {
+            ...rest,
+            attendees: attendees.map(a => a.id)
+        }
+    })
+
+    // Return normalized structure
     return {
         event: {
             ...event,
@@ -125,19 +136,15 @@ export async function exportEventData(eventId: string) {
             attendees: undefined,
             rooms: undefined
         },
-        attendees: event.attendees,
+        attendees: normalizedAttendees,
         rooms: event.rooms,
-        meetings: event.meetings,
+        meetings: normalizedMeetings,
         exportedAt: new Date().toISOString(),
-        version: '2.0'
+        version: '2.1'
     }
 }
 
 export async function deleteEventData(eventId: string) {
-    // Dangerous action. Only Root/Admin.
-    // Constraints are CASCADE, so deleting Event deletes all children.
-
-    // Check permissions (should be done by caller or middleware, but safer here)
     const { canWrite } = await import('@/lib/roles')
     if (!await canWrite()) throw new Error('Forbidden')
 
@@ -147,162 +154,173 @@ export async function deleteEventData(eventId: string) {
     return { success: true }
 }
 
-export async function importEventData(eventId: string, data: any) {
-    // Merge strategy? Or overwite?
-    // Plan said "add new data or update existing". 
-    // If ID matches, update? If ID new, create?
-    // Usually Config JSONs have specific IDs or we ignore IDs and create new.
-    // For "Restore", we might want to keep IDs.
-
-    // For simplicity and safety:
-    // This function imports components INTO an existing event container.
-    // It assumes `data` contains lists of attendees, rooms, etc.
-
+export async function resetEventData(eventId: string) {
     const { canWrite } = await import('@/lib/roles')
     if (!await canWrite()) throw new Error('Forbidden')
 
-    // 1. Settings Update (if present)
+    // Delete children only
+    await prisma.$transaction([
+        prisma.meeting.deleteMany({ where: { eventId } }),
+        prisma.attendee.deleteMany({ where: { eventId } }),
+        prisma.room.deleteMany({ where: { eventId } })
+    ])
+
+    return { success: true }
+}
+
+export async function importEventData(eventId: string, data: any) {
+    const { canWrite } = await import('@/lib/roles')
+    if (!await canWrite()) throw new Error('Forbidden')
+
+    // 1. Scope Validation
+    if (data.event?.id && data.event.id !== eventId) {
+        throw new Error(`Invalid Event ID. Data belongs to event ${data.event.id} but you are importing into ${eventId}.`)
+    }
+
+    // 2. Event Update (Merge)
     if (data.event) {
+        const eventUpdate: any = {}
+        // Only update fields present in JSON
+        if (data.event.name !== undefined) eventUpdate.name = data.event.name
+        if (data.event.startDate !== undefined) eventUpdate.startDate = data.event.startDate
+        if (data.event.endDate !== undefined) eventUpdate.endDate = data.event.endDate
+        if (data.event.status !== undefined) eventUpdate.status = data.event.status
+        if (data.event.region !== undefined) eventUpdate.region = data.event.region
+        if (data.event.url !== undefined) eventUpdate.url = data.event.url
+        if (data.event.budget !== undefined) eventUpdate.budget = data.event.budget
+        if (data.event.targetCustomers !== undefined) eventUpdate.targetCustomers = data.event.targetCustomers
+        if (data.event.expectedRoi !== undefined) eventUpdate.expectedRoi = data.event.expectedRoi
+        if (data.event.requesterEmail !== undefined) eventUpdate.requesterEmail = data.event.requesterEmail
+        if (data.event.tags !== undefined) eventUpdate.tags = data.event.tags
+        if (data.event.meetingTypes !== undefined) eventUpdate.meetingTypes = data.event.meetingTypes
+        if (data.event.attendeeTypes !== undefined) eventUpdate.attendeeTypes = data.event.attendeeTypes
+        if (data.event.address !== undefined) eventUpdate.address = data.event.address
+        if (data.event.timezone !== undefined) eventUpdate.timezone = data.event.timezone
+
         await prisma.event.update({
             where: { id: eventId },
-            data: {
-                // Update editable fields
-                name: data.event.name,
-                startDate: data.event.startDate,
-                endDate: data.event.endDate,
-                tags: data.event.tags,
-                meetingTypes: data.event.meetingTypes,
-                attendeeTypes: data.event.attendeeTypes,
-                // ... others
-            }
+            data: eventUpdate
         })
     }
 
-    // 2. Import Rooms
+    // 3. Import Rooms
     if (data.rooms && Array.isArray(data.rooms)) {
         for (const room of data.rooms) {
+            const roomUpdate: any = {}
+            if (room.name !== undefined) roomUpdate.name = room.name
+            if (room.capacity !== undefined) roomUpdate.capacity = room.capacity
+
             await prisma.room.upsert({
-                where: { id: room.id || 'new' }, // 'new' will fail find, so create. unique ID needed.
+                where: { id: room.id },
                 create: {
+                    id: room.id,
                     name: room.name,
                     capacity: room.capacity,
                     eventId
                 },
-                update: {
-                    name: room.name,
-                    capacity: room.capacity
-                    // Don't update eventId
-                }
+                update: roomUpdate
             }).catch(e => console.warn('Room import skip', e))
         }
     }
 
-    // 3. Import Attendees
+    // 4. Import Attendees
     if (data.attendees && Array.isArray(data.attendees)) {
         for (const att of data.attendees) {
-            // Check unique constraint [email, eventId]
+            const attUpdate: any = {}
+            if (att.name !== undefined) attUpdate.name = att.name
+            if (att.email !== undefined) attUpdate.email = att.email
+            if (att.title !== undefined) attUpdate.title = att.title
+            if (att.company !== undefined) attUpdate.company = att.company
+            if (att.bio !== undefined) attUpdate.bio = att.bio
+            if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
+            if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
+            if (att.isExternal !== undefined) attUpdate.isExternal = att.isExternal
+            if (att.type !== undefined) attUpdate.type = att.type
+
             await prisma.attendee.upsert({
-                where: {
-                    email_eventId: {
-                        email: att.email,
-                        eventId
-                    }
-                },
+                where: { id: att.id },
                 create: {
-                    ...att,
-                    id: undefined, // Let DB gen ID or use existing? 
-                    // If we use existing ID, we might conflict with other events if IDs were global (CUIDs are unique though).
-                    // Safer to let DB gen ID for imported entities to avoid collisions?
-                    // But if we want to LINK meetings, we need stable IDs.
-                    // Let's try to use provied ID if valid CUID.
-                    // Actually, safest for "Import" into EXISTING event is to match by Email.
+                    id: att.id,
+                    name: att.name,
+                    email: att.email,
+                    title: att.title,
+                    company: att.company,
+                    bio: att.bio,
+                    linkedin: att.linkedin,
+                    imageUrl: att.imageUrl,
+                    isExternal: att.isExternal,
+                    type: att.type,
                     eventId
                 },
-                update: {
-                    ...att,
-                    id: undefined,
-                    eventId: undefined
-                }
+                update: attUpdate
             }).catch(e => console.warn('Attendee import skip', e))
         }
     }
 
-    // 4. Import Meetings
+    // 5. Import Meetings
     if (data.meetings && Array.isArray(data.meetings)) {
-        for (const meeting of data.meetings) {
-            // Extract relations
-            // meeting.room is an object, meeting.attendees is array of objects
-            const { room, attendees, ...meetingFields } = meeting as any
-            const roomName = room?.name
-            const attendeeEmails = attendees?.map((a: any) => a.email)
+        for (const mtg of data.meetings) {
+            // Prepare attendee connections
+            let attendeeConnects: any = undefined
+            if (mtg.attendees !== undefined) {
+                attendeeConnects = mtg.attendees?.map((a: any) => {
+                    if (typeof a === 'string') return { id: a }
+                    return { id: a.id }
+                }) || []
+            }
 
-            // 4a. Find Room ID (scoped to this event)
-            let roomId = null
-            if (roomName) {
-                const room = await prisma.room.findFirst({
-                    where: {
-                        name: roomName,
-                        eventId
+            const mtgUpdate: any = {}
+            if (mtg.title !== undefined) mtgUpdate.title = mtg.title
+            if (mtg.date !== undefined) mtgUpdate.date = mtg.date
+            if (mtg.startTime !== undefined) mtgUpdate.startTime = mtg.startTime
+            if (mtg.endTime !== undefined) mtgUpdate.endTime = mtg.endTime
+            if (mtg.roomId !== undefined) mtgUpdate.roomId = mtg.roomId
+            if (attendeeConnects !== undefined) {
+                mtgUpdate.attendees = { set: attendeeConnects }
+            }
+            if (mtg.sequence !== undefined) mtgUpdate.sequence = mtg.sequence
+            if (mtg.status !== undefined) mtgUpdate.status = mtg.status
+            if (mtg.tags !== undefined) mtgUpdate.tags = mtg.tags
+            if (mtg.calendarInviteSent !== undefined) mtgUpdate.calendarInviteSent = mtg.calendarInviteSent
+            if (mtg.createdBy !== undefined) mtgUpdate.createdBy = mtg.createdBy
+            if (mtg.isApproved !== undefined) mtgUpdate.isApproved = mtg.isApproved
+            if (mtg.meetingType !== undefined) mtgUpdate.meetingType = mtg.meetingType
+            if (mtg.otherDetails !== undefined) mtgUpdate.otherDetails = mtg.otherDetails
+            if (mtg.requesterEmail !== undefined) mtgUpdate.requesterEmail = mtg.requesterEmail
+            if (mtg.location !== undefined) mtgUpdate.location = mtg.location
+
+            const createConnects = mtg.attendees?.map((a: any) => {
+                if (typeof a === 'string') return { id: a }
+                return { id: a.id }
+            }) || []
+
+            await prisma.meeting.upsert({
+                where: { id: mtg.id },
+                create: {
+                    id: mtg.id,
+                    title: mtg.title,
+                    purpose: mtg.purpose,
+                    startTime: mtg.startTime,
+                    endTime: mtg.endTime,
+                    roomId: mtg.roomId,
+                    sequence: mtg.sequence || 0,
+                    status: mtg.status || 'PIPELINE',
+                    tags: mtg.tags || [],
+                    date: mtg.date,
+                    calendarInviteSent: mtg.calendarInviteSent || false,
+                    createdBy: mtg.createdBy,
+                    isApproved: mtg.isApproved || false,
+                    meetingType: mtg.meetingType,
+                    otherDetails: mtg.otherDetails,
+                    requesterEmail: mtg.requesterEmail,
+                    location: mtg.location,
+                    eventId,
+                    attendees: {
+                        connect: createConnects
                     }
-                })
-                if (room) roomId = room.id
-            }
-
-            // 4b. Find Attendee IDs (scoped to this event)
-            const attendeeIds = []
-            if (attendeeEmails && Array.isArray(attendeeEmails)) {
-                for (const email of attendeeEmails) {
-                    const att = await prisma.attendee.findUnique({
-                        where: {
-                            email_eventId: {
-                                email,
-                                eventId
-                            }
-                        }
-                    })
-                    if (att) attendeeIds.push({ id: att.id })
-                }
-            }
-
-            // 4c. Create/Upsert Meeting
-            // We use Title + StartTime as unique key for "logic" since Meeting has no unique constraints other than ID
-            const whereClause: any = {
-                title: meeting.title,
-                roomId: roomId // optional check? collisions?
-            }
-            if (meeting.startTime) whereClause.startTime = meeting.startTime
-
-            // But wait, if we deleted the event, the IDs are gone. New IDs are generated. 
-            // So we can't use ID. We must use "Title + StartTime" + "Room" to check existence?
-            // Actually, if we just deleted the event, all meetings are gone. 
-            // So we can just create them. 
-            // BUT, if we are "updating" an existing event, we strictly want to avoid duplicates.
-            // Let's try to match by Title + StartTime + RoomId (if present).
-
-            // Simple duplicates check:
-            const existing = await prisma.meeting.findFirst({
-                where: {
-                    title: meeting.title,
-                    startTime: meeting.startTime,
-                    eventId
-                }
-            })
-
-            if (!existing) {
-                // exclude id, eventId from fields just in case
-                const { id: _id, eventId: _eid, ...cleanFields } = meetingFields
-
-                await prisma.meeting.create({
-                    data: {
-                        ...cleanFields,
-                        eventId,
-                        roomId,
-                        attendees: {
-                            connect: attendeeIds
-                        }
-                    }
-                }).catch(e => console.warn('Meeting import failed', e))
-            }
+                },
+                update: mtgUpdate
+            }).catch(e => console.warn('Meeting import skip', e))
         }
     }
 

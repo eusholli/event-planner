@@ -39,7 +39,12 @@ export async function POST(request: Request) {
         }
 
         const json = await request.json()
-        // Validation could go here
+
+        // Fetch system settings for defaults
+        const settings = await prisma.systemSettings.findFirst()
+        const defaultTags = settings?.defaultTags || []
+        const defaultMeetingTypes = settings?.defaultMeetingTypes || []
+        const defaultAttendeeTypes = settings?.defaultAttendeeTypes || []
 
         const event = await prisma.event.create({
             data: {
@@ -53,9 +58,9 @@ export async function POST(request: Request) {
                 targetCustomers: json.targetCustomers,
                 expectedRoi: json.expectedRoi,
                 requesterEmail: json.requesterEmail,
-                tags: json.tags || [],
-                meetingTypes: json.meetingTypes || [],
-                attendeeTypes: json.attendeeTypes || [],
+                tags: json.tags || defaultTags,
+                meetingTypes: json.meetingTypes || defaultMeetingTypes,
+                attendeeTypes: json.attendeeTypes || defaultAttendeeTypes,
                 timezone: json.timezone
             }
         })

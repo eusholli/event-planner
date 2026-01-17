@@ -96,10 +96,29 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
 
     const checkSettings = async () => {
         try {
-            const res = await fetch('/api/settings')
-            const data = await res.json()
-            setHasApiKey(!!data.geminiApiKey)
-            setAttendeeTypes(data.attendeeTypes || [])
+            // Fetch global settings ONLY for API Key
+            const settingsRes = await fetch('/api/settings')
+            const settingsData = await settingsRes.json()
+            setHasApiKey(!!settingsData.geminiApiKey)
+
+            let types: string[] = []
+
+            // Fetch event settings for Attendee Types
+            if (eventId) {
+                try {
+                    const eventRes = await fetch(`/api/events/${eventId}`)
+                    if (eventRes.ok) {
+                        const eventData = await eventRes.json()
+                        if (eventData.attendeeTypes && Array.isArray(eventData.attendeeTypes)) {
+                            types = eventData.attendeeTypes
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch event details", e)
+                }
+            }
+
+            setAttendeeTypes(types)
         } catch (error) {
             console.error('Error checking settings:', error)
         }

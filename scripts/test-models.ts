@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 
 async function listModels() {
     try {
-        const settings = await prisma.eventSettings.findFirst();
+        const settings = await prisma.systemSettings.findFirst();
         if (!settings?.geminiApiKey) {
-            console.error('No Gemini API configured in EventSettings');
+            console.error('No Gemini API configured in SystemSettings');
             process.exit(1);
         }
 

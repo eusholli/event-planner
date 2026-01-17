@@ -30,6 +30,12 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
+
+    // Local state for list inputs to allow free typing
+    const [tagsInput, setTagsInput] = useState('')
+    const [meetingTypesInput, setMeetingTypesInput] = useState('')
+    const [attendeeTypesInput, setAttendeeTypesInput] = useState('')
+
     const router = useRouter()
 
     // Unwrapped params
@@ -44,7 +50,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
         fetch(`/api/events/${id}`)
             .then(res => res.json())
             .then(data => {
-                setEvent({
+                const loadedEvent = {
                     ...data,
                     startDate: data.startDate ? data.startDate.split('T')[0] : null,
                     endDate: data.endDate ? data.endDate.split('T')[0] : null,
@@ -52,7 +58,14 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     tags: data.tags || [],
                     meetingTypes: data.meetingTypes || [],
                     attendeeTypes: data.attendeeTypes || []
-                })
+                }
+                setEvent(loadedEvent)
+
+                // Init local inputs
+                setTagsInput(loadedEvent.tags.join(', '))
+                setMeetingTypesInput(loadedEvent.meetingTypes.join(', '))
+                setAttendeeTypesInput(loadedEvent.attendeeTypes.join(', '))
+
                 setLoading(false)
             })
             .catch(err => {
@@ -92,17 +105,31 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
         setMessage('')
 
         try {
+            // Parse local inputs to arrays
+            const updatedEvent = {
+                ...event!,
+                tags: tagsInput.split(',').map(s => s.trim()).filter(Boolean),
+                meetingTypes: meetingTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                attendeeTypes: attendeeTypesInput.split(',').map(s => s.trim()).filter(Boolean)
+            }
+
             const res = await fetch(`/api/events/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(event)
+                body: JSON.stringify(updatedEvent)
             })
 
-            if (!res.ok) throw new Error('Failed to save')
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'Failed to save')
+            }
 
             setMessage('Settings saved successfully')
-        } catch (err) {
-            setMessage('Error saving settings')
+            // Update event state with saved values to stay in sync
+            setEvent(updatedEvent)
+            router.push('/events')
+        } catch (err: any) {
+            setMessage(err.message || 'Error saving settings')
         } finally {
             setSaving(false)
         }
@@ -119,12 +146,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
         }
     }
 
-    const handleListChange = (key: 'tags' | 'meetingTypes' | 'attendeeTypes', value: string) => {
-        setEvent(prev => ({
-            ...prev!,
-            [key]: value.split(',').map(s => s.trim()).filter(Boolean)
-        }))
-    }
+
 
     if (loading || !event) return <div className="p-10 text-center">Loading settings...</div>
 
@@ -139,11 +161,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     <h1 className="text-2xl font-bold text-neutral-900">Event Configuration</h1>
                     <p className="text-neutral-500">Manage lifecycle, details, and data scope.</p>
                 </div>
-                {message && (
-                    <div className="bg-green-50 text-green-700 px-4 py-2 rounded-md text-sm font-medium animate-in fade-in">
-                        {message}
-                    </div>
-                )}
             </div>
 
             <form onSubmit={handleSave} className="space-y-8">
@@ -325,8 +342,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Meeting Tags</label>
                         <input
                             type="text"
-                            value={event.tags.join(', ')}
-                            onChange={e => handleListChange('tags', e.target.value)}
+                            value={tagsInput}
+                            onChange={e => setTagsInput(e.target.value)}
                             className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                         />
                     </div>
@@ -335,8 +352,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Meeting Types</label>
                         <input
                             type="text"
-                            value={event.meetingTypes.join(', ')}
-                            onChange={e => handleListChange('meetingTypes', e.target.value)}
+                            value={meetingTypesInput}
+                            onChange={e => setMeetingTypesInput(e.target.value)}
                             className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                         />
                     </div>
@@ -345,8 +362,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Attendee Types</label>
                         <input
                             type="text"
-                            value={event.attendeeTypes.join(', ')}
-                            onChange={e => handleListChange('attendeeTypes', e.target.value)}
+                            value={attendeeTypesInput}
+                            onChange={e => setAttendeeTypesInput(e.target.value)}
                             className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                         />
                     </div>
@@ -361,6 +378,14 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <Save className="w-4 h-4" />
                         Save Changes
                     </button>
+                    {message && (
+                        <div className={`px-4 py-2 rounded-md text-sm font-medium animate-in fade-in ${message.includes('saved successfully') || message.includes('Auto-filled')
+                            ? 'bg-green-50 text-green-700'
+                            : 'bg-red-50 text-red-700'
+                            }`}>
+                            {message}
+                        </div>
+                    )}
                 </div>
             </form>
 
@@ -423,17 +448,57 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     </div>
 
                     <div className="border border-red-200 bg-red-50 p-4 rounded-lg">
-                        <h3 className="font-medium text-red-900">Delete Event</h3>
-                        <p className="text-sm text-red-700 mb-4">Permanently remove this event and all its data.</p>
+                        <h3 className="font-medium text-red-900">Reset Event</h3>
+                        <p className="text-sm text-red-700 mb-4">Wipe all Attendees, Rooms, and Meetings. Event details are preserved. <br /><strong>A backup will be downloaded automatically.</strong></p>
                         <button
-                            onClick={handleDelete}
+                            onClick={async () => {
+                                if (!confirm('Are you sure you want to reset this event? This will delete all Attendees, Rooms, and Meetings.\n\nA backup JSON file will be downloaded before deletion proceeds.')) return
+
+                                setMessage('Downloading backup...')
+                                try {
+                                    // 1. Download Backup
+                                    const resExport = await fetch(`/api/events/${id}/export`)
+                                    if (!resExport.ok) throw new Error('Backup failed. Reset aborted.')
+
+                                    const blob = await resExport.blob()
+                                    const url = window.URL.createObjectURL(blob)
+                                    const a = document.createElement('a')
+                                    a.href = url
+                                    // wrapper to get filename from headers if possible, or fallback
+                                    const disposition = resExport.headers.get('Content-Disposition')
+                                    let filename = `event-${id}-backup.json`
+                                    if (disposition && disposition.includes('filename=')) {
+                                        filename = disposition.split('filename=')[1].replace(/"/g, '')
+                                    }
+                                    a.download = filename
+                                    document.body.appendChild(a)
+                                    a.click()
+                                    window.URL.revokeObjectURL(url)
+                                    document.body.removeChild(a)
+
+                                    setMessage('Backup downloaded. Resetting data...')
+
+                                    // 2. Perform Reset
+                                    const resReset = await fetch(`/api/events/${id}/reset`, { method: 'POST' })
+                                    if (resReset.ok) {
+                                        alert('Event has been reset successfully.')
+                                        window.location.reload()
+                                    } else {
+                                        const err = await resReset.json()
+                                        throw new Error(err.error || 'Reset failed')
+                                    }
+                                } catch (error: any) {
+                                    alert(`Error: ${error.message}`)
+                                    setMessage('')
+                                }
+                            }}
                             className="text-sm bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 w-full flex items-center justify-center gap-2"
                         >
-                            <Trash2 className="w-4 h-4" /> Delete Event
+                            <Trash2 className="w-4 h-4" /> Reset Event
                         </button>
                     </div>
                 </div>
             </section>
-        </div>
+        </div >
     )
 }
