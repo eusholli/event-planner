@@ -14,8 +14,10 @@ export async function GET(
         const resolvedParams = await params
         const data = await exportEventData(resolvedParams.id)
 
-        const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-        const filename = `event-${resolvedParams.id}-${date}.json`
+        const now = new Date()
+        const dateStr = now.toISOString().replace(/T/, '-').replace(/\..+/, '').replace(/:/g, '-')
+        const sanitizedName = data.event.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+        const filename = `${sanitizedName}-${dateStr}.json`
 
         return new NextResponse(JSON.stringify(data, null, 2), {
             headers: {

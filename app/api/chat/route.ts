@@ -14,24 +14,21 @@ export async function POST(req: Request) {
         // Convert UI messages to CoreMessages for the AI SDK
         const coreMessages = convertToCoreMessages(messages);
         // 1. Fetch API Key from EventSettings
-        const settings = await prisma.eventSettings.findFirst();
+        // 1. Fetch API Key from SystemSettings
+        const settings = await prisma.systemSettings.findFirst();
         if (!settings?.geminiApiKey) {
             console.error('Chat API: Missing API Key');
-            return new Response('Gemini API Key not configured in Event Settings.', { status: 500 });
+            return new Response('Gemini API Key not configured in System Settings.', { status: 500 });
         }
 
         const google = createGoogleGenerativeAI({
             apiKey: settings.geminiApiKey,
         });
 
-        // Construct System Prompt with Event Context
+        // Construct System Prompt
         const systemPrompt = `
-You are the AI assistant for the event "${settings.name}".
-Event Details:
-- Start Date: ${settings.startDate.toISOString().split('T')[0]}
-- End Date: ${settings.endDate.toISOString().split('T')[0]}
-- Timezone: ${settings.timezone || 'UTC'}
-- Current Date: ${new Date().toISOString().split('T')[0]}
+You are the AI assistant for the Event Planner application.
+Current Date: ${new Date().toISOString().split('T')[0]}
 
 Use this context to answer questions. If the user mentions "Day 1", it refers to the start date.
 Assume all queries are relative to this event unless specified otherwise.

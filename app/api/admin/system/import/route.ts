@@ -19,14 +19,32 @@ export async function POST(request: Request) {
         // 1. Restore System Settings
         if (systemSettings) {
             const existing = await prisma.systemSettings.findFirst()
+
+            // Prepare update data - undefined values are ignored by Prisma updates
+            const updateData: any = {}
+            if (systemSettings.geminiApiKey !== undefined) updateData.geminiApiKey = systemSettings.geminiApiKey
+            if (systemSettings.defaultTags !== undefined) updateData.defaultTags = systemSettings.defaultTags
+            if (systemSettings.defaultMeetingTypes !== undefined) updateData.defaultMeetingTypes = systemSettings.defaultMeetingTypes
+            if (systemSettings.defaultAttendeeTypes !== undefined) updateData.defaultAttendeeTypes = systemSettings.defaultAttendeeTypes
+
             if (existing) {
                 await prisma.systemSettings.update({
                     where: { id: existing.id },
-                    data: { geminiApiKey: systemSettings.geminiApiKey }
+                    data: updateData
                 })
             } else {
+                // For create, we might want defaults if missing, but let's use what we have.
+                // If they are missing from import, schema defaults will handle them if we don't pass them?
+                // Actually prisma create needs explicit types if they are required, but these have defaults.
+                // However, Prisma client types might make them optional.
+                // Let's safe-guard:
                 await prisma.systemSettings.create({
-                    data: { geminiApiKey: systemSettings.geminiApiKey }
+                    data: {
+                        geminiApiKey: systemSettings.geminiApiKey, // can be null
+                        defaultTags: systemSettings.defaultTags || [],
+                        defaultMeetingTypes: systemSettings.defaultMeetingTypes || [],
+                        defaultAttendeeTypes: systemSettings.defaultAttendeeTypes || []
+                    }
                 })
             }
         }
@@ -35,6 +53,23 @@ export async function POST(request: Request) {
         if (events && Array.isArray(events)) {
             for (const evt of events) {
                 // Upsert Event
+                const eventUpdate: any = {}
+                if (evt.name !== undefined) eventUpdate.name = evt.name
+                if (evt.startDate !== undefined) eventUpdate.startDate = evt.startDate
+                if (evt.endDate !== undefined) eventUpdate.endDate = evt.endDate
+                if (evt.status !== undefined) eventUpdate.status = evt.status
+                if (evt.region !== undefined) eventUpdate.region = evt.region
+                if (evt.url !== undefined) eventUpdate.url = evt.url
+                if (evt.budget !== undefined) eventUpdate.budget = evt.budget
+                if (evt.targetCustomers !== undefined) eventUpdate.targetCustomers = evt.targetCustomers
+                if (evt.expectedRoi !== undefined) eventUpdate.expectedRoi = evt.expectedRoi
+                if (evt.requesterEmail !== undefined) eventUpdate.requesterEmail = evt.requesterEmail
+                if (evt.tags !== undefined) eventUpdate.tags = evt.tags
+                if (evt.meetingTypes !== undefined) eventUpdate.meetingTypes = evt.meetingTypes
+                if (evt.attendeeTypes !== undefined) eventUpdate.attendeeTypes = evt.attendeeTypes
+                if (evt.address !== undefined) eventUpdate.address = evt.address
+                if (evt.timezone !== undefined) eventUpdate.timezone = evt.timezone
+
                 const event = await prisma.event.upsert({
                     where: { id: evt.id || 'new_impossible_id' },
                     create: {
@@ -55,23 +90,7 @@ export async function POST(request: Request) {
                         address: evt.address,
                         timezone: evt.timezone
                     },
-                    update: {
-                        name: evt.name,
-                        startDate: evt.startDate,
-                        endDate: evt.endDate,
-                        status: evt.status,
-                        region: evt.region,
-                        url: evt.url,
-                        budget: evt.budget,
-                        targetCustomers: evt.targetCustomers,
-                        expectedRoi: evt.expectedRoi,
-                        requesterEmail: evt.requesterEmail,
-                        tags: evt.tags || [],
-                        meetingTypes: evt.meetingTypes || [],
-                        attendeeTypes: evt.attendeeTypes || [],
-                        address: evt.address,
-                        timezone: evt.timezone
-                    }
+                    update: eventUpdate
                 })
 
                 const eventId = event.id
@@ -79,6 +98,10 @@ export async function POST(request: Request) {
                 // Restore Rooms
                 if (evt.rooms) {
                     for (const room of evt.rooms) {
+                        const roomUpdate: any = {}
+                        if (room.name !== undefined) roomUpdate.name = room.name
+                        if (room.capacity !== undefined) roomUpdate.capacity = room.capacity
+
                         await prisma.room.upsert({
                             where: { id: room.id },
                             create: {
@@ -87,10 +110,7 @@ export async function POST(request: Request) {
                                 capacity: room.capacity,
                                 eventId
                             },
-                            update: {
-                                name: room.name,
-                                capacity: room.capacity
-                            }
+                            update: roomUpdate
                         }).catch(e => console.warn('Room skip', e))
                     }
                 }
@@ -98,9 +118,19 @@ export async function POST(request: Request) {
                 // Restore Attendees
                 if (evt.attendees) {
                     for (const att of evt.attendees) {
+                        const attUpdate: any = {}
+                        if (att.name !== undefined) attUpdate.name = att.name
+                        if (att.email !== undefined) attUpdate.email = att.email
+                        if (att.title !== undefined) attUpdate.title = att.title
+                        if (att.company !== undefined) attUpdate.company = att.company
+                        if (att.bio !== undefined) attUpdate.bio = att.bio
+                        if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
+                        if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
+                        if (att.isExternal !== undefined) attUpdate.isExternal = att.isExternal
+                        if (att.type !== undefined) attUpdate.type = att.type
+
                         await prisma.attendee.upsert({
-                            where: { id: att.id }, // Use ID if available, else standard upsert logic might fail if ID conflict?
-                            // Safest to use ID if we are doing full restore.
+                            where: { id: att.id },
                             create: {
                                 id: att.id,
                                 name: att.name,
@@ -114,28 +144,37 @@ export async function POST(request: Request) {
                                 type: att.type,
                                 eventId
                             },
-                            update: {
-                                name: att.name,
-                                email: att.email,
-                                title: att.title,
-                                company: att.company,
-                                bio: att.bio,
-                                linkedin: att.linkedin,
-                                imageUrl: att.imageUrl,
-                                isExternal: att.isExternal,
-                                type: att.type
-                            }
+                            update: attUpdate
                         }).catch(e => console.warn('Attendee skip', e))
                     }
                 }
 
                 // Meetings restoration is complex due to Many-to-Many via implicit or explicit tables.
-                // In Schema: Meeting has `attendees Attendee[]`. Prisma handles this as implicit unless explicit join table.
-                // We need to connect them.
                 if (evt.meetings) {
                     for (const mtg of evt.meetings) {
                         // Prepare attendee connections
-                        const attendeeConnects = mtg.attendees?.map((a: any) => ({ id: a.id })) || []
+                        let attendeeConnects: any = undefined
+                        if (mtg.attendees !== undefined) {
+                            attendeeConnects = mtg.attendees?.map((a: any) => {
+                                if (typeof a === 'string') return { id: a }
+                                return { id: a.id }
+                            }) || []
+                        }
+
+                        const mtgUpdate: any = {}
+                        if (mtg.title !== undefined) mtgUpdate.title = mtg.title
+                        if (mtg.date !== undefined) mtgUpdate.date = mtg.date
+                        if (mtg.startTime !== undefined) mtgUpdate.startTime = mtg.startTime
+                        if (mtg.endTime !== undefined) mtgUpdate.endTime = mtg.endTime
+                        if (mtg.roomId !== undefined) mtgUpdate.roomId = mtg.roomId
+                        if (attendeeConnects !== undefined) {
+                            mtgUpdate.attendees = { set: attendeeConnects }
+                        }
+
+                        const createConnects = mtg.attendees?.map((a: any) => {
+                            if (typeof a === 'string') return { id: a }
+                            return { id: a.id }
+                        }) || []
 
                         await prisma.meeting.upsert({
                             where: { id: mtg.id },
@@ -146,21 +185,12 @@ export async function POST(request: Request) {
                                 startTime: mtg.startTime,
                                 endTime: mtg.endTime,
                                 eventId,
-                                roomId: mtg.roomId, // Assuming room ID was preserved and restored above
-                                attendees: {
-                                    connect: attendeeConnects
-                                }
-                            },
-                            update: {
-                                title: mtg.title,
-                                date: mtg.date,
-                                startTime: mtg.startTime,
-                                endTime: mtg.endTime,
                                 roomId: mtg.roomId,
                                 attendees: {
-                                    set: attendeeConnects // Reset and re-connect
+                                    connect: createConnects
                                 }
-                            }
+                            },
+                            update: mtgUpdate
                         }).catch(e => console.warn('Meeting skip', e))
                     }
                 }

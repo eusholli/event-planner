@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const settings = await prisma.eventSettings.findFirst();
+        const settings = await prisma.systemSettings.findFirst();
         return NextResponse.json({
             ready: !!settings?.geminiApiKey
         });

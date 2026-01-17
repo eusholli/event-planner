@@ -1,0 +1,238 @@
+{
+  "systemSettings": {
+    "geminiApiKey": "AIzaSyD3l8j-JEukPjNFhVZcV2HlWMLpMn2o734",
+    "defaultAttendeeTypes": [
+      "BU IS",
+      "BU OSS",
+      "BU RAN",
+      "Customer",
+      "Customer Success",
+      "Marketing",
+      "Partner",
+      "Press / Analyst",
+      "Sales",
+      "Staff",
+      "Vendor"
+    ],
+    "defaultMeetingTypes": [
+      "Channel Partner",
+      "Govt",
+      "Other",
+      "PR Engagement",
+      "Sales/Customer",
+      "Technology Partner",
+      "Vendor Partner",
+      "BU Cloud"
+    ],
+    "defaultTags": [
+      "APAC",
+      "Americas",
+      "Europe",
+      "Global",
+      "IS",
+      "Japan Enterprise",
+      "LATAM",
+      "MEA",
+      "OSS",
+      "Open RAN MoU",
+      "Partner",
+      "RAN",
+      "RMI"
+    ]
+  },
+  "events": [
+    {
+      "id": "e87178a3-6001-418c-83a5-5c016c218606",
+      "name": "Future Innovation Summit (Draft)",
+      "status": "PIPELINE",
+      "tags": [
+        "Global",
+        "Technology"
+      ],
+      "meetingTypes": [
+        "Sales/Customer"
+      ],
+      "attendeeTypes": [
+        "Staff"
+      ],
+      "startDate": null,
+      "endDate": null,
+      "address": null,
+      "rooms": [],
+      "attendees": [],
+      "meetings": []
+    },
+    {
+      "id": "7d3564f8-264a-4190-8b56-7eef2142b354",
+      "name": "Annual Partner Conference 2026",
+      "status": "COMMITTED",
+      "startDate": "2026-01-24T14:52:33.375Z",
+      "endDate": "2026-01-27T14:52:33.375Z",
+      "address": "123 Convention Center Dr, San Francisco, CA",
+      "region": "NA",
+      "tags": [
+        "Partner",
+        "Americas"
+      ],
+      "meetingTypes": [
+        "Channel Partner",
+        "Technology Partner"
+      ],
+      "attendeeTypes": [
+        "Partner",
+        "Staff"
+      ],
+      "rooms": [
+        {
+          "id": "446c0edf-17d8-41d2-8eab-db3ad3e887ee",
+          "name": "Main Hall",
+          "capacity": 500
+        },
+        {
+          "id": "781130ac-790d-4813-806b-899d6185cbd3",
+          "name": "Breakout Room A",
+          "capacity": 50
+        },
+        {
+          "id": "3dba34f6-c006-4c07-8db6-61fa2fec6020",
+          "name": "Breakout Room B",
+          "capacity": 50
+        }
+      ],
+      "attendees": [
+        {
+          "id": "9d9e40ab-3d49-4230-b2a7-155e3057154f",
+          "name": "John Doe",
+          "email": "john@example.com",
+          "title": "VP Sales",
+          "company": "TechCorp",
+          "isExternal": true,
+          "type": "Partner"
+        },
+        {
+          "id": "df0136c8-121a-47c5-8142-20fb7d8d2289",
+          "name": "Jane Smith",
+          "email": "jane@internal.com",
+          "title": "Event Manager",
+          "company": "OurCompany",
+          "isExternal": false,
+          "type": "Staff"
+        }
+      ],
+      "meetings": [
+        {
+          "id": "7bff74e1-475e-4c11-b670-8dc7cb2cf863",
+          "title": "Keynote Address",
+          "startTime": "2026-01-24T14:52:33.375Z",
+          "endTime": "2026-01-24T15:52:33.375Z",
+          "roomId": "446c0edf-17d8-41d2-8eab-db3ad3e887ee",
+          "room": {
+            "id": "446c0edf-17d8-41d2-8eab-db3ad3e887ee",
+            "name": "Main Hall",
+            "capacity": 500
+          },
+          "status": "CONFIRMED",
+          "attendees": [
+            {
+              "id": "9d9e40ab-3d49-4230-b2a7-155e3057154f",
+              "name": "John Doe",
+              "email": "john@example.com",
+              "title": "VP Sales",
+              "company": "TechCorp",
+              "isExternal": true,
+              "type": "Partner"
+            }
+          ],
+          "eventId": "7d3564f8-264a-4190-8b56-7eef2142b354"
+        }
+      ]
+    },
+    {
+      "id": "586dc181-567d-4ed8-ba79-3846be02f466",
+      "name": "Q1 Global Strategy Review",
+      "status": "OCCURRED",
+      "startDate": "2026-01-07T14:52:33.375Z",
+      "endDate": "2026-01-10T14:52:33.375Z",
+      "address": "Corporate HQ, New York, NY",
+      "region": "NA",
+      "tags": [
+        "Global",
+        "IS"
+      ],
+      "meetingTypes": [
+        "Internal"
+      ],
+      "attendeeTypes": [
+        "Staff",
+        "BU IS"
+      ],
+      "rooms": [
+        {
+          "id": "2be45eaa-a5d8-4529-afb0-6550ee77824a",
+          "name": "Boardroom",
+          "capacity": 20
+        }
+      ],
+      "attendees": [
+        {
+          "id": "c5ca04f2-b31f-4959-b126-c3c97a3aa381",
+          "name": "Alice Director",
+          "email": "alice@internal.com",
+          "title": "Director",
+          "company": "OurCompany",
+          "isExternal": false,
+          "type": "Staff"
+        }
+      ],
+      "meetings": [
+        {
+          "id": "b2e608a9-9903-4314-8591-8fec1a190dd0",
+          "title": "Strategy Session",
+          "startTime": "2026-01-07T14:52:33.375Z",
+          "endTime": "2026-01-07T16:52:33.375Z",
+          "roomId": "2be45eaa-a5d8-4529-afb0-6550ee77824a",
+          "room": {
+            "id": "2be45eaa-a5d8-4529-afb0-6550ee77824a",
+            "name": "Boardroom",
+            "capacity": 20
+          },
+          "status": "OCCURRED",
+          "attendees": [
+            {
+              "id": "c5ca04f2-b31f-4959-b126-c3c97a3aa381",
+              "name": "Alice Director",
+              "email": "alice@internal.com",
+              "title": "Director",
+              "company": "OurCompany",
+              "isExternal": false,
+              "type": "Staff"
+            }
+          ],
+          "eventId": "586dc181-567d-4ed8-ba79-3846be02f466"
+        }
+      ]
+    },
+    {
+      "id": "43632969-0c5d-44af-94e2-586a8de6703b",
+      "name": "Cancelled Product Launch",
+      "status": "CANCELED",
+      "startDate": "2026-01-24T14:52:33.375Z",
+      "endDate": "2026-01-27T14:52:33.375Z",
+      "address": "TBD",
+      "tags": [
+        "Marketing"
+      ],
+      "meetingTypes": [
+        "PR Engagement"
+      ],
+      "attendeeTypes": [
+        "Press / Analyst"
+      ],
+      "rooms": [],
+      "attendees": [],
+      "meetings": []
+    }
+  ],
+  "exportedAt": "2026-01-17T14:52:33.376Z",
+  "version": "2.0-full-system"
+}

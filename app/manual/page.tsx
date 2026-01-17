@@ -118,6 +118,7 @@ export default function ManualPage() {
                         <li><strong>Resize</strong>: Drag the bottom edge of a meeting block to change its duration.</li>
                         <li><strong>View Details</strong>: Click on a meeting to view its details or delete it.</li>
                     </ul>
+
                 </section>
 
                 <section id="settings-data-management" className="mb-12 scroll-mt-20">
@@ -157,6 +158,6 @@ export default function ManualPage() {
                     </div>
                 </section>
             </article>
-        </div>
+        </div >
     )
 }

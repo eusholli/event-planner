@@ -566,7 +566,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 meeting={viewEvent}
                 rooms={rooms}
             />
-        </div >
+        </>
     )
 }
 

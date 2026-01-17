@@ -23,8 +23,15 @@ export async function POST() {
             prisma.attendee.deleteMany(),
             prisma.room.deleteMany(),
             prisma.event.deleteMany(),
-            // We KEEP SystemSettings (API Keys) so we don't lock ourselves out of AI? 
-            // Factory usually means "Data Reset".
+            // Clear System Settings (Factory Reset means blank slate)
+            prisma.systemSettings.updateMany({
+                data: {
+                    geminiApiKey: null,
+                    defaultTags: [],
+                    defaultMeetingTypes: [],
+                    defaultAttendeeTypes: []
+                }
+            })
         ])
 
         return NextResponse.json({ success: true, message: 'System data reset successfully' })

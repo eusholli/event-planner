@@ -18,13 +18,32 @@ export async function GET() {
             }
         })
 
+        // Normalize data to reduce size and duplication
+        const normalizedEvents = events.map(event => ({
+            ...event,
+            attendees: event.attendees.map(attendee => {
+                // Remove nested meetings from attendees
+                const { meetings, ...rest } = attendee
+                return rest
+            }),
+            meetings: event.meetings.map(meeting => {
+                // Convert full attendee objects to just IDs
+                // Remove room object (roomId is already there)
+                const { attendees, room, ...rest } = meeting
+                return {
+                    ...rest,
+                    attendees: attendees.map(a => a.id)
+                }
+            })
+        }))
+
         const settings = await prisma.systemSettings.findFirst()
 
         const exportData = {
             systemSettings: settings,
-            events: events,
+            events: normalizedEvents,
             exportedAt: new Date().toISOString(),
-            version: '2.0-full-system'
+            version: '2.1-normalized-system'
         }
 
         return NextResponse.json(exportData)

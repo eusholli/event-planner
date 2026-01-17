@@ -21,13 +21,14 @@ export default function Navigation() {
     // Event Links (Scoped)
     const eventLinks = eventId ? [
         { href: `/events/${eventId}/dashboard`, label: 'Dashboard' },
-        { href: `/events/${eventId}/calendar`, label: 'Schedule' }, // Renamed from New Meeting? No, Calendar is Schedule.
+
         { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin] },
         { href: `/events/${eventId}/attendees`, label: 'Attendees' },
         { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/calendar`, label: 'Calendar' },
         { href: `/events/${eventId}/chat`, label: 'Chat' },
         { href: `/events/${eventId}/reports`, label: 'Reports', roles: [Roles.Root, Roles.Admin] },
-        { href: `/events/${eventId}/settings`, label: 'Settings', roles: [Roles.Root, Roles.Admin] }, // Event Settings
+
     ] : []
 
     // Admin Links (Global)

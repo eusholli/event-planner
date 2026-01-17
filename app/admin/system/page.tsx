@@ -5,7 +5,18 @@ import { Save, Trash2, Download, Upload, AlertTriangle, ShieldAlert } from 'luci
 import { useRouter } from 'next/navigation'
 
 export default function SystemAdminPage() {
-    const [settings, setSettings] = useState<{ geminiApiKey: string } | null>(null)
+    const [settings, setSettings] = useState<{
+        geminiApiKey: string
+        defaultTags: string[]
+        defaultMeetingTypes: string[]
+        defaultAttendeeTypes: string[]
+    } | null>(null)
+
+    // Local state for list inputs
+    const [defaultTagsInput, setDefaultTagsInput] = useState('')
+    const [defaultMeetingTypesInput, setDefaultMeetingTypesInput] = useState('')
+    const [defaultAttendeeTypesInput, setDefaultAttendeeTypesInput] = useState('')
+
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
@@ -20,7 +31,19 @@ export default function SystemAdminPage() {
                 return res.json()
             })
             .then(data => {
-                setSettings(data)
+                const loadedSettings = {
+                    ...data,
+                    defaultTags: data.defaultTags || [],
+                    defaultMeetingTypes: data.defaultMeetingTypes || [],
+                    defaultAttendeeTypes: data.defaultAttendeeTypes || []
+                }
+                setSettings(loadedSettings)
+
+                // Init local inputs
+                setDefaultTagsInput(loadedSettings.defaultTags.join(', '))
+                setDefaultMeetingTypesInput(loadedSettings.defaultMeetingTypes.join(', '))
+                setDefaultAttendeeTypesInput(loadedSettings.defaultAttendeeTypes.join(', '))
+
                 setLoading(false)
             })
             .catch(err => {
@@ -36,10 +59,18 @@ export default function SystemAdminPage() {
         setMessage('')
 
         try {
+            // Parse local inputs
+            const updatedSettings = {
+                ...settings!,
+                defaultTags: defaultTagsInput.split(',').map(s => s.trim()).filter(Boolean),
+                defaultMeetingTypes: defaultMeetingTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                defaultAttendeeTypes: defaultAttendeeTypesInput.split(',').map(s => s.trim()).filter(Boolean)
+            }
+
             const res = await fetch('/api/admin/system', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings)
+                body: JSON.stringify(updatedSettings)
             })
 
             if (!res.ok) throw new Error('Failed to save')
@@ -51,12 +82,55 @@ export default function SystemAdminPage() {
         }
     }
 
+    const performSystemExport = async () => {
+        const exportRes = await fetch('/api/admin/system/export')
+        if (!exportRes.ok) throw new Error('Backup failed')
+
+        const blob = await exportRes.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        // ISO string replacing colons/dots with dashes for filename safety: YYYY-MM-DDTHH-mm-ss
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        a.download = `system-backup-${timestamp}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+    }
+
+    const handleSystemExport = async () => {
+        try {
+            setLoading(true)
+            await performSystemExport()
+        } catch (err) {
+            console.error(err)
+            alert('Failed to download system backup')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleResetSystem = async () => {
         const confirmText = prompt('This will DELETE ALL DATA (Events, Attendees, Meetings). Type "DELETE SYSTEM" to confirm.')
         if (confirmText !== 'DELETE SYSTEM') return
 
         try {
             setLoading(true)
+
+            // 1. Auto-Backup
+            try {
+                await performSystemExport()
+            } catch (backupErr) {
+                console.error('Backup failed', backupErr)
+                const proceed = confirm('Automatic backup failed. Do you want to proceed with reset anyway? Data will be lost permanently.')
+                if (!proceed) {
+                    setLoading(false)
+                    return
+                }
+            }
+
+            // 2. Perform Reset
             const res = await fetch('/api/admin/system/reset', { method: 'POST' })
             if (res.ok) {
                 alert('System has been reset.')
@@ -124,6 +198,46 @@ export default function SystemAdminPage() {
                             />
                             <p className="text-xs text-neutral-500 mt-1">Used for AI Autocomplete across all events.</p>
                         </div>
+
+                        <hr className="border-neutral-200" />
+
+                        <div className="grid grid-cols-1 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700">Default Meeting Tags</label>
+                                <input
+                                    type="text"
+                                    value={defaultTagsInput}
+                                    onChange={e => setDefaultTagsInput(e.target.value)}
+                                    placeholder="e.g. Urgent, Follow-up, Strategy"
+                                    className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                />
+                                <p className="text-xs text-neutral-500 mt-1">Comma-separated list of tags automatically added to new events.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700">Default Meeting Types</label>
+                                <input
+                                    type="text"
+                                    value={defaultMeetingTypesInput}
+                                    onChange={e => setDefaultMeetingTypesInput(e.target.value)}
+                                    placeholder="e.g. Intro, Demo, Negotiation"
+                                    className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                />
+                                <p className="text-xs text-neutral-500 mt-1">Comma-separated list of meeting types automatically added to new events.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700">Default Attendee Types</label>
+                                <input
+                                    type="text"
+                                    value={defaultAttendeeTypesInput}
+                                    onChange={e => setDefaultAttendeeTypesInput(e.target.value)}
+                                    placeholder="e.g. VIP, Speaker, Staff"
+                                    className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                />
+                                <p className="text-xs text-neutral-500 mt-1">Comma-separated list of attendee types automatically added to new events.</p>
+                            </div>
+                        </div>
                         <div className="flex justify-end">
                             <button
                                 type="submit"
@@ -144,7 +258,7 @@ export default function SystemAdminPage() {
                         <p className="text-sm text-neutral-500">Export the entire database including all events.</p>
 
                         <button
-                            onClick={() => window.location.href = '/api/admin/system/export'}
+                            onClick={handleSystemExport}
                             className="text-sm border border-neutral-300 bg-white px-3 py-2 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2"
                         >
                             <Download className="w-4 h-4" /> Download Full System Backup (JSON)

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Name and Company are required' }, { status: 400 })
         }
 
-        const settings = await prisma.eventSettings.findFirst()
+        const settings = await prisma.systemSettings.findFirst()
         if (!settings?.geminiApiKey) {
             return NextResponse.json({ error: 'Gemini API Key not configured' }, { status: 400 })
         }

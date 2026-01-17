@@ -37,6 +37,49 @@ export async function PATCH(
         const id = (await params).id
         const json = await request.json()
 
+        // Validation: Name is mandatory if provided
+        if (json.name !== undefined && (!json.name || json.name.trim() === '')) {
+            return NextResponse.json({ error: 'Event name is required' }, { status: 400 })
+        }
+
+        // Validation: Unique Name
+        if (json.name) {
+            const existing = await prisma.event.findFirst({
+                where: {
+                    name: {
+                        equals: json.name,
+                        mode: 'insensitive'
+                    },
+                    id: {
+                        not: id
+                    }
+                }
+            })
+            if (existing) {
+                return NextResponse.json({ error: 'Event name must be unique' }, { status: 409 })
+            }
+        }
+
+        // Fetch current event to check constraints against combined state
+        const currentEvent = await prisma.event.findUnique({ where: { id } })
+        if (!currentEvent) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
+
+        // Calculate final state for validation
+        const finalStatus = json.status !== undefined ? json.status : currentEvent.status
+        const finalStartDate = json.startDate !== undefined ? json.startDate : currentEvent.startDate
+        const finalEndDate = json.endDate !== undefined ? json.endDate : currentEvent.endDate
+        const finalAddress = json.address !== undefined ? json.address : currentEvent.address
+
+        if (finalStatus === 'COMMITTED') {
+            if (!finalStartDate || !finalEndDate || !finalAddress || finalAddress.trim() === '') {
+                return NextResponse.json({
+                    error: 'Committed events must have Start Date, End Date, and Address'
+                }, { status: 400 })
+            }
+        }
+
         const event = await prisma.event.update({
             where: { id },
             data: {
