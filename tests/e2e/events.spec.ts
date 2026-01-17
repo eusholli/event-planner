@@ -22,7 +22,7 @@ test.describe('Events E2E', () => {
         await page.getByLabel('Start Date').fill(startDate.toISOString().split('T')[0]);
         await page.getByLabel('End Date').fill(endDate.toISOString().split('T')[0]);
 
-        await page.click('button:has-text("Save Configuration")');
+        await page.click('button:has-text("Save Changes")');
 
         await page.reload();
         await expect(page.getByLabel('Event Name')).toHaveValue(eventName);
@@ -35,7 +35,7 @@ test.describe('Events E2E', () => {
 
         const updatedName = `Updated Name ${Date.now()}`;
         await page.getByLabel('Event Name').fill(updatedName);
-        await page.click('button:has-text("Save Configuration")');
+        await page.click('button:has-text("Save Changes")');
 
         await page.reload();
         await expect(page.getByLabel('Event Name')).toHaveValue(updatedName);
@@ -59,5 +59,28 @@ test.describe('Events E2E', () => {
         await card.getByTitle('Delete').click();
 
         await expect(card).not.toBeVisible();
+    });
+    test('should show blank dates for new event', async ({ page }) => {
+        await page.goto('/events');
+        await page.getByRole('button', { name: 'New Event' }).click();
+        await expect(page).toHaveURL(/\/events\/.*\/settings/);
+
+        const startDate = page.getByLabel('Start Date');
+        const endDate = page.getByLabel('End Date');
+
+        await expect(startDate).toBeEmpty();
+        await expect(endDate).toBeEmpty();
+
+        // Verify we can save
+        const today = new Date().toISOString().split('T')[0];
+        await startDate.fill(today);
+        await endDate.fill(today);
+
+        await page.getByRole('button', { name: 'Save Changes' }).click();
+
+        // Should rely on reload or toast? 
+        // existing test reloads.
+        await page.reload();
+        await expect(page.getByLabel('Start Date')).toHaveValue(today);
     });
 });

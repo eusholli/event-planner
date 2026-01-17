@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma'
 
 export async function generateEventDetails(url: string, currentData?: any) {
     try {
-        console.log('Generating details for URL:', url)
+        console.log(`Generating details for Event: "${currentData?.name || 'Unknown'}" (URL: ${url})`)
 
         // 3. Call Gemini
         const settings = await prisma.systemSettings.findFirst()
@@ -17,21 +17,33 @@ export async function generateEventDetails(url: string, currentData?: any) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash-exp',
+            // @ts-ignore
+            tools: [{ googleSearch: {} }]
+        })
+
+        const hasUrl = url && url.length > 5
+        const hasName = currentData?.name && currentData.name.length > 2
+
+        if (!hasUrl && !hasName) {
+            return { debug: 'Insufficient data. Please provide at least an Event URL or Event Name.' }
+        }
 
         const prompt = `
-        You are an event data expert. Validated details are needed for an event.
+        You are an event data expert. validated details are needed for an event.
         
-        Target Event URL: ${url}
+        Target Event URL: ${hasUrl ? url : 'Not provided, rely on Event Name and Context.'}
         ${currentData?.name ? `Event Name Hint: ${currentData.name}` : ''}
         
-        Existing Known Data:
+        Existing Known Data (Context):
         ${currentData ? JSON.stringify(currentData, null, 2) : 'None'}
 
         Task:
-        1. Analyze the URL structure and the Event Name (if provided) to infer details.
-        2. Use your internal knowledge base to find information about this event (e.g. if it is a famous conference like "CES 2025" or "FutureNet World").
-        3. Do NOT try to browse the live internet if you cannot access it. Rely on your training data and inference.
+        1. Analyze the available data (URL, Name, Context) to identify the specific event.
+        2. USE THE GOOGLE SEARCH TOOL to find the latest official details for this event. This is CRITICAL if the event is in the future.
+        3. If the URL is provided, prioritize it. 
+        4. If the URL is missing, use the 'Event Name Hint' and 'Existing Known Data' (like City, Date) to identify the event from your internal knowledge base and GOOGLE SEARCH.
         
         Return a JSON object ONLY with the following fields (if found/inferred, else null):
         - name (string) - The official event name.
@@ -41,7 +53,13 @@ export async function generateEventDetails(url: string, currentData?: any) {
         - address (string: Full venue address if known)
         - region (string: One of NA, SA, EU/UK, MEA, APAC, Japan. Infer from location.)
         - description (string: Brief summary of the event)
-        - debug (string: A short sentence explaining how you found this info, e.g. "Known event in training data" or "Inferred from URL")
+        - budget (number: Estimated typical budget for attending/sponsoring if inferable, else 0)
+        - targetCustomers (string: Summary of who attends/targets)
+        - expectedRoi (string: Summary of potential ROI value)
+        - tags (string[]: List of relevant keywords/tags)
+        - meetingTypes (string[]: Suggested meeting types e.g. "Networking", "Sales", "Keynote")
+        - attendeeTypes (string[]: Suggested attendee types to target e.g. "CTO", "Buyer", "Developer")
+        - debug (string: A short sentence explaining how you found this info, e.g. "Found via Google Search" or "Inferred from URL")
         
         JSON Format:
         `
@@ -49,8 +67,27 @@ export async function generateEventDetails(url: string, currentData?: any) {
         const result = await model.generateContent(prompt)
         const text = result.response.text()
 
-        // Clean markdown code blocks if present
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim()
+        // Robust JSON extraction: Find start and count braces to find end
+        let jsonStr = text
+        const firstOpen = text.indexOf('{')
+
+        if (firstOpen !== -1) {
+            let braceCount = 0
+            let lastClose = -1
+            for (let i = firstOpen; i < text.length; i++) {
+                if (text[i] === '{') braceCount++
+                else if (text[i] === '}') braceCount--
+
+                if (braceCount === 0) {
+                    lastClose = i
+                    break
+                }
+            }
+
+            if (lastClose !== -1) {
+                jsonStr = text.substring(firstOpen, lastClose + 1)
+            }
+        }
 
         return JSON.parse(jsonStr)
 

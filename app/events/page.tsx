@@ -10,8 +10,8 @@ import { EventCalendar } from '@/components/reports/EventCalendar'
 interface Event {
     id: string
     name: string
-    startDate: string
-    endDate: string
+    startDate: string | null
+    endDate: string | null
     region: string | null
     status: string
     location?: string
@@ -81,7 +81,7 @@ export default function EventsPage() {
     const handleCreate = async () => {
         const res = await fetch('/api/events', {
             method: 'POST',
-            body: JSON.stringify({ name: 'New Event' }),
+            body: JSON.stringify({ name: '' }),
             headers: { 'Content-Type': 'application/json' }
         })
         if (res.ok) {
@@ -200,12 +200,16 @@ export default function EventsPage() {
                                         <div className="space-y-1 text-sm text-neutral-500">
                                             <div className="flex items-center gap-2">
                                                 <CalendarIcon className="w-3.5 h-3.5" />
-                                                <span>{new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}</span>
+                                                <span>
+                                                    {event.startDate && event.endDate
+                                                        ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
+                                                        : 'Dates TBD'}
+                                                </span>
                                             </div>
-                                            {event.location && (
+                                            {event.address && (
                                                 <div className="flex items-center gap-2">
                                                     <MapIcon className="w-3.5 h-3.5" />
-                                                    <span className="line-clamp-1">{event.location}</span>
+                                                    <span className="line-clamp-1">{event.address}</span>
                                                 </div>
                                             )}
                                         </div>
