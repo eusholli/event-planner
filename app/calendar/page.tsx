@@ -129,7 +129,7 @@ export default function CalendarPage() {
             if (settingsData) {
                 if (settingsData.startDate) {
                     setEventSettings(settingsData)
-                    setDate(new Date(settingsData.startDate))
+                    setDate(moment(settingsData.startDate).toDate())
                 }
                 if (settingsData.tags) {
                     setAvailableTags(settingsData.tags)
@@ -144,8 +144,8 @@ export default function CalendarPage() {
 
     const onNavigate = useCallback((newDate: Date) => {
         if (eventSettings) {
-            const eventStart = new Date(eventSettings.startDate)
-            const eventEnd = new Date(eventSettings.endDate)
+            const eventStart = moment(eventSettings.startDate).toDate()
+            const eventEnd = moment(eventSettings.endDate).toDate()
 
             // Reset hours to compare dates only
             const target = new Date(newDate)
