@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { resolveEventId } from '@/lib/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,8 @@ import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
-        const eventId = searchParams.get('eventId')
+        const rawEventId = searchParams.get('eventId')
+        const eventId = await resolveEventId(rawEventId || '')
 
         if (!eventId) {
             // Option: return all if root? Or fail?
@@ -53,7 +55,8 @@ export async function POST(request: Request) {
         let linkedin = formData.get('linkedin') as string
         const isExternal = formData.get('isExternal') === 'true'
         const type = formData.get('type') as string
-        const eventId = formData.get('eventId') as string
+        const rawEventId = formData.get('eventId') as string
+        const eventId = await resolveEventId(rawEventId)
 
         if (!eventId) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })

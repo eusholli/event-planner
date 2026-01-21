@@ -44,6 +44,7 @@
     {
       "id": "e87178a3-6001-418c-83a5-5c016c218606",
       "name": "Future Innovation Summit (Draft)",
+      "slug": "future-innovation-summit-draft",
       "status": "PIPELINE",
       "tags": [
         "Global",
@@ -65,6 +66,7 @@
     {
       "id": "7d3564f8-264a-4190-8b56-7eef2142b354",
       "name": "Annual Partner Conference 2026",
+      "slug": "annual-partner-conference-2026",
       "status": "COMMITTED",
       "startDate": "2026-01-24T14:52:33.375Z",
       "endDate": "2026-01-27T14:52:33.375Z",
@@ -150,6 +152,7 @@
     {
       "id": "586dc181-567d-4ed8-ba79-3846be02f466",
       "name": "Q1 Global Strategy Review",
+      "slug": "q1-global-strategy-review",
       "status": "OCCURRED",
       "startDate": "2026-01-07T14:52:33.375Z",
       "endDate": "2026-01-10T14:52:33.375Z",
@@ -215,6 +218,7 @@
     {
       "id": "43632969-0c5d-44af-94e2-586a8de6703b",
       "name": "Cancelled Product Launch",
+      "slug": "cancelled-product-launch",
       "status": "CANCELED",
       "startDate": "2026-01-24T14:52:33.375Z",
       "endDate": "2026-01-27T14:52:33.375Z",
@@ -234,6 +238,7 @@
     },
     {
       "name": "MWC BCN 2026",
+      "slug": "mwc-bcn-2026",
       "status": "COMMITTED",
       "startDate": "2026-03-02T00:00:00.000Z",
       "endDate": "2026-03-05T00:00:00.000Z",

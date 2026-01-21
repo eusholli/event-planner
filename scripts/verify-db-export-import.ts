@@ -39,6 +39,7 @@ async function main() {
     const event = await prisma.event.create({
         data: {
             name: 'Integration Test Export Event',
+            slug: 'integration-test-export-event',
             startDate: new Date('2025-01-01'),
             endDate: new Date('2025-01-05'),
             status: 'PLANNING',
@@ -119,6 +120,7 @@ async function main() {
     const newEvent = await prisma.event.create({
         data: {
             name: 'Restored Shell', // Should be overwritten by import
+            slug: 'restored-shell',
             startDate: new Date(),
             endDate: new Date(),
             status: 'DRAFT'

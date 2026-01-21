@@ -38,7 +38,24 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
+
         const json = await request.json()
+
+        let slug = json.slug
+
+        if (slug && slug.trim() !== '') {
+            // Check provided slug uniqueness
+            const existingSlug = await prisma.event.findUnique({
+                where: { slug }
+            })
+            if (existingSlug) {
+                return NextResponse.json({ error: 'Event slug must be unique' }, { status: 409 })
+            }
+        } else {
+            // Generate draft slug
+            const randomSuffix = Math.random().toString(36).substring(2, 8)
+            slug = `draft-event-${Date.now()}-${randomSuffix}`
+        }
 
         // Fetch system settings for defaults
         const settings = await prisma.systemSettings.findFirst()
@@ -49,6 +66,7 @@ export async function POST(request: Request) {
         const event = await prisma.event.create({
             data: {
                 name: json.name ?? 'New Event',
+                slug: slug,
                 startDate: json.startDate,
                 endDate: json.endDate,
                 status: json.status || 'PIPELINE',
@@ -64,6 +82,7 @@ export async function POST(request: Request) {
                 timezone: json.timezone
             }
         })
+
 
         return NextResponse.json(event)
     } catch (error) {

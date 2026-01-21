@@ -10,6 +10,7 @@ import { EventCalendar } from '@/components/reports/EventCalendar'
 interface Event {
     id: string
     name: string
+    slug?: string
     startDate: string | null
     endDate: string | null
     region: string | null
@@ -42,7 +43,7 @@ export default function EventsPage() {
         fetchEvents()
     }, [])
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: string, slug?: string) => {
         if (!confirm('Are you sure you want to delete this event? This will also export a backup.')) return
 
         try {
@@ -79,14 +80,24 @@ export default function EventsPage() {
     }
 
     const handleCreate = async () => {
-        const res = await fetch('/api/events', {
-            method: 'POST',
-            body: JSON.stringify({ name: '' }),
-            headers: { 'Content-Type': 'application/json' }
-        })
-        if (res.ok) {
-            const newEvent = await res.json()
-            router.push(`/events/${newEvent.id}/settings`) // Go to settings to config
+        try {
+            const res = await fetch('/api/events', {
+                method: 'POST',
+                body: JSON.stringify({ name: '' }),
+                headers: { 'Content-Type': 'application/json' }
+            })
+
+            if (res.ok) {
+                const newEvent = await res.json()
+                // Use slug (likely temp) or id to navigate to settings
+                const urlId = newEvent.slug || newEvent.id
+                router.push(`/events/${urlId}/settings`)
+            } else {
+                alert('Failed to create new event')
+            }
+        } catch (e) {
+            console.error(e)
+            alert('Error creating event')
         }
     }
 
@@ -145,7 +156,7 @@ export default function EventsPage() {
                                     key={event.id}
                                     onClick={() => {
                                         if (event.status === 'COMMITTED' || event.status === 'OCCURRED') {
-                                            router.push(`/events/${event.id}/dashboard`)
+                                            router.push(`/events/${event.slug || event.id}/dashboard`)
                                         } else {
                                             alert('Event must be COMMITTED or OCCURRED to access management dashboard. Please edit the event to change its status.')
                                         }
@@ -173,7 +184,7 @@ export default function EventsPage() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
-                                                        router.push(`/events/${event.id}/settings`)
+                                                        router.push(`/events/${event.slug || event.id}/settings`)
                                                     }}
                                                     className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
                                                     title="Edit"
@@ -185,7 +196,7 @@ export default function EventsPage() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
-                                                        handleDelete(event.id)
+                                                        handleDelete(event.id, event.slug)
                                                     }}
                                                     className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                     title="Delete"

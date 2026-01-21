@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { importEventData } from '@/lib/actions/event'
 import { canWrite } from '@/lib/roles'
+import { resolveEventId } from '@/lib/events'
 
 export async function POST(
     request: Request,
@@ -11,7 +12,11 @@ export async function POST(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const id = (await params).id
+        const rawId = (await params).id
+        const id = await resolveEventId(rawId)
+        if (!id) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
 
         // LOCK CHECK
         const { isEventEditable } = await import('@/lib/events')

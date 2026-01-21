@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { exportEventData } from '@/lib/actions/event'
 import { canWrite } from '@/lib/roles'
+import { resolveEventId } from '@/lib/events'
 
 export async function GET(
     request: Request,
@@ -12,7 +13,12 @@ export async function GET(
         }
 
         const resolvedParams = await params
-        const data = await exportEventData(resolvedParams.id)
+        const id = await resolveEventId(resolvedParams.id)
+        if (!id) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
+
+        const data = await exportEventData(id)
 
         const now = new Date()
         const dateStr = now.toISOString().replace(/T/, '-').replace(/\..+/, '').replace(/:/g, '-')
