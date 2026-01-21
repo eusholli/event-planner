@@ -197,6 +197,8 @@ export async function importEventData(eventId: string, data: any) {
         if (data.event.address !== undefined) eventUpdate.address = data.event.address
         if (data.event.timezone !== undefined) eventUpdate.timezone = data.event.timezone
         if (data.event.slug !== undefined) eventUpdate.slug = data.event.slug
+        if (data.event.password !== undefined) eventUpdate.password = data.event.password
+        if (data.event.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = data.event.authorizedUserIds
 
         await prisma.event.update({
             where: { id: eventId },
