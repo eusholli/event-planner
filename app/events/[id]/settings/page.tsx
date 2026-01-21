@@ -5,6 +5,18 @@ import { useRouter } from 'next/navigation'
 import { EventAIScraper } from '@/components/EventAIScraper'
 import { Save, Trash2, Download, Upload, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useUser } from '@/components/auth'
+import { Roles } from '@/lib/constants'
+
+interface User {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    emailAddresses: { emailAddress: string }[]
+    publicMetadata: {
+        role?: string
+    }
+}
 
 interface EventSettings {
     id: string
@@ -24,13 +36,21 @@ interface EventSettings {
     address: string
     timezone: string
     slug: string
+    authorizedUserIds: string[]
 }
 
 export default function EventSettingsPage({ params }: { params: Promise<{ id: string }> }) {
     const [event, setEvent] = useState<EventSettings | null>(null)
+    const [initialEvent, setInitialEvent] = useState<EventSettings | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
+
+    // User Access Control State
+    const { user: currentUser } = useUser()
+    const [availableUsers, setAvailableUsers] = useState<User[]>([])
+    const [userSearch, setUserSearch] = useState('')
+    const [loadingUsers, setLoadingUsers] = useState(false)
 
     // Local state for list inputs to allow free typing
     const [tagsInput, setTagsInput] = useState('')
@@ -49,7 +69,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     useEffect(() => {
         if (!id) return
         fetch(`/api/events/${id}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error(`Failed to load event: ${res.status} ${res.statusText}`)
+                return res.json()
+            })
             .then(data => {
                 const loadedEvent = {
                     ...data,
@@ -60,9 +83,11 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     // Ensure arrays
                     tags: data.tags || [],
                     meetingTypes: data.meetingTypes || [],
-                    attendeeTypes: data.attendeeTypes || []
+                    attendeeTypes: data.attendeeTypes || [],
+                    authorizedUserIds: data.authorizedUserIds || []
                 }
                 setEvent(loadedEvent)
+                setInitialEvent(loadedEvent)
 
                 // Init local inputs
                 setTagsInput(loadedEvent.tags.join(', '))
@@ -76,6 +101,100 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                 setLoading(false)
             })
     }, [id])
+
+    // Fetch users if privileged
+    useEffect(() => {
+        const role = currentUser?.publicMetadata?.role as string
+        const canManageAccess = role === Roles.Root || role === Roles.Marketing || role === Roles.Admin
+
+        if (canManageAccess) {
+            setLoadingUsers(true)
+            fetch('/api/admin/users')
+                .then(res => {
+                    if (res.ok) return res.json()
+                    throw new Error('Failed to fetch users')
+                })
+                .then(data => {
+                    setAvailableUsers(data.data || data)
+                    setLoadingUsers(false)
+                })
+                .catch(err => {
+                    console.error('Failed to load users for access control', err)
+                    setLoadingUsers(false)
+                })
+        }
+    }, [currentUser])
+
+    // DIRTY CHECK & WARNING
+    useEffect(() => {
+        if (!event || !initialEvent) return
+
+        const isDirty = () => {
+            // Compare list inputs
+            if (tagsInput !== initialEvent.tags.join(', ')) return true
+            if (meetingTypesInput !== initialEvent.meetingTypes.join(', ')) return true
+            if (attendeeTypesInput !== initialEvent.attendeeTypes.join(', ')) return true
+
+            // Compare simple fields in event object
+            // We use JSON stringify on relevant fields to avoid object ref issues
+            // but we must exclude lists as they are handled by inputs above
+            const { tags, meetingTypes, attendeeTypes, ...currentRest } = event
+            const { tags: _t, meetingTypes: _m, attendeeTypes: _a, ...initialRest } = initialEvent
+
+            // We need to ensuring consistent ordering or deepEqual. JSON.stringify works if keys are same order.
+            // Since we clone from same shape, keys usually same. 
+            // Better to iterate keys.
+            return JSON.stringify(currentRest) !== JSON.stringify(initialRest)
+        }
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isDirty()) {
+                e.preventDefault()
+                e.returnValue = '' // Standard for Chrome
+            }
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+
+    }, [event, initialEvent, tagsInput, meetingTypesInput, attendeeTypesInput])
+
+    const filteredUsers = availableUsers.filter(u => {
+        const term = userSearch.toLowerCase()
+        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase()
+        const email = u.emailAddresses[0]?.emailAddress.toLowerCase() || ''
+        const role = (u.publicMetadata?.role || Roles.User).toLowerCase()
+        // Only show admins and users (root/marketing implies global access, no need to assign usually, 
+        // but we show them effectively. Actually, wait. 
+        // If I assign a Marketing user, it's redundant but harmless.
+        // Let's filtered based on search only for now.
+        return fullName.includes(term) || email.includes(term) || role.includes(term)
+    })
+
+    const handleSelectAllFiltered = () => {
+        if (!event) return
+        const currentIds = new Set(event.authorizedUserIds)
+        filteredUsers.forEach(u => currentIds.add(u.id))
+        setEvent({ ...event, authorizedUserIds: Array.from(currentIds) })
+    }
+
+    const handleDeselectAllFiltered = () => {
+        if (!event) return
+        const currentIds = new Set(event.authorizedUserIds)
+        filteredUsers.forEach(u => currentIds.delete(u.id))
+        setEvent({ ...event, authorizedUserIds: Array.from(currentIds) })
+    }
+
+    const toggleUserAccess = (userId: string) => {
+        if (!event) return
+        const currentIds = new Set(event.authorizedUserIds)
+        if (currentIds.has(userId)) {
+            currentIds.delete(userId)
+        } else {
+            currentIds.add(userId)
+        }
+        setEvent({ ...event, authorizedUserIds: Array.from(currentIds) })
+    }
 
     const calculateBudgetFromAI = (desc: string) => {
         // Mock logic: if description mentions money, parse it? 
@@ -130,6 +249,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
             setMessage('Settings saved successfully')
             // Update event state with saved values to stay in sync
             setEvent(updatedEvent)
+            setInitialEvent(updatedEvent) // Reset dirty state baseline
             router.push('/events')
         } catch (err: any) {
             setMessage(err.message || 'Error saving settings')
@@ -421,6 +541,96 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         />
                     </div>
                 </section>
+
+
+
+                {/* Section 4: User Access Control (Privileged Only) */}
+                {availableUsers.length > 0 && (
+                    <>
+                        <hr className="border-neutral-200" />
+                        <section className="space-y-4 pt-4">
+                            <h2 className="text-lg font-semibold text-neutral-900">User Access Control</h2>
+                            <p className="text-sm text-neutral-500">
+                                Select users who can access this event.
+                                (Root and Marketing users have global access by default).
+                            </p>
+
+                            <div className="bg-white border border-neutral-200 rounded-lg p-4">
+                                <div className="flex gap-2 mb-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Search users by name, email or role..."
+                                        className="flex-1 rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                        value={userSearch}
+                                        onChange={e => setUserSearch(e.target.value)}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleSelectAllFiltered}
+                                        className="px-3 py-2 bg-neutral-100 text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-200"
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleDeselectAllFiltered}
+                                        className="px-3 py-2 bg-neutral-100 text-neutral-700 rounded-md text-sm font-medium hover:bg-neutral-200"
+                                    >
+                                        Deselect All
+                                    </button>
+                                </div>
+
+                                <div className="max-h-60 overflow-y-auto border border-neutral-200 rounded-md divide-y divide-neutral-100">
+                                    {loadingUsers ? (
+                                        <div className="p-4 text-center text-neutral-500">Loading users...</div>
+                                    ) : filteredUsers.length === 0 ? (
+                                        <div className="p-4 text-center text-neutral-500">No users match your search.</div>
+                                    ) : (
+                                        filteredUsers.map(user => {
+                                            const isSelected = event?.authorizedUserIds?.includes(user.id)
+                                            const role = user.publicMetadata.role || Roles.User
+                                            const isGlobal = role === Roles.Root || role === Roles.Marketing
+
+                                            return (
+                                                <div key={user.id} className={`flex items-center justify-between p-3 hover:bg-neutral-50 ${isSelected ? 'bg-blue-50' : ''}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`user-${user.id}`}
+                                                            checked={isSelected || isGlobal}
+                                                            disabled={isGlobal || isLocked}
+                                                            onChange={() => toggleUserAccess(user.id)}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-neutral-300 rounded"
+                                                        />
+                                                        <div>
+                                                            <label htmlFor={`user-${user.id}`} className="block text-sm font-medium text-neutral-900 cursor-pointer">
+                                                                {user.firstName} {user.lastName}
+                                                            </label>
+                                                            <span className="text-xs text-neutral-500">{user.emailAddresses[0]?.emailAddress}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize
+                                                        ${role === Roles.Root ? 'bg-purple-100 text-purple-800' :
+                                                                role === Roles.Admin ? 'bg-green-100 text-green-800' :
+                                                                    role === Roles.Marketing ? 'bg-blue-100 text-blue-800' :
+                                                                        'bg-gray-100 text-gray-800'}`}>
+                                                            {role}
+                                                        </span>
+                                                        {isGlobal && <span className="text-xs text-neutral-400 italic">(Global Access)</span>}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                                <div className="mt-2 text-xs text-neutral-500 text-right">
+                                    {event?.authorizedUserIds.length || 0} users selected
+                                </div>
+                            </div>
+                        </section>
+                    </>
+                )}
 
                 <div className="flex items-center gap-4 pt-4">
                     <button

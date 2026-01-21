@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { canWrite, isRootUser } from '@/lib/roles'
 import { resolveEventId } from '@/lib/events'
+import { auth } from '@clerk/nextjs/server'
+import { hasEventAccess } from '@/lib/access'
+import { Roles } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +25,16 @@ export async function GET(
 
         if (!event) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
+
+        const { sessionClaims, userId } = await auth()
+        // If auth disabled, assume root
+        const role = process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true'
+            ? Roles.Root
+            : sessionClaims?.metadata?.role as string
+
+        if (!hasEventAccess(event as any, userId || '', role)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
         const response = {
@@ -142,6 +155,7 @@ export async function PATCH(
                 tags: json.tags,
                 meetingTypes: json.meetingTypes,
                 attendeeTypes: json.attendeeTypes,
+                authorizedUserIds: json.authorizedUserIds,
                 timezone: json.timezone
             }
         })
