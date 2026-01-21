@@ -13,14 +13,16 @@ For a detailed guide on how to use the application features, please refer to the
 - **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
 - **Authentication**: Secure user authentication and management provided by [Clerk](https://clerk.com/).
 - **Monitoring**: Application performance monitoring and error tracking with [Sentry](https://sentry.io/).
-- **Role-Based Access Control**: Secure access management with distinct roles (Root, Admin, User). **User** role is read-only for attendees.
-- **AI Chat Assistant**: Smart chatbot for event queries and navigation. Features **Persistent Chat** history, **Clear Chat** functionality, and **Enhanced Search** for attendees. Generates helper cards for creating/editing resources.
+- **Role-Based Access Control**: Secure access management with distinct roles (**Root**, **Marketing**, **Admin**, **User**).
+- **Security**: Event Password Protection for sharing sensitive events.
+- **AI Chat Assistant**: Smart chatbot for event queries and navigation. Features **Persistent Chat** history, **Clear Chat** functionality, and **Enhanced Search** for attendees.
 - **Briefing Books**: Generate detailed PDF reports for Rooms and Attendees.
 - **Meeting Tags**: Categorize meetings with custom tags (e.g., "Internal", "Client").
-- **Attendee Management**: Add, edit, and track event attendees (Read-only for standard users).
+- **Attendee Management**: Add, edit, and track event attendees.
 - **AI-Powered Auto Complete**: Use Google Gemini to automatically populate attendee professional details.
 - **Schedule Management**: Drag-and-drop interface for organizing meetings and sessions.
-- **Data Management**: Import, Export, and Delete Database (with auto-export backup) capabilities.
+- **Data Management**: Import, Export, and Factory Reset with **Auto-Backup**.
+- **Event Controls**: Read-only mode for **Occurred** events preventing accidental changes.
 
 ## Getting Started
 
