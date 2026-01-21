@@ -38,6 +38,7 @@ model Event {
   attendees       Attendee[]
   meetings        Meeting[]
   rooms           Room[]
+  password        String?
 }
 
 model Attendee {

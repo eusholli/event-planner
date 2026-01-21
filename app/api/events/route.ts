@@ -94,7 +94,8 @@ export async function POST(request: Request) {
                 meetingTypes: json.meetingTypes || defaultMeetingTypes,
                 attendeeTypes: json.attendeeTypes || defaultAttendeeTypes,
                 authorizedUserIds: json.authorizedUserIds || [],
-                timezone: json.timezone
+                timezone: json.timezone,
+                password: json.password
             }
         })
 

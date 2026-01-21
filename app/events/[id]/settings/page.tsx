@@ -37,6 +37,7 @@ interface EventSettings {
     timezone: string
     slug: string
     authorizedUserIds: string[]
+    password?: string
 }
 
 export default function EventSettingsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -356,6 +357,21 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 />
                             </div>
                             <p className="text-xs text-neutral-500 mt-1">This ID is used in the URL to access the event dashboard.</p>
+                        </div>
+
+                        {/* Password Protection */}
+                        <div className="col-span-2">
+                            <label htmlFor="password" className="block text-sm font-medium text-neutral-700">Event Password (Optional)</label>
+                            <input
+                                type="text"
+                                id="password"
+                                disabled={isLocked}
+                                value={event.password || ''}
+                                onChange={e => setEvent({ ...event, password: e.target.value })}
+                                placeholder="Leave empty for public access"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
+                            />
+                            <p className="text-xs text-neutral-500 mt-1">If set, users must enter this password to view the event (unless they are authorized users).</p>
                         </div>
 
                         {/* 3. AI Action Button - Prominent */}
