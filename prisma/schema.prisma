@@ -18,7 +18,7 @@ model SystemSettings {
 
 model Event {
   id              String     @id @default(cuid())
-  name            String     @default("My Event")
+  name            String     @unique
   startDate       DateTime?
   endDate         DateTime?
   tags            String[]   @default([])
