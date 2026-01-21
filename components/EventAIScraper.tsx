@@ -8,9 +8,10 @@ interface AIScraperProps {
     url: string
     onFill: (data: any) => void
     currentData?: any
+    disabled?: boolean
 }
 
-export function EventAIScraper({ url, onFill, currentData, className }: { url: string, onFill: (data: any) => void, currentData?: any, className?: string }) {
+export function EventAIScraper({ url, onFill, currentData, className, disabled }: { url: string, onFill: (data: any) => void, currentData?: any, className?: string, disabled?: boolean }) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [debugInfo, setDebugInfo] = useState('')
@@ -63,7 +64,7 @@ export function EventAIScraper({ url, onFill, currentData, className }: { url: s
                 <button
                     type="button"
                     onClick={handleScrape}
-                    disabled={loading || !canScrape}
+                    disabled={loading || !canScrape || disabled}
                     className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                     {loading ? (

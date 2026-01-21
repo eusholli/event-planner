@@ -37,6 +37,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
         }
 
+        // LOCK CHECK
+        const { isEventEditable } = await import('@/lib/events')
+        if (!await isEventEditable(body.eventId)) {
+            return NextResponse.json({
+                error: 'Event has occurred and is read-only.'
+            }, { status: 403 })
+        }
+
         const room = await prisma.room.create({
             data: {
                 name: body.name,

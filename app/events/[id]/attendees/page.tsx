@@ -27,8 +27,10 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null)
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const { user } = useUser()
+    const [isLocked, setIsLocked] = useState(false)
     const role = user?.publicMetadata?.role as string
-    const readOnly = !hasWriteAccess(role)
+    const userPermissionReadOnly = !hasWriteAccess(role)
+    const readOnly = userPermissionReadOnly || isLocked
     const userEmail = user?.primaryEmailAddress?.emailAddress
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -94,11 +96,14 @@ function AttendeesContent({ eventId }: { eventId: string }) {
         try {
             let types: string[] = []
 
-            // Fetch event settings for Attendee Types
+            // Fetch event settings for Attendee Types and Status
             try {
                 const eventRes = await fetch(`/api/events/${eventId}`)
                 if (eventRes.ok) {
                     const eventData = await eventRes.json()
+                    if (eventData.status === 'OCCURRED') {
+                        setIsLocked(true)
+                    }
                     if (eventData.attendeeTypes && Array.isArray(eventData.attendeeTypes)) {
                         types = eventData.attendeeTypes
                     }

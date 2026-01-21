@@ -44,6 +44,16 @@ export async function PUT(
             return NextResponse.json({ error: 'Attendee not found' }, { status: 404 })
         }
 
+        // LOCK CHECK
+        if (existingAttendee.eventId) {
+            const { isEventEditable } = await import('@/lib/events')
+            if (!await isEventEditable(existingAttendee.eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+        }
+
         // 3. Parse Form Data
         const formData = await request.formData()
 
@@ -168,11 +178,25 @@ export async function DELETE(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Fetch attendee first to get the image URL
+        // Fetch attendee first to get the image URL and Event ID
         const attendee = await prisma.attendee.findUnique({
             where: { id },
-            select: { imageUrl: true }
+            select: { imageUrl: true, eventId: true }
         })
+
+        if (!attendee) {
+            return NextResponse.json({ error: 'Attendee not found' }, { status: 404 })
+        }
+
+        // LOCK CHECK
+        if (attendee.eventId) {
+            const { isEventEditable } = await import('@/lib/events')
+            if (!await isEventEditable(attendee.eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+        }
 
         if (attendee?.imageUrl) {
             await deleteImageFromR2(attendee.imageUrl)

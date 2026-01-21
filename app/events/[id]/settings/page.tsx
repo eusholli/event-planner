@@ -148,6 +148,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
 
 
 
+    const isLocked = event?.status === 'OCCURRED'
+
     if (loading || !event) return <div className="p-10 text-center">Loading settings...</div>
 
     return (
@@ -162,6 +164,20 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     <p className="text-neutral-500">Manage lifecycle, details, and data scope.</p>
                 </div>
             </div>
+
+            {isLocked && (
+                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
+                    <div className="flex items-start">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 mr-3" />
+                        <div>
+                            <h3 className="text-sm font-medium text-amber-800">Event is Read-Only</h3>
+                            <p className="text-sm text-amber-700 mt-1">
+                                This event has occurred and is locked. To make changes, switch the status back to <strong>Committed</strong> or <strong>Pipeline</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={handleSave} className="space-y-8">
                 {/* Section 1: Core Details */}
@@ -178,9 +194,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="name"
                                 type="text"
+                                disabled={isLocked}
                                 value={event.name}
                                 onChange={e => setEvent({ ...event, name: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
 
@@ -189,10 +206,11 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <label className="block text-sm font-medium text-neutral-700">Event URL</label>
                             <input
                                 type="url"
+                                disabled={isLocked}
                                 value={event.url || ''}
                                 onChange={e => setEvent({ ...event, url: e.target.value })}
                                 placeholder="https://example.com"
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                             <p className="text-xs text-neutral-500 mt-1">Optional: Provide URL for better AI accuracy.</p>
                         </div>
@@ -204,6 +222,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 currentData={event}
                                 onFill={handleAIFill}
                                 className="w-full"
+                                disabled={isLocked}
                             />
                             <p className="text-xs text-neutral-500 text-center mt-2 italic">
                                 💡 Tip: Enter an Event Name or URL, then click above to auto-fill details using AI.
@@ -232,7 +251,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 id="region"
                                 value={event.region || ''}
                                 onChange={e => setEvent({ ...event, region: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                disabled={isLocked}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             >
                                 <option value="">Select Region...</option>
                                 <option value="NA">North America (NA)</option>
@@ -249,9 +269,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="startDate"
                                 type="date"
+                                disabled={isLocked}
                                 value={event.startDate || ''}
                                 onChange={e => setEvent({ ...event, startDate: e.target.value || null })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
 
@@ -260,9 +281,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="endDate"
                                 type="date"
+                                disabled={isLocked}
                                 value={event.endDate || ''}
                                 onChange={e => setEvent({ ...event, endDate: e.target.value || null })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
 
@@ -271,9 +293,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="address"
                                 type="text"
+                                disabled={isLocked}
                                 value={event.address || ''}
                                 onChange={e => setEvent({ ...event, address: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
                     </div>
@@ -290,9 +313,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="requesterEmail"
                                 type="email"
+                                disabled={isLocked}
                                 value={event.requesterEmail || ''}
                                 onChange={e => setEvent({ ...event, requesterEmail: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
 
@@ -301,9 +325,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="budget"
                                 type="number"
+                                disabled={isLocked}
                                 value={event.budget || ''}
                                 onChange={e => setEvent({ ...event, budget: parseFloat(e.target.value) })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
 
@@ -311,10 +336,11 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <label htmlFor="targetCustomers" className="block text-sm font-medium text-neutral-700">Target Customers</label>
                             <textarea
                                 id="targetCustomers"
+                                disabled={isLocked}
                                 value={event.targetCustomers || ''}
                                 onChange={e => setEvent({ ...event, targetCustomers: e.target.value })}
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
 
@@ -322,10 +348,11 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <label htmlFor="expectedRoi" className="block text-sm font-medium text-neutral-700">Expected ROI</label>
                             <textarea
                                 id="expectedRoi"
+                                disabled={isLocked}
                                 value={event.expectedRoi || ''}
                                 onChange={e => setEvent({ ...event, expectedRoi: e.target.value })}
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
                     </div>
@@ -342,9 +369,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Meeting Tags</label>
                         <input
                             type="text"
+                            disabled={isLocked}
                             value={tagsInput}
                             onChange={e => setTagsInput(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                         />
                     </div>
 
@@ -352,9 +380,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Meeting Types</label>
                         <input
                             type="text"
+                            disabled={isLocked}
                             value={meetingTypesInput}
                             onChange={e => setMeetingTypesInput(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                         />
                     </div>
 
@@ -362,9 +391,10 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Attendee Types</label>
                         <input
                             type="text"
+                            disabled={isLocked}
                             value={attendeeTypesInput}
                             onChange={e => setAttendeeTypesInput(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                            className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                         />
                     </div>
                 </section>
@@ -412,91 +442,95 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </button>
                     </div>
 
-                    <div className="border border-neutral-200 p-4 rounded-lg bg-white">
-                        <h3 className="font-medium text-neutral-900">Import Data</h3>
-                        <p className="text-sm text-neutral-500 mb-4">Restore or merge data from JSON.</p>
-                        <label className="text-sm border border-neutral-300 bg-white px-3 py-1.5 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2 cursor-pointer">
-                            <Upload className="w-4 h-4" /> Import
-                            <input
-                                type="file"
-                                accept=".json"
-                                className="hidden"
-                                onChange={async (e) => {
-                                    const file = e.target.files?.[0]
-                                    if (!file) return
+                    {!isLocked && (
+                        <>
+                            <div className="border border-neutral-200 p-4 rounded-lg bg-white">
+                                <h3 className="font-medium text-neutral-900">Import Data</h3>
+                                <p className="text-sm text-neutral-500 mb-4">Restore or merge data from JSON.</p>
+                                <label className="text-sm border border-neutral-300 bg-white px-3 py-1.5 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2 cursor-pointer">
+                                    <Upload className="w-4 h-4" /> Import
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        className="hidden"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0]
+                                            if (!file) return
 
-                                    const text = await file.text()
-                                    try {
-                                        const json = JSON.parse(text)
-                                        const res = await fetch(`/api/events/${id}/import`, {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(json)
-                                        })
-                                        if (res.ok) {
-                                            alert('Import successful')
-                                            window.location.reload()
-                                        } else {
-                                            alert('Import failed')
+                                            const text = await file.text()
+                                            try {
+                                                const json = JSON.parse(text)
+                                                const res = await fetch(`/api/events/${id}/import`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(json)
+                                                })
+                                                if (res.ok) {
+                                                    alert('Import successful')
+                                                    window.location.reload()
+                                                } else {
+                                                    alert('Import failed')
+                                                }
+                                            } catch (err) {
+                                                alert('Invalid JSON file')
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="border border-red-200 bg-red-50 p-4 rounded-lg">
+                                <h3 className="font-medium text-red-900">Reset Event</h3>
+                                <p className="text-sm text-red-700 mb-4">Wipe all Attendees, Rooms, and Meetings. Event details are preserved. <br /><strong>A backup will be downloaded automatically.</strong></p>
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm('Are you sure you want to reset this event? This will delete all Attendees, Rooms, and Meetings.\n\nA backup JSON file will be downloaded before deletion proceeds.')) return
+
+                                        setMessage('Downloading backup...')
+                                        try {
+                                            // 1. Download Backup
+                                            const resExport = await fetch(`/api/events/${id}/export`)
+                                            if (!resExport.ok) throw new Error('Backup failed. Reset aborted.')
+
+                                            const blob = await resExport.blob()
+                                            const url = window.URL.createObjectURL(blob)
+                                            const a = document.createElement('a')
+                                            a.href = url
+                                            // wrapper to get filename from headers if possible, or fallback
+                                            const disposition = resExport.headers.get('Content-Disposition')
+                                            let filename = `event-${id}-backup.json`
+                                            if (disposition && disposition.includes('filename=')) {
+                                                filename = disposition.split('filename=')[1].replace(/"/g, '')
+                                            }
+                                            a.download = filename
+                                            document.body.appendChild(a)
+                                            a.click()
+                                            window.URL.revokeObjectURL(url)
+                                            document.body.removeChild(a)
+
+                                            setMessage('Backup downloaded. Resetting data...')
+
+                                            // 2. Perform Reset
+                                            const resReset = await fetch(`/api/events/${id}/reset`, { method: 'POST' })
+                                            if (resReset.ok) {
+                                                alert('Event has been reset successfully.')
+                                                window.location.reload()
+                                            } else {
+                                                const err = await resReset.json()
+                                                throw new Error(err.error || 'Reset failed')
+                                            }
+                                        } catch (error: any) {
+                                            alert(`Error: ${error.message}`)
+                                            setMessage('')
                                         }
-                                    } catch (err) {
-                                        alert('Invalid JSON file')
-                                    }
-                                }}
-                            />
-                        </label>
-                    </div>
-
-                    <div className="border border-red-200 bg-red-50 p-4 rounded-lg">
-                        <h3 className="font-medium text-red-900">Reset Event</h3>
-                        <p className="text-sm text-red-700 mb-4">Wipe all Attendees, Rooms, and Meetings. Event details are preserved. <br /><strong>A backup will be downloaded automatically.</strong></p>
-                        <button
-                            onClick={async () => {
-                                if (!confirm('Are you sure you want to reset this event? This will delete all Attendees, Rooms, and Meetings.\n\nA backup JSON file will be downloaded before deletion proceeds.')) return
-
-                                setMessage('Downloading backup...')
-                                try {
-                                    // 1. Download Backup
-                                    const resExport = await fetch(`/api/events/${id}/export`)
-                                    if (!resExport.ok) throw new Error('Backup failed. Reset aborted.')
-
-                                    const blob = await resExport.blob()
-                                    const url = window.URL.createObjectURL(blob)
-                                    const a = document.createElement('a')
-                                    a.href = url
-                                    // wrapper to get filename from headers if possible, or fallback
-                                    const disposition = resExport.headers.get('Content-Disposition')
-                                    let filename = `event-${id}-backup.json`
-                                    if (disposition && disposition.includes('filename=')) {
-                                        filename = disposition.split('filename=')[1].replace(/"/g, '')
-                                    }
-                                    a.download = filename
-                                    document.body.appendChild(a)
-                                    a.click()
-                                    window.URL.revokeObjectURL(url)
-                                    document.body.removeChild(a)
-
-                                    setMessage('Backup downloaded. Resetting data...')
-
-                                    // 2. Perform Reset
-                                    const resReset = await fetch(`/api/events/${id}/reset`, { method: 'POST' })
-                                    if (resReset.ok) {
-                                        alert('Event has been reset successfully.')
-                                        window.location.reload()
-                                    } else {
-                                        const err = await resReset.json()
-                                        throw new Error(err.error || 'Reset failed')
-                                    }
-                                } catch (error: any) {
-                                    alert(`Error: ${error.message}`)
-                                    setMessage('')
-                                }
-                            }}
-                            className="text-sm bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 w-full flex items-center justify-center gap-2"
-                        >
-                            <Trash2 className="w-4 h-4" /> Reset Event
-                        </button>
-                    </div>
+                                    }}
+                                    className="text-sm bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 w-full flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 className="w-4 h-4" /> Reset Event
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </section>
         </div >

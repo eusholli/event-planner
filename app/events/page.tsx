@@ -144,13 +144,13 @@ export default function EventsPage() {
                                 <div
                                     key={event.id}
                                     onClick={() => {
-                                        if (event.status === 'COMMITTED') {
+                                        if (event.status === 'COMMITTED' || event.status === 'OCCURRED') {
                                             router.push(`/events/${event.id}/dashboard`)
                                         } else {
-                                            alert('Event must be COMMITTED to access management dashboard. Please edit the event and change its status to Committed.')
+                                            alert('Event must be COMMITTED or OCCURRED to access management dashboard. Please edit the event to change its status.')
                                         }
                                     }}
-                                    className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${event.status === 'COMMITTED' ? 'cursor-pointer' : 'cursor-default'}`}
+                                    className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${(event.status === 'COMMITTED' || event.status === 'OCCURRED') ? 'cursor-pointer' : 'cursor-default'}`}
                                 >
                                     <div className={`absolute top-0 left-0 w-1 h-full ${event.status === 'COMMITTED' ? 'bg-green-500' :
                                         event.status === 'CANCELED' ? 'bg-red-500' : 'bg-amber-500'
