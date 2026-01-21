@@ -1,12 +1,14 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function ChatPage() {
+export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: eventId } = use(params);
+
     const { messages, sendMessage, status, error, setMessages } = useChat({
         onError: (err) => {
             console.error('Chat error:', err);
@@ -26,12 +28,12 @@ export default function ChatPage() {
         await sendMessage({
             role: 'user',
             parts: [{ type: 'text', text: messageInput }],
-        });
+        }, { body: { eventId } });
     };
 
     // Load messages from localStorage on mount
     useEffect(() => {
-        const savedMessages = localStorage.getItem('chat_messages');
+        const savedMessages = localStorage.getItem(`chat_messages_${eventId}`);
         if (savedMessages) {
             try {
                 setMessages(JSON.parse(savedMessages));
@@ -39,14 +41,14 @@ export default function ChatPage() {
                 console.error('Failed to parse chat messages:', e);
             }
         }
-    }, [setMessages]);
+    }, [setMessages, eventId]);
 
     // Save messages to localStorage whenever they change
     useEffect(() => {
         if (messages.length > 0) {
-            localStorage.setItem('chat_messages', JSON.stringify(messages));
+            localStorage.setItem(`chat_messages_${eventId}`, JSON.stringify(messages));
         }
-    }, [messages]);
+    }, [messages, eventId]);
 
     useEffect(() => {
         // Check if Chat is ready (configured)
@@ -72,7 +74,7 @@ export default function ChatPage() {
 
     const handleClearChat = () => {
         setMessages([]);
-        localStorage.removeItem('chat_messages');
+        localStorage.removeItem(`chat_messages_${eventId}`);
     };
 
     // Show banner if explicit error OR not ready (after check completes)

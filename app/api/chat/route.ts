@@ -9,11 +9,34 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     try {
-        const { messages } = await req.json();
+        const { messages, eventId: bodyEventId } = await req.json();
+        const url = new URL(req.url);
+        const eventId = bodyEventId || url.searchParams.get('eventId');
+
+        if (!eventId) {
+            return new Response('Event ID is required', { status: 400 });
+        }
+
+        const event = await prisma.event.findFirst({
+            where: {
+                OR: [
+                    { id: eventId },
+                    { slug: eventId }
+                ]
+            },
+            select: { id: true, name: true, slug: true }
+        });
+
+        if (!event) {
+            return new Response('Event not found', { status: 404 });
+        }
+
+        // Use the resolved UUID for tools and prompts
+        const resolvedEventId = event.id;
+        const resolvedSlug = event.slug;
 
         // Convert UI messages to CoreMessages for the AI SDK
         const coreMessages = convertToCoreMessages(messages);
-        // 1. Fetch API Key from EventSettings
         // 1. Fetch API Key from SystemSettings
         const settings = await prisma.systemSettings.findFirst();
         if (!settings?.geminiApiKey) {
@@ -25,13 +48,21 @@ export async function POST(req: Request) {
             apiKey: settings.geminiApiKey,
         });
 
+        const eventTools = tools.createTools(resolvedEventId, resolvedSlug);
+
         // Construct System Prompt
         const systemPrompt = `
 You are the AI assistant for the Event Planner application.
 Current Date: ${new Date().toISOString().split('T')[0]}
+Current Event: "${event.name}" (ID: ${resolvedEventId})
 
 Use this context to answer questions. If the user mentions "Day 1", it refers to the start date.
-Assume all queries are relative to this event unless specified otherwise.
+Assume all queries are relative to this event (ID: ${resolvedEventId}) unless specified otherwise.
+
+CRITICAL INSTRUCTIONS:
+- You are strictly scoped to the event "${event.name}".
+- Do NOT use the event name ("${event.name}") or "Event ${event.name}" as a search term in tools (e.g. getMeetings, getAttendees). The tools are already scoped to this event. Searching for the event name will return no results.
+- Only search for specific meeting titles, attendee names, or keywords provided by the user that are NOT the event name.
 
 IMPORTANT:
 - When you receive tool outputs, process them and provide the FINAL ANSWER immediately.
@@ -63,7 +94,7 @@ INTELLIGENT SEARCH & RESOLUTION:
             model: google('gemini-2.5-pro'),
             system: systemPrompt,
             messages: coreMessages,
-            tools: tools,
+            tools: eventTools,
             // Use stopWhen with stepCountIs to enable multi-step execution (replacing maxSteps)
             stopWhen: stepCountIs(5),
             onError: (error) => {
