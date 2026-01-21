@@ -15,6 +15,7 @@ const TEST_MEETING_ID = "test-integrity-meeting-id-123"
 const MAXIMAL_EVENT: any = {
     id: TEST_EVENT_ID,
     name: "Maximal Integrity Test Event",
+    slug: "maximal-integrity-test-event",
     startDate: new Date("2026-06-01T09:00:00.000Z"),
     endDate: new Date("2026-06-05T18:00:00.000Z"),
     status: "CONFIRMED",

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { resolveEventId } from '@/lib/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,7 +8,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
-        const eventId = searchParams.get('eventId')
+        const rawEventId = searchParams.get('eventId')
+        const eventId = await resolveEventId(rawEventId || '')
 
         if (!eventId) {
             return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
@@ -33,13 +35,16 @@ export async function POST(request: Request) {
         }
         const body = await request.json()
 
-        if (!body.eventId) {
+        const rawEventId = body.eventId
+        const eventId = await resolveEventId(rawEventId)
+
+        if (!eventId) {
             return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
         }
 
         // LOCK CHECK
         const { isEventEditable } = await import('@/lib/events')
-        if (!await isEventEditable(body.eventId)) {
+        if (!await isEventEditable(eventId)) {
             return NextResponse.json({
                 error: 'Event has occurred and is read-only.'
             }, { status: 403 })
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
             data: {
                 name: body.name,
                 capacity: parseInt(body.capacity),
-                eventId: body.eventId
+                eventId: eventId
             },
         })
         return NextResponse.json(room)

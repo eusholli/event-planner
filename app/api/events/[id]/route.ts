@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { canWrite, isRootUser } from '@/lib/roles'
+import { resolveEventId } from '@/lib/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,12 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const id = (await params).id
+        const rawId = (await params).id
+        const id = await resolveEventId(rawId)
+        if (!id) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
+
         const event = await prisma.event.findUnique({
             where: { id }
         })
@@ -40,12 +46,21 @@ export async function PATCH(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const id = (await params).id
+        const rawId = (await params).id
+        const id = await resolveEventId(rawId)
+        if (!id) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
         const json = await request.json()
 
         // Validation: Name is mandatory if provided
         if (json.name !== undefined && (!json.name || json.name.trim() === '')) {
             return NextResponse.json({ error: 'Event name is required' }, { status: 400 })
+        }
+
+        // Validation: Slug is mandatory if provided
+        if (json.slug !== undefined && (!json.slug || json.slug.trim() === '')) {
+            return NextResponse.json({ error: 'URL Slug is required' }, { status: 400 })
         }
 
         // Validation: Unique Name
@@ -63,6 +78,16 @@ export async function PATCH(
             })
             if (existing) {
                 return NextResponse.json({ error: 'Event name must be unique' }, { status: 409 })
+            }
+        }
+
+        // Validation: Unique Slug
+        if (json.slug) {
+            const existingSlug = await prisma.event.findUnique({
+                where: { slug: json.slug }
+            })
+            if (existingSlug && existingSlug.id !== id) {
+                return NextResponse.json({ error: 'Event slug must be unique' }, { status: 409 })
             }
         }
 
@@ -103,6 +128,7 @@ export async function PATCH(
             where: { id },
             data: {
                 name: json.name,
+                slug: json.slug,
                 startDate: json.startDate ? new Date(json.startDate) : json.startDate,
                 endDate: json.endDate ? new Date(json.endDate) : json.endDate,
                 status: json.status,

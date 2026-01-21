@@ -27,6 +27,7 @@ const events = [
     {
         id: newId(),
         name: "Future Innovation Summit (Draft)",
+        slug: "future-innovation-summit",
         status: "PIPELINE",
         tags: ["Global", "Technology"],
         meetingTypes: ["Sales/Customer"],
@@ -37,12 +38,13 @@ const events = [
         address: null,
         rooms: [],
         attendees: [],
-        meetings: []
+        meetings: [] as any[]
     },
     // 2. COMMITTED
     {
         id: newId(),
         name: "Annual Partner Conference 2026",
+        slug: "annual-partner-conference-2026",
         status: "COMMITTED",
         startDate: futureStart,
         endDate: futureEnd,
@@ -61,12 +63,13 @@ const events = [
             { id: newId(), name: "Jane Smith", email: "jane@internal.com", title: "Event Manager", company: "OurCompany", isExternal: false, type: "Staff" }
         ],
         // Meetings will be linked after ID generation
-        meetings: []
+        meetings: [] as any[]
     },
     // 3. OCCURRED
     {
         id: newId(),
         name: "Q1 Global Strategy Review",
+        slug: "q1-global-strategy-review",
         status: "OCCURRED",
         startDate: pastStart,
         endDate: pastEnd,
@@ -81,12 +84,13 @@ const events = [
         attendees: [
             { id: newId(), name: "Alice Director", email: "alice@internal.com", title: "Director", company: "OurCompany", isExternal: false, type: "Staff" }
         ],
-        meetings: []
+        meetings: [] as any[]
     },
     // 4. CANCELED
     {
         id: newId(),
         name: "Cancelled Product Launch",
+        slug: "cancelled-product-launch",
         status: "CANCELED",
         startDate: futureStart,
         endDate: futureEnd, // Kept dates even if cancelled
@@ -96,7 +100,7 @@ const events = [
         attendeeTypes: ["Press / Analyst"],
         rooms: [],
         attendees: [],
-        meetings: []
+        meetings: [] as any[]
     }
 ];
 

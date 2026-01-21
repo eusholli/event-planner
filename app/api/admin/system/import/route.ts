@@ -69,12 +69,15 @@ export async function POST(request: Request) {
                 if (evt.attendeeTypes !== undefined) eventUpdate.attendeeTypes = evt.attendeeTypes
                 if (evt.address !== undefined) eventUpdate.address = evt.address
                 if (evt.timezone !== undefined) eventUpdate.timezone = evt.timezone
+                if (evt.slug !== undefined) eventUpdate.slug = evt.slug
 
                 const event = await prisma.event.upsert({
                     where: { id: evt.id || 'new_impossible_id' },
                     create: {
                         id: evt.id, // Try to preserve ID
                         name: evt.name,
+                        // Fallback implementation for legacy imports without slugs
+                        slug: evt.slug || (evt.name || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + (evt.id ? evt.id.slice(-5) : Math.random().toString(36).substring(2, 7)),
                         startDate: evt.startDate,
                         endDate: evt.endDate,
                         status: evt.status,

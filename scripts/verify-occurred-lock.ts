@@ -12,6 +12,7 @@ async function main() {
     const event = await prisma.event.create({
         data: {
             name: 'Test Lock Event',
+            slug: 'test-lock-event',
             status: 'COMMITTED', // Start as committed
             startDate: new Date(),
             endDate: new Date(),

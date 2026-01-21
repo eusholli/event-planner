@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { resolveEventId } from '@/lib/events'
 import { currentUser } from '@clerk/nextjs/server'
 
 export const dynamic = 'force-dynamic'
@@ -9,7 +10,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
-        const eventId = searchParams.get('eventId')
+        const rawEventId = searchParams.get('eventId')
+        const eventId = await resolveEventId(rawEventId || '')
 
         if (!eventId) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
@@ -122,8 +124,10 @@ export async function POST(request: Request) {
             otherDetails,
             isApproved,
             calendarInviteSent,
-            eventId
+            eventId: rawEventId
         } = body
+
+        const eventId = await resolveEventId(rawEventId)
 
         if (!eventId) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })

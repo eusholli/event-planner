@@ -33,6 +33,7 @@ model Event {
   targetCustomers String?
   expectedRoi     String?
   status          String     @default("PIPELINE")
+  slug            String     @unique
   attendees       Attendee[]
   meetings        Meeting[]
   rooms           Room[]
