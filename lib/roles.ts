@@ -11,7 +11,7 @@ export const checkRole = async (role: string) => {
     return sessionClaims?.metadata?.role === role
 }
 
-import { hasWriteAccess } from './role-utils'
+import { hasWriteAccess, canManageEvents as checkManageEvents } from './role-utils'
 
 export const isRootUser = async () => {
     return checkRole(Roles.Root)
@@ -24,4 +24,13 @@ export const canWrite = async () => {
     const { sessionClaims } = await auth()
     const role = sessionClaims?.metadata?.role as string
     return hasWriteAccess(role)
+}
+
+export const canManageEvents = async () => {
+    if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
+        return true
+    }
+    const { sessionClaims } = await auth()
+    const role = sessionClaims?.metadata?.role as string
+    return checkManageEvents(role)
 }
