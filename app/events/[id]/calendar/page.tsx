@@ -139,10 +139,10 @@ function CalendarContent({ eventId }: { eventId: string }) {
             setAllAttendees(attendeesData)
 
             // Set calendar range based on settings
-            if (settingsData) {
-                if (settingsData.startDate) {
-                    setEventSettings(settingsData)
-                    setDate(moment(settingsData.startDate).toDate())
+            if (eventData) {
+                if (eventData.startDate) {
+                    setEventSettings(eventData)
+                    setDate(moment(eventData.startDate).toDate())
                 }
                 if (eventData.tags) {
                     setAvailableTags(eventData.tags)
