@@ -22,12 +22,12 @@ export default function Navigation() {
     const eventLinks = eventId ? [
         { href: `/events/${eventId}/dashboard`, label: 'Dashboard' },
 
-        { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
         { href: `/events/${eventId}/attendees`, label: 'Attendees' },
-        { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
         { href: `/events/${eventId}/calendar`, label: 'Calendar' },
         { href: `/events/${eventId}/chat`, label: 'Chat' },
-        { href: `/events/${eventId}/reports`, label: 'Reports', roles: [Roles.Root, Roles.Admin] },
+        { href: `/events/${eventId}/reports`, label: 'Reports', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
 
     ] : []
 

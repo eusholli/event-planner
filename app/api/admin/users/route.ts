@@ -59,7 +59,8 @@ export async function POST(req: Request) {
 
         // Validate role
         if (!Object.values(Roles).includes(role)) {
-            return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+            console.error(`Invalid role attempted: ${role}. Valid roles: ${Object.values(Roles).join(', ')}`)
+            return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 })
         }
 
         const client = await clerkClient()
@@ -70,9 +71,9 @@ export async function POST(req: Request) {
         })
 
         return NextResponse.json({ success: true })
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating user role:', error)
-        return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 })
+        return NextResponse.json({ error: error.message || 'Failed to update user role' }, { status: 500 })
     }
 }
 

@@ -10,7 +10,7 @@ export async function GET(
     const isRoot = await checkRole(Roles.Root)
     const isAdmin = await checkRole(Roles.Admin)
 
-    if (!isRoot && !isAdmin) {
+    if (!isRoot && !isAdmin && !await checkRole(Roles.Marketing)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
