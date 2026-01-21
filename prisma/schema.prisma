@@ -24,6 +24,7 @@ model Event {
   tags            String[]   @default([])
   meetingTypes    String[]   @default([])
   attendeeTypes   String[]   @default([])
+  authorizedUserIds String[] @default([])
   timezone        String?
   url             String?
   address         String?

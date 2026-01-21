@@ -3,20 +3,34 @@ import prisma from '@/lib/prisma'
 import { auth } from '@clerk/nextjs/server'
 import { isRootUser, canWrite } from '@/lib/roles'
 
+import { Roles } from '@/lib/constants'
+
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
     try {
-        const { sessionClaims } = await auth()
+        const { sessionClaims, userId } = await auth()
         // If auth disabled, assume root
         const role = process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true'
-            ? 'root'
+            ? Roles.Root
             : sessionClaims?.metadata?.role as string
 
-        const isPrivileged = role === 'root' || role === 'admin'
+        const isGlobalAccess = role === Roles.Root || role === Roles.Marketing
 
-        // Users see only COMMITTED events. Root/Admin see all.
-        const where = isPrivileged ? {} : { status: 'COMMITTED' }
+        const where: any = {}
+
+        if (!isGlobalAccess) {
+            // If local auth is mocked or no user, this might be tricky with "has"
+            // But assuming Clerk is active or Root bypass matches above.
+            if (!userId && process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            }
+
+            // If not global access (Admin or User), they must be in the authorized list
+            if (userId) {
+                where.authorizedUserIds = { has: userId }
+            }
+        }
 
         const events = await prisma.event.findMany({
             where,
@@ -79,6 +93,7 @@ export async function POST(request: Request) {
                 tags: json.tags || defaultTags,
                 meetingTypes: json.meetingTypes || defaultMeetingTypes,
                 attendeeTypes: json.attendeeTypes || defaultAttendeeTypes,
+                authorizedUserIds: json.authorizedUserIds || [],
                 timezone: json.timezone
             }
         })
