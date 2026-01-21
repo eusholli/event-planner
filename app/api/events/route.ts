@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { auth } from '@clerk/nextjs/server'
-import { isRootUser, canWrite } from '@/lib/roles'
+import { isRootUser, canManageEvents } from '@/lib/roles'
 
 import { Roles } from '@/lib/constants'
 
@@ -47,8 +47,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
-        // Only Root/Admin can create events
-        if (!await canWrite()) {
+        // Only Root/Marketing can create events
+        if (!await canManageEvents()) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { canWrite, isRootUser } from '@/lib/roles'
+import { canManageEvents, isRootUser } from '@/lib/roles'
 import { resolveEventId } from '@/lib/events'
 import { auth } from '@clerk/nextjs/server'
 import { hasEventAccess } from '@/lib/access'
@@ -55,7 +55,7 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        if (!await canWrite()) {
+        if (!await canManageEvents()) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
@@ -178,9 +178,8 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        // Only Root can delete events? Or Admin too?
-        // Plan said: Root/Admin can Delete Events.
-        if (!await canWrite()) {
+        // Only Root/Marketing can delete events
+        if (!await canManageEvents()) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 

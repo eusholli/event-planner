@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EventMap } from '@/components/reports/EventMap'
 import { EventCalendar } from '@/components/reports/EventCalendar'
+import { useUser } from '@/components/auth'
+import { canManageEvents } from '@/lib/role-utils'
 
 interface Event {
     id: string
@@ -24,6 +26,8 @@ export default function EventsPage() {
     const [loading, setLoading] = useState(true)
     const [view, setView] = useState<'list' | 'calendar' | 'map'>('list')
     const router = useRouter()
+    const { user } = useUser()
+    const canManage = canManageEvents(user?.publicMetadata?.role as string)
 
     const fetchEvents = () => {
         setLoading(true)
@@ -136,14 +140,16 @@ export default function EventsPage() {
                                 <MapIcon className="w-5 h-5" />
                             </button>
                         </div>
-                        <button
-                            onClick={handleCreate}
-                            aria-label="New Event"
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span className="hidden sm:inline">New Event</span>
-                        </button>
+                        {canManage && (
+                            <button
+                                onClick={handleCreate}
+                                aria-label="New Event"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-95"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span className="hidden sm:inline">New Event</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -155,13 +161,13 @@ export default function EventsPage() {
                                 <div
                                     key={event.id}
                                     onClick={() => {
-                                        if (event.status === 'COMMITTED' || event.status === 'OCCURRED') {
+                                        if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') {
                                             router.push(`/events/${event.slug || event.id}/dashboard`)
                                         } else {
                                             alert('Event must be COMMITTED or OCCURRED to access management dashboard. Please edit the event to change its status.')
                                         }
                                     }}
-                                    className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${(event.status === 'COMMITTED' || event.status === 'OCCURRED') ? 'cursor-pointer' : 'cursor-default'}`}
+                                    className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${(canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') ? 'cursor-pointer' : 'cursor-default'}`}
                                 >
                                     <div className={`absolute top-0 left-0 w-1 h-full ${event.status === 'COMMITTED' ? 'bg-green-500' :
                                         event.status === 'CANCELED' ? 'bg-red-500' : 'bg-amber-500'
@@ -180,32 +186,34 @@ export default function EventsPage() {
                                                         'bg-amber-50 text-amber-700 border border-amber-100'}`}>
                                                 {event.status}
                                             </span>
-                                            <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        router.push(`/events/${event.slug || event.id}/settings`)
-                                                    }}
-                                                    className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleDelete(event.id, event.slug)
-                                                    }}
-                                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
-                                            </div>
+                                            {canManage && (
+                                                <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            router.push(`/events/${event.slug || event.id}/settings`)
+                                                        }}
+                                                        className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleDelete(event.id, event.slug)
+                                                        }}
+                                                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
