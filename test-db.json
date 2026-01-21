@@ -234,8 +234,10 @@
     },
     {
       "name": "MWC BCN 2026",
+      "status": "COMMITTED",
       "startDate": "2026-03-02T00:00:00.000Z",
       "endDate": "2026-03-05T00:00:00.000Z",
+      "address": "Barcelona, Spain",
       "geminiApiKey": "AIzaSyD3l8j-JEukPjNFhVZcV2HlWMLpMn2o734",
       "tags": [
         "APAC",
