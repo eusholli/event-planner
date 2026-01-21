@@ -139,13 +139,10 @@ function CalendarContent({ eventId }: { eventId: string }) {
             setAllAttendees(attendeesData)
 
             // Set calendar range based on settings
-            if (eventData) {
-                if (eventData.startDate) {
-                    setEventSettings({
-                        startDate: eventData.startDate.split('T')[0],
-                        endDate: eventData.endDate.split('T')[0]
-                    })
-                    setDate(new Date(eventData.startDate))
+            if (settingsData) {
+                if (settingsData.startDate) {
+                    setEventSettings(settingsData)
+                    setDate(moment(settingsData.startDate).toDate())
                 }
                 if (eventData.tags) {
                     setAvailableTags(eventData.tags)
@@ -160,8 +157,8 @@ function CalendarContent({ eventId }: { eventId: string }) {
 
     const onNavigate = useCallback((newDate: Date) => {
         if (eventSettings) {
-            const eventStart = new Date(eventSettings.startDate)
-            const eventEnd = new Date(eventSettings.endDate)
+            const eventStart = moment(eventSettings.startDate).toDate()
+            const eventEnd = moment(eventSettings.endDate).toDate()
 
             // Reset hours to compare dates only
             const target = new Date(newDate)
