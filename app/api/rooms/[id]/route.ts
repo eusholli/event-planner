@@ -14,6 +14,22 @@ export async function PUT(
         const body = await request.json()
         const { name, capacity } = body
 
+        // LOCK CHECK
+        const { isEventEditable } = await import('@/lib/events')
+        const currentRoom = await prisma.room.findUnique({ where: { id }, select: { eventId: true } })
+
+        if (!currentRoom) {
+            return NextResponse.json({ error: 'Room not found' }, { status: 404 })
+        }
+
+        if (currentRoom.eventId) {
+            if (!await isEventEditable(currentRoom.eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+        }
+
         const room = await prisma.room.update({
             where: { id },
             data: {
@@ -38,6 +54,22 @@ export async function DELETE(
     }
     const id = (await params).id
     try {
+        // LOCK CHECK
+        const { isEventEditable } = await import('@/lib/events')
+        const currentRoom = await prisma.room.findUnique({ where: { id }, select: { eventId: true } })
+
+        if (!currentRoom) {
+            return NextResponse.json({ error: 'Room not found' }, { status: 404 })
+        }
+
+        if (currentRoom.eventId) {
+            if (!await isEventEditable(currentRoom.eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+        }
+
         await prisma.room.delete({
             where: { id },
         })

@@ -71,7 +71,10 @@ function CalendarContent({ eventId }: { eventId: string }) {
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
     const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const { user } = useUser()
-    const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
+    const [isLocked, setIsLocked] = useState(false)
+    const role = user?.publicMetadata?.role as string
+    const userPermissionReadOnly = !hasWriteAccess(role)
+    const readOnly = userPermissionReadOnly || isLocked
 
     useEffect(() => {
         if (!eventId) return
@@ -140,6 +143,10 @@ function CalendarContent({ eventId }: { eventId: string }) {
 
             // Set calendar range based on settings
             if (eventData) {
+                if (eventData.status === 'OCCURRED') {
+                    setIsLocked(true)
+                }
+
                 if (eventData.startDate) {
                     setEventSettings(eventData)
                     setDate(moment(eventData.startDate).toDate())
@@ -491,9 +498,9 @@ function CalendarContent({ eventId }: { eventId: string }) {
                     resources={rooms.map(r => ({ id: r.id, title: r.name }))}
                     resourceIdAccessor={(resource: any) => resource.id}
                     resourceTitleAccessor={(resource: any) => resource.title}
-                    onSelectSlot={handleSelectSlot}
-                    selectable
-                    onEventDrop={onEventDrop}
+                    onSelectSlot={(slotInfo) => !readOnly && handleSelectSlot(slotInfo)}
+                    selectable={!readOnly}
+                    onEventDrop={(args) => !readOnly && onEventDrop(args)}
                     onDoubleClickEvent={(event: any) => {
                         if (clickTimeoutRef.current) {
                             clearTimeout(clickTimeoutRef.current)

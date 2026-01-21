@@ -129,6 +129,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
         }
 
+        // LOCK CHECK
+        const { isEventEditable } = await import('@/lib/events')
+        if (!await isEventEditable(eventId)) {
+            return NextResponse.json({
+                error: 'Event has occurred and is read-only.'
+            }, { status: 403 })
+        }
+
         let createdBy = null
         if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
             createdBy = 'test-user@example.com'

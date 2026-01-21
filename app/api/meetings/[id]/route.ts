@@ -36,6 +36,23 @@ export async function PUT(
     const id = (await params).id
     try {
         const body = await request.json()
+
+        // LOCK CHECK
+        const { isEventEditable } = await import('@/lib/events')
+        const currentMeeting = await prisma.meeting.findUnique({ where: { id }, select: { eventId: true } })
+
+        if (!currentMeeting) {
+            return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        }
+
+        if (currentMeeting.eventId) {
+            if (!await isEventEditable(currentMeeting.eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+        }
+
         const {
             title,
             purpose,
@@ -232,6 +249,20 @@ export async function DELETE(
             where: { id },
             include: { room: true, attendees: true }
         })
+
+        if (!meeting) {
+            return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        }
+
+        // LOCK CHECK
+        if (meeting.eventId) {
+            const { isEventEditable } = await import('@/lib/events')
+            if (!await isEventEditable(meeting.eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+        }
 
         if (meeting && meeting.date && meeting.startTime && meeting.endTime) {
             try {

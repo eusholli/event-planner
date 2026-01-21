@@ -72,6 +72,19 @@ export async function PATCH(
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
         }
 
+        // LOCK CHECK: If event is currently OCCURRED, block changes unless we are strictly changing status AWAY from OCCURRED
+        if (currentEvent.status === 'OCCURRED') {
+            // Check if user is attempting to unlock (change status to something else)
+            const isUnlocking = json.status && json.status !== 'OCCURRED';
+
+            if (!isUnlocking) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only. Change status to edit.'
+                }, { status: 403 })
+            }
+            // If unlocking, we allow the update to proceed (which will update the status)
+        }
+
         // Calculate final state for validation
         const finalStatus = json.status !== undefined ? json.status : currentEvent.status
         const finalStartDate = json.startDate !== undefined ? json.startDate : currentEvent.startDate
@@ -137,6 +150,13 @@ export async function DELETE(
         const existing = await prisma.event.findUnique({ where: { id } })
         if (!existing) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+        }
+
+        // LOCK CHECK
+        if (existing.status === 'OCCURRED') {
+            return NextResponse.json({
+                error: 'Cannot delete an event that has occurred.'
+            }, { status: 403 })
         }
 
         // Delete cascade handles children (defined in schema)

@@ -12,6 +12,15 @@ export async function POST(
         }
 
         const id = (await params).id
+
+        // LOCK CHECK
+        const { isEventEditable } = await import('@/lib/events')
+        if (!await isEventEditable(id)) {
+            return NextResponse.json({
+                error: 'Event has occurred and is read-only.'
+            }, { status: 403 })
+        }
+
         await resetEventData(id)
 
         return NextResponse.json({ success: true })
