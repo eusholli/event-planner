@@ -18,7 +18,13 @@ export async function GET(
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
         }
 
-        return NextResponse.json(event)
+        const response = {
+            ...event,
+            startDate: event.startDate ? event.startDate.toISOString().split('T')[0] : null,
+            endDate: event.endDate ? event.endDate.toISOString().split('T')[0] : null
+        }
+
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error fetching event:', error)
         return NextResponse.json({ error: 'Failed to fetch event' }, { status: 500 })
@@ -101,7 +107,13 @@ export async function PATCH(
             }
         })
 
-        return NextResponse.json(event)
+        const response = {
+            ...event,
+            startDate: event.startDate ? event.startDate.toISOString().split('T')[0] : null,
+            endDate: event.endDate ? event.endDate.toISOString().split('T')[0] : null
+        }
+
+        return NextResponse.json(response)
     } catch (error) {
         console.error('Error updating event:', error)
         return NextResponse.json({ error: 'Failed to update event' }, { status: 500 })
