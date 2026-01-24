@@ -46,9 +46,7 @@ export default clerkMiddleware(async (auth, req) => {
             return NextResponse.redirect(new URL('/access-denied', req.url));
         }
 
-        if (isReportRoute(req) && role !== 'root' && role !== 'admin') {
-            return NextResponse.redirect(new URL('/access-denied', req.url));
-        }
+        // Removed role check for isReportRoute to allow access to all logged-in users
     }
 });
 

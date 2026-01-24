@@ -20,7 +20,7 @@ export default function Navigation() {
         { href: '/chat', label: 'Chat' },
         { href: '/settings', label: 'Settings', roles: [Roles.Root] },
         { href: '/admin/users', label: 'Users', roles: [Roles.Root] },
-        { href: '/reports', label: 'Reports', roles: [Roles.Root] },
+        { href: '/reports', label: 'Reports' },
     ]
 
     const links = allLinks.filter(link => {
