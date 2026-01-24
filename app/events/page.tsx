@@ -29,6 +29,12 @@ export default function EventsPage() {
     const { user } = useUser()
     const canManage = canManageEvents(user?.publicMetadata?.role as string)
 
+    // Filter State
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'])
+    const [selectedRegions, setSelectedRegions] = useState<string[]>([])
+    const [selectedYears, setSelectedYears] = useState<string[]>([])
+
     const fetchEvents = () => {
         setLoading(true)
         fetch('/api/events')
@@ -105,6 +111,42 @@ export default function EventsPage() {
         }
     }
 
+    // Derived Filter Data
+    const availableRegions = Array.from(new Set(events.map(e => e.region).filter(Boolean))) as string[]
+    const availableYears = Array.from(new Set(events.map(e => {
+        return e.startDate ? new Date(e.startDate).getFullYear().toString() : null
+    }).filter(Boolean))) as string[]
+
+    const filteredEvents = events.filter(event => {
+        // Search Filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase()
+            const matchName = event.name.toLowerCase().includes(query)
+            const matchLocation = event.location?.toLowerCase().includes(query) || false
+            const matchAddress = event.address?.toLowerCase().includes(query) || false
+            if (!matchName && !matchLocation && !matchAddress) return false
+        }
+
+        // Status Filter
+        if (!selectedStatuses.includes(event.status)) {
+            return false
+        }
+
+        // Region Filter
+        if (selectedRegions.length > 0) {
+            if (!event.region || !selectedRegions.includes(event.region)) return false
+        }
+
+        // Year Filter
+        if (selectedYears.length > 0) {
+            if (!event.startDate) return false
+            const year = new Date(event.startDate).getFullYear().toString()
+            if (!selectedYears.includes(year)) return false
+        }
+
+        return true
+    })
+
     if (loading) return <div className="p-10 flex justify-center text-neutral-500 animate-pulse">Loading portfolio...</div>
 
     return (
@@ -117,6 +159,19 @@ export default function EventsPage() {
                         <p className="text-neutral-500 mt-1">Manage global strategy, timelines, and regional coverage.</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        {/* Clear Filters Button (Mobile/Desktop) */}
+                        <button
+                            onClick={() => {
+                                setSearchQuery('')
+                                setSelectedStatuses(['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'])
+                                setSelectedRegions([])
+                                setSelectedYears([])
+                            }}
+                            className="bg-white border border-neutral-200 text-neutral-600 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors shadow-sm"
+                        >
+                            Clear Filters
+                        </button>
+
                         <div className="bg-white border border-neutral-200 rounded-lg p-1 flex items-center">
                             <button
                                 onClick={() => setView('list')}
@@ -153,119 +208,215 @@ export default function EventsPage() {
                     </div>
                 </div>
 
-                {/* Content Views */}
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {view === 'list' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {events.map((event) => (
-                                <div
-                                    key={event.id}
-                                    onClick={() => {
-                                        if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') {
-                                            router.push(`/events/${event.slug || event.id}/dashboard`)
-                                        } else {
-                                            alert('Event must be COMMITTED or OCCURRED to access management dashboard. Please edit the event to change its status.')
-                                        }
-                                    }}
-                                    className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${(canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') ? 'cursor-pointer' : 'cursor-default'}`}
-                                >
-                                    <div className={`absolute top-0 left-0 w-1 h-full ${event.status === 'COMMITTED' ? 'bg-green-500' :
-                                        event.status === 'CANCELED' ? 'bg-red-500' : 'bg-amber-500'
-                                        }`} />
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    {/* Filters Sidebar */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm space-y-6">
+                            <h3 className="font-semibold text-neutral-900">Filters</h3>
 
-                                    <div className="flex justify-between items-start mb-4 pl-3">
-                                        <div className="space-y-1">
-                                            {event.region && (
-                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{event.region}</span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase 
-                                                ${event.status === 'COMMITTED' ? 'bg-green-50 text-green-700 border border-green-100' :
-                                                    event.status === 'CANCELED' ? 'bg-red-50 text-red-700 border border-red-100' :
-                                                        'bg-amber-50 text-amber-700 border border-amber-100'}`}>
-                                                {event.status}
-                                            </span>
-                                            {canManage && (
-                                                <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            router.push(`/events/${event.slug || event.id}/settings`)
-                                                        }}
-                                                        className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleDelete(event.id, event.slug)
-                                                        }}
-                                                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                            {/* Search */}
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Search</label>
+                                <input
+                                    type="text"
+                                    placeholder="Search events..."
+                                    className="input-field text-sm"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                />
+                            </div>
 
-                                    <div className="pl-3">
-                                        <h3 className="text-xl font-bold text-neutral-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-1">
-                                            {event.name}
-                                        </h3>
+                            {/* Status */}
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">Status</label>
+                                <div className="space-y-2">
+                                    {['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'].map(status => (
+                                        <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStatuses.includes(status)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedStatuses(prev => [...prev, status])
+                                                    } else {
+                                                        setSelectedStatuses(prev => prev.filter(s => s !== status))
+                                                    }
+                                                }}
+                                                className="w-4 h-4 text-blue-600 border-neutral-300 rounded focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm text-neutral-600 capitalize">{status.toLowerCase()}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
 
-                                        <div className="space-y-1 text-sm text-neutral-500">
-                                            <div className="flex items-center gap-2">
-                                                <CalendarIcon className="w-3.5 h-3.5" />
-                                                <span>
-                                                    {event.startDate && event.endDate
-                                                        ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
-                                                        : 'Dates TBD'}
-                                                </span>
-                                            </div>
-                                            {event.address && (
-                                                <div className="flex items-center gap-2">
-                                                    <MapIcon className="w-3.5 h-3.5" />
-                                                    <span className="line-clamp-1">{event.address}</span>
-                                                </div>
-                                            )}
-                                        </div>
+                            {/* Region */}
+                            {availableRegions.length > 0 && (
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">Region</label>
+                                    <div className="space-y-2">
+                                        {availableRegions.map(region => (
+                                            <label key={region} className="flex items-center space-x-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedRegions.includes(region)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedRegions(prev => [...prev, region])
+                                                        } else {
+                                                            setSelectedRegions(prev => prev.filter(r => r !== region))
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-blue-600 border-neutral-300 rounded focus:ring-blue-500"
+                                                />
+                                                <span className="text-sm text-neutral-600">{region}</span>
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
-                            ))}
-                            {events.length === 0 && (
-                                <div className="col-span-full py-20 text-center border-2 border-dashed border-neutral-200 rounded-xl bg-white/50">
-                                    <div className="mx-auto w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
-                                        <CalendarIcon className="w-6 h-6 text-neutral-400" />
+                            )}
+
+                            {/* Year */}
+                            {availableYears.length > 0 && (
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">Year</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableYears.sort().reverse().map(year => (
+                                            <button
+                                                key={year}
+                                                onClick={() => {
+                                                    setSelectedYears(prev =>
+                                                        prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]
+                                                    )
+                                                }}
+                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedYears.includes(year)
+                                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                    : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300'
+                                                    }`}
+                                            >
+                                                {year}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <h3 className="text-lg font-medium text-neutral-900">No events found</h3>
-                                    <p className="text-neutral-500 mt-1">Get started by creating your first event to build your portfolio.</p>
                                 </div>
                             )}
                         </div>
-                    )}
+                    </div>
 
-                    {view === 'calendar' && (
-                        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-                            <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
-                            <EventCalendar events={events} />
-                        </div>
-                    )}
+                    {/* Content Views */}
+                    <div className="lg:col-span-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {view === 'list' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {filteredEvents.map((event) => (
+                                    <div
+                                        key={event.id}
+                                        onClick={() => {
+                                            if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') {
+                                                router.push(`/events/${event.slug || event.id}/dashboard`)
+                                            } else {
+                                                alert('Event must be COMMITTED or OCCURRED to access management dashboard. Please edit the event to change its status.')
+                                            }
+                                        }}
+                                        className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${(canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') ? 'cursor-pointer' : 'cursor-default'}`}
+                                    >
+                                        <div className={`absolute top-0 left-0 w-1 h-full ${event.status === 'COMMITTED' ? 'bg-green-500' :
+                                            event.status === 'CANCELED' ? 'bg-red-500' : 'bg-amber-500'
+                                            }`} />
 
-                    {view === 'map' && (
-                        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-                            <h2 className="text-lg font-semibold mb-4">Global Event Footprint</h2>
-                            <EventMap events={events} />
-                        </div>
-                    )}
+                                        <div className="flex justify-between items-start mb-4 pl-3">
+                                            <div className="space-y-1">
+                                                {event.region && (
+                                                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{event.region}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase 
+                                                    ${event.status === 'COMMITTED' ? 'bg-green-50 text-green-700 border border-green-100' :
+                                                        event.status === 'CANCELED' ? 'bg-red-50 text-red-700 border border-red-100' :
+                                                            'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                                                    {event.status}
+                                                </span>
+                                                {canManage && (
+                                                    <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                router.push(`/events/${event.slug || event.id}/settings`)
+                                                            }}
+                                                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleDelete(event.id, event.slug)
+                                                            }}
+                                                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pl-3">
+                                            <h3 className="text-xl font-bold text-neutral-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-1">
+                                                {event.name}
+                                            </h3>
+
+                                            <div className="space-y-1 text-sm text-neutral-500">
+                                                <div className="flex items-center gap-2">
+                                                    <CalendarIcon className="w-3.5 h-3.5" />
+                                                    <span>
+                                                        {event.startDate && event.endDate
+                                                            ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
+                                                            : 'Dates TBD'}
+                                                    </span>
+                                                </div>
+                                                {event.address && (
+                                                    <div className="flex items-center gap-2">
+                                                        <MapIcon className="w-3.5 h-3.5" />
+                                                        <span className="line-clamp-1">{event.address}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {filteredEvents.length === 0 && (
+                                    <div className="col-span-full py-20 text-center border-2 border-dashed border-neutral-200 rounded-xl bg-white/50">
+                                        <div className="mx-auto w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
+                                            <CalendarIcon className="w-6 h-6 text-neutral-400" />
+                                        </div>
+                                        <h3 className="text-lg font-medium text-neutral-900">No events found</h3>
+                                        <p className="text-neutral-500 mt-1">Try adjusting your filters or create a new event.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {view === 'calendar' && (
+                            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
+                                <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
+                                <EventCalendar events={filteredEvents} />
+                            </div>
+                        )}
+
+                        {view === 'map' && (
+                            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
+                                <h2 className="text-lg font-semibold mb-4">Global Event Footprint</h2>
+                                <EventMap events={filteredEvents} />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div >
