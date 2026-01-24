@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { geocodeAddress } from '@/lib/geocoding'
 
 export async function POST(request: Request) {
     try {
@@ -52,6 +53,20 @@ export async function POST(request: Request) {
         if (config.events && Array.isArray(config.events)) {
             for (const evt of config.events) {
                 const parsedEvt = parseDates(evt)
+
+                // Geocode if address exists but coords are missing
+                if (parsedEvt.address && (!parsedEvt.latitude || !parsedEvt.longitude)) {
+                    try {
+                        const geo = await geocodeAddress(parsedEvt.address)
+                        if (geo) {
+                            parsedEvt.latitude = geo.latitude
+                            parsedEvt.longitude = geo.longitude
+                        }
+                    } catch (e) {
+                        console.error('Import settings geocoding failed', e)
+                    }
+                }
+
                 // Use name as unique key? Or just create always?
                 const existing = await prisma.event.findFirst({ where: { name: parsedEvt.name } })
                 if (existing) {

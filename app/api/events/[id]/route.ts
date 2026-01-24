@@ -5,6 +5,7 @@ import { resolveEventId } from '@/lib/events'
 import { auth } from '@clerk/nextjs/server'
 import { hasEventAccess } from '@/lib/access'
 import { Roles } from '@/lib/constants'
+import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
@@ -137,6 +138,17 @@ export async function PATCH(
             }
         }
 
+        if (json.address) {
+            const geo = await geocodeAddress(json.address)
+            if (geo) {
+                // We can't easily add properties to `data` in one go if we want to be clean, 
+                // but let's just add them to the data object we pass to update.
+                // Ideally we check if address actually changed, but geocoding again is safer/easier.
+                (json as any).latitude = geo.latitude;
+                (json as any).longitude = geo.longitude;
+            }
+        }
+
         const event = await prisma.event.update({
             where: { id },
             data: {
@@ -158,7 +170,9 @@ export async function PATCH(
                 authorizedUserIds: json.authorizedUserIds,
                 timezone: json.timezone,
                 password: json.password,
-                description: json.description
+                description: json.description,
+                latitude: (json as any).latitude,
+                longitude: (json as any).longitude
             }
         })
 

@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { JSDOM } from 'jsdom'
 import prisma from '@/lib/prisma'
+import { geocodeAddress } from '@/lib/geocoding'
 
 export async function generateEventDetails(url: string, currentData?: any) {
     try {
@@ -201,6 +202,23 @@ export async function importEventData(eventId: string, data: any) {
         if (data.event.password !== undefined) eventUpdate.password = data.event.password
         if (data.event.description !== undefined) eventUpdate.description = data.event.description
         if (data.event.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = data.event.authorizedUserIds
+
+        // Geocode if address exists but coords are missing
+        if (data.event.address && (data.event.latitude === undefined || data.event.longitude === undefined)) {
+            try {
+                const geo = await geocodeAddress(data.event.address)
+                if (geo) {
+                    eventUpdate.latitude = geo.latitude
+                    eventUpdate.longitude = geo.longitude
+                }
+            } catch (e) {
+                console.error('Event import action geocoding failed', e)
+            }
+        }
+
+        // Allow direct import of coords if provided
+        if (data.event.latitude !== undefined) eventUpdate.latitude = data.event.latitude
+        if (data.event.longitude !== undefined) eventUpdate.longitude = data.event.longitude
 
         await prisma.event.update({
             where: { id: eventId },

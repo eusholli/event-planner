@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 import { isRootUser, canManageEvents } from '@/lib/roles'
 
 import { Roles } from '@/lib/constants'
+import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,6 +78,20 @@ export async function POST(request: Request) {
         const defaultMeetingTypes = settings?.defaultMeetingTypes || []
         const defaultAttendeeTypes = settings?.defaultAttendeeTypes || []
 
+        let latitude = null
+        let longitude = null
+        if (json.address) {
+            try {
+                const geo = await geocodeAddress(json.address)
+                if (geo) {
+                    latitude = geo.latitude
+                    longitude = geo.longitude
+                }
+            } catch (e) {
+                console.error('Geocoding failed:', e)
+            }
+        }
+
         const event = await prisma.event.create({
             data: {
                 name: json.name ?? 'New Event',
@@ -95,10 +110,12 @@ export async function POST(request: Request) {
                 attendeeTypes: json.attendeeTypes || defaultAttendeeTypes,
                 authorizedUserIds: json.authorizedUserIds || [],
                 timezone: json.timezone,
-                password: json.password
+                password: json.password,
+                address: json.address,
+                latitude,
+                longitude
             }
         })
-
 
         return NextResponse.json(event)
     } catch (error) {
