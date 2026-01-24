@@ -40,6 +40,8 @@ model Event {
   rooms           Room[]
   password        String?
   description     String?
+  latitude        Float?
+  longitude       Float?
 }
 
 model Attendee {

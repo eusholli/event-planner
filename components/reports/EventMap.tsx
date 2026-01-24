@@ -19,17 +19,16 @@ interface Event {
     status: string
     startDate?: string | null
     endDate?: string | null
+    latitude?: number | null
+    longitude?: number | null
 }
 
 // Map component
 export function EventMap({ events }: { events: Event[] }) {
-    // Note: In a real app we would Geocode the address to Lat/Lng.
-    // For this prototype, we'll maintain a static mapping of Regions to Centers, 
-    // or mock geocoding for demonstration if address is present.
-    // Ideally the Backend would have `lat` and `lng` fields on Event.
+    // Note: We use latitude/longitude if available, otherwise fallback to region centers.
 
     // Hardcoded centers for demo purposes if no real geocoding service
-    const getCoordinates = (region: string, offset: number) => {
+    const getCoordinates = (region: string, offset: number): [number, number] => {
         const jitter = (offset * 2); // Spread markers slightly
         switch (region) {
             case 'NA': return [40.7128 + jitter, -74.0060 + jitter] // NYC
@@ -63,15 +62,22 @@ export function EventMap({ events }: { events: Event[] }) {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     {events.map((event, index) => {
-                        if (!event.region) return null
-                        const position = getCoordinates(event.region, index * 0.1) as [number, number]
-                        if (position[0] === 0) return null
+                        let position: [number, number] = [0, 0]
+
+                        if (typeof event.latitude === 'number' && typeof event.longitude === 'number') {
+                            position = [event.latitude, event.longitude]
+                        } else if (event.region) {
+                            position = getCoordinates(event.region, index * 0.001) // Smaller jitter
+                        }
+
+                        if (position[0] === 0 && position[1] === 0) return null
 
                         return (
                             <Marker key={event.id} position={position}>
                                 <Popup>
                                     <strong>{event.name}</strong><br />
-                                    {event.region}<br />
+                                    {event.address && <>{event.address}<br /></>}
+                                    {event.region && <>{event.region}<br /></>}
                                     Status: {event.status}
                                 </Popup>
                             </Marker>

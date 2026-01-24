@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { isRootUser } from '@/lib/roles'
+import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,6 +75,25 @@ export async function POST(request: Request) {
                 if (evt.description !== undefined) eventUpdate.description = evt.description
                 if (evt.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = evt.authorizedUserIds
 
+                // Geocode if address exists but coords are missing
+                let latitude = (evt as any).latitude
+                let longitude = (evt as any).longitude
+
+                if (evt.address && (latitude === undefined || longitude === undefined)) {
+                    try {
+                        const geo = await geocodeAddress(evt.address)
+                        if (geo) {
+                            latitude = geo.latitude
+                            longitude = geo.longitude
+                        }
+                    } catch (e) {
+                        console.error('Import geocoding failed for event:', evt.name, e)
+                    }
+                }
+
+                if (latitude !== undefined) eventUpdate.latitude = latitude
+                if (longitude !== undefined) eventUpdate.longitude = longitude
+
                 const event = await prisma.event.upsert({
                     where: { id: evt.id || 'new_impossible_id' },
                     create: {
@@ -94,6 +114,8 @@ export async function POST(request: Request) {
                         meetingTypes: evt.meetingTypes || [],
                         attendeeTypes: evt.attendeeTypes || [],
                         address: evt.address,
+                        latitude,
+                        longitude,
                         timezone: evt.timezone,
 
                         password: evt.password,
