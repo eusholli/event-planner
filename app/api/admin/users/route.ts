@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { checkRole } from '@/lib/roles'
 import { Roles } from '@/lib/constants'
 
-export async function GET() {
+export async function GET(req: Request) {
     // Check if user is root
     const isRoot = await checkRole(Roles.Root)
 
@@ -12,8 +12,17 @@ export async function GET() {
     }
 
     try {
+        const { searchParams } = new URL(req.url)
+        const page = parseInt(searchParams.get('page') || '1', 10)
+        const limit = parseInt(searchParams.get('limit') || '10', 10)
+        const query = searchParams.get('search') || ''
+
         const client = await clerkClient()
-        const users = await client.users.getUserList()
+        const users = await client.users.getUserList({
+            limit,
+            offset: (page - 1) * limit,
+            query,
+        })
 
         // Backfill missing roles
         const updates = users.data.map(async (user) => {
@@ -35,7 +44,10 @@ export async function GET() {
         // Wait for all updates to complete (or at least fire them off)
         await Promise.all(updates)
 
-        return NextResponse.json(users)
+        return NextResponse.json({
+            data: users.data,
+            totalCount: users.totalCount,
+        })
     } catch (error) {
         console.error('Error fetching users:', error)
         return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
