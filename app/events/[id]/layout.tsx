@@ -49,7 +49,14 @@ export default async function EventLayout({
     const hasAccess = hasEventAccess(event as any, userId, role)
 
     if (hasAccess) {
-        return <>{children}</>
+        return (
+            <div className="space-y-6">
+                <div className="border-b border-zinc-200 pb-4">
+                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900">{event.name}</h1>
+                </div>
+                {children}
+            </div>
+        )
     }
 
     // If no direct access, check if password protection is enabled
