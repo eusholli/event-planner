@@ -8,6 +8,7 @@ import { EventMap } from '@/components/reports/EventMap'
 import { EventCalendar } from '@/components/reports/EventCalendar'
 import { useUser } from '@/components/auth'
 import { canManageEvents } from '@/lib/role-utils'
+import { getStatusColor } from '@/lib/status-colors'
 
 interface Event {
     id: string
@@ -37,6 +38,8 @@ export default function EventsPage() {
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'])
     const [selectedRegions, setSelectedRegions] = useState<string[]>([])
     const [selectedYears, setSelectedYears] = useState<string[]>([])
+
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
     const fetchEvents = () => {
         setLoading(true)
@@ -114,6 +117,20 @@ export default function EventsPage() {
         }
     }
 
+    // Unified Navigation Logic
+    const handleEventClick = (event: Event) => {
+        setSelectedEvent(event)
+    }
+
+    // Modal Action
+    const handleViewDashboard = (event: Event) => {
+        if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') {
+            router.push(`/events/${event.slug || event.id}/dashboard`)
+        } else {
+            alert('Event must be COMMITTED or OCCURRED to access management dashboard.')
+        }
+    }
+
     // Derived Filter Data
     const availableRegions = Array.from(new Set(events.map(e => e.region).filter(Boolean))) as string[]
     const availableYears = Array.from(new Set(events.map(e => {
@@ -126,7 +143,6 @@ export default function EventsPage() {
             const query = searchQuery.toLowerCase()
             const matchName = event.name.toLowerCase().includes(query)
             const matchLocation = event.location?.toLowerCase().includes(query) || false
-
             const matchAddress = event.address?.toLowerCase().includes(query) || false
             const matchDescription = event.description?.toLowerCase().includes(query) || false
             if (!matchName && !matchLocation && !matchAddress && !matchDescription) return false
@@ -315,18 +331,10 @@ export default function EventsPage() {
                                 {filteredEvents.map((event) => (
                                     <div
                                         key={event.id}
-                                        onClick={() => {
-                                            if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') {
-                                                router.push(`/events/${event.slug || event.id}/dashboard`)
-                                            } else {
-                                                alert('Event must be COMMITTED or OCCURRED to access management dashboard. Please edit the event to change its status.')
-                                            }
-                                        }}
-                                        className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden ${(canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') ? 'cursor-pointer' : 'cursor-default'}`}
+                                        onClick={() => handleEventClick(event)}
+                                        className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden cursor-pointer`}
                                     >
-                                        <div className={`absolute top-0 left-0 w-1 h-full ${event.status === 'COMMITTED' ? 'bg-green-500' :
-                                            event.status === 'CANCELED' ? 'bg-red-500' : 'bg-amber-500'
-                                            }`} />
+                                        <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: getStatusColor(event.status).bg }} />
 
                                         <div className="flex justify-between items-start mb-4 pl-3">
                                             <div className="space-y-1">
@@ -335,10 +343,9 @@ export default function EventsPage() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase 
-                                                    ${event.status === 'COMMITTED' ? 'bg-green-50 text-green-700 border border-green-100' :
-                                                        event.status === 'CANCELED' ? 'bg-red-50 text-red-700 border border-red-100' :
-                                                            'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                                                <span
+                                                    className={`px-2 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase ${getStatusColor(event.status).className}`}
+                                                >
                                                     {event.status}
                                                 </span>
                                                 {canManage && (
@@ -411,19 +418,107 @@ export default function EventsPage() {
                         {view === 'calendar' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
-                                <EventCalendar events={filteredEvents} />
+                                <EventCalendar events={filteredEvents} onEventClick={handleEventClick} />
                             </div>
                         )}
 
                         {view === 'map' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Global Event Footprint</h2>
-                                <EventMap events={filteredEvents} />
+                                <EventMap events={filteredEvents} onEventClick={handleEventClick} />
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Event Details Modal */}
+            {selectedEvent && (
+                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-neutral-100 relative">
+                            <button
+                                onClick={() => setSelectedEvent(null)}
+                                className="absolute top-4 right-4 p-2 bg-neutral-100 text-neutral-500 rounded-full hover:bg-neutral-200 transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            <h3 className="text-2xl font-bold text-neutral-900 pr-10">{selectedEvent.name}</h3>
+                            <div className="mt-2 flex items-center gap-2">
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold tracking-wider uppercase border ${getStatusColor(selectedEvent.status).className}`}>
+                                    {selectedEvent.status}
+                                </span>
+                                {selectedEvent.region && (
+                                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest border border-neutral-200 px-2 py-1 rounded-full">
+                                        {selectedEvent.region}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            {/* Dates */}
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                    <CalendarIcon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">Date</label>
+                                    <p className="text-neutral-900 font-medium">
+                                        {selectedEvent.startDate && selectedEvent.endDate
+                                            ? `${new Date(selectedEvent.startDate).toLocaleDateString()} - ${new Date(selectedEvent.endDate).toLocaleDateString()}`
+                                            : 'Dates To Be Determined'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Location */}
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                                    <MapIcon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">Location</label>
+                                    <p className="text-neutral-900 font-medium">
+                                        {selectedEvent.address || 'Location To Be Determined'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            {selectedEvent.description && (
+                                <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-100">
+                                    <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Description</label>
+                                    <p className="text-sm text-neutral-600 leading-relaxed">
+                                        {selectedEvent.description}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => setSelectedEvent(null)}
+                                className="px-4 py-2 text-neutral-600 font-medium hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                            >
+                                Close
+                            </button>
+                            {(canManage || selectedEvent.status === 'COMMITTED' || selectedEvent.status === 'OCCURRED') && (
+                                <button
+                                    onClick={() => handleViewDashboard(selectedEvent)}
+                                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
+                                >
+                                    View Dashboard
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     )
 }
+
