@@ -1,30 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import 'leaflet/dist/leaflet.css'
 import dynamic from 'next/dynamic'
+import { getStatusColor } from '@/lib/status-colors'
 
 // Leaflet specific hacks for Next.js (window check)
-// We use dynamic import for the actual map container
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false })
 const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false })
+const CircleMarker = dynamic(() => import('react-leaflet').then(mod => mod.CircleMarker), { ssr: false })
 
 interface Event {
     id: string
     name: string
+    slug?: string
     address: string | null
     region: string | null
     status: string
-    startDate?: string | null
-    endDate?: string | null
+    startDate: string | null
+    endDate: string | null
     latitude?: number | null
     longitude?: number | null
 }
 
 // Map component
-export function EventMap({ events }: { events: Event[] }) {
+export function EventMap({ events, onEventClick }: { events: Event[], onEventClick?: (event: Event) => void }) {
     // Note: We use latitude/longitude if available, otherwise fallback to region centers.
 
     // Hardcoded centers for demo purposes if no real geocoding service
@@ -44,6 +45,8 @@ export function EventMap({ events }: { events: Event[] }) {
     // Fix for default marker icons in Leaflet with Next.js/Webpack
     useEffect(() => {
         // This is a known issue with Leaflet in React
+        // Since we are moving to CircleMarker, we might not need the default icon fix anymore 
+        // but keeping it just in case we use standard markers later.
         const L = require('leaflet')
         delete L.Icon.Default.prototype._getIconUrl
         L.Icon.Default.mergeOptions({
@@ -72,15 +75,39 @@ export function EventMap({ events }: { events: Event[] }) {
 
                         if (position[0] === 0 && position[1] === 0) return null
 
+                        const colors = getStatusColor(event.status)
+
                         return (
-                            <Marker key={event.id} position={position}>
-                                <Popup>
-                                    <strong>{event.name}</strong><br />
-                                    {event.address && <>{event.address}<br /></>}
-                                    {event.region && <>{event.region}<br /></>}
-                                    Status: {event.status}
+                            <CircleMarker
+                                key={event.id}
+                                center={position}
+                                pathOptions={{
+                                    color: colors.text,
+                                    fillColor: colors.bg,
+                                    fillOpacity: 0.8,
+                                    weight: 2
+                                }}
+                                radius={8}
+                                eventHandlers={{
+                                    click: () => {
+                                        if (onEventClick) {
+                                            onEventClick(event)
+                                        }
+                                    },
+                                    mouseover: (e) => {
+                                        e.target.openPopup()
+                                    },
+                                    mouseout: (e) => {
+                                        e.target.closePopup()
+                                    }
+                                }}
+                            >
+                                <Popup closeButton={false}>
+                                    <div className="text-xs font-bold text-neutral-900 whitespace-nowrap">
+                                        {event.name}
+                                    </div>
                                 </Popup>
-                            </Marker>
+                            </CircleMarker>
                         )
                     })}
                 </MapContainer>
