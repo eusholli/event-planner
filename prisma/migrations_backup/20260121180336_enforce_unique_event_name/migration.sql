@@ -7,7 +7,13 @@
 
 */
 -- AlterTable
-ALTER TABLE "Event" ADD COLUMN     "slug" TEXT NOT NULL,
+ALTER TABLE "Event" ADD COLUMN     "slug" TEXT;
+
+-- Backfill slug from name (simple slugification)
+UPDATE "Event" SET "slug" = replace(lower("name"), ' ', '-') WHERE "slug" IS NULL;
+
+-- Enforce NOT NULL after backfill
+ALTER TABLE "Event" ALTER COLUMN "slug" SET NOT NULL;
 ALTER COLUMN "name" DROP DEFAULT;
 
 -- CreateIndex
