@@ -39,6 +39,7 @@ model Event {
   meetings        Meeting[]
   rooms           Room[]
   password        String?
+  description     String?
 }
 
 model Attendee {

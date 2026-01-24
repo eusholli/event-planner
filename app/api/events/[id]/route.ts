@@ -157,7 +157,8 @@ export async function PATCH(
                 attendeeTypes: json.attendeeTypes,
                 authorizedUserIds: json.authorizedUserIds,
                 timezone: json.timezone,
-                password: json.password
+                password: json.password,
+                description: json.description
             }
         })
 

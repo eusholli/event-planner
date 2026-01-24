@@ -38,6 +38,7 @@ interface EventSettings {
     slug: string
     authorizedUserIds: string[]
     password?: string
+    description?: string | null
 }
 
 export default function EventSettingsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -208,6 +209,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
         setEvent(prev => ({
             ...prev!,
             name: data.name || prev!.name,
+            description: data.description || prev!.description,
             startDate: data.startDate || prev!.startDate,
             endDate: data.endDate || prev!.endDate,
             address: data.address || data.location || prev!.address, // added location fallback
@@ -337,6 +339,20 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                             <p className="text-xs text-neutral-500 mt-1">Optional: Provide URL for better AI accuracy.</p>
+                        </div>
+
+                        {/* 5. Description */}
+                        <div className="col-span-2">
+                            <label htmlFor="description" className="block text-sm font-medium text-neutral-700">Event Description</label>
+                            <textarea
+                                id="description"
+                                rows={3}
+                                disabled={isLocked}
+                                value={event.description || ''}
+                                onChange={e => setEvent({ ...event, description: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
+                                placeholder="Brief overview of the event..."
+                            />
                         </div>
 
                         {/* 4. Slug - Mandatory */}
