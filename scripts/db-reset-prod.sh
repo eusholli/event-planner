@@ -6,7 +6,7 @@ echo "⚠️  DANGER ZONE: PROD DATABASE RESET ⚠️"
 echo "This script will completely WIPE (Delete) all data in the target database and re-apply all migrations."
 echo ""
 echo "Please paste your connection string (e.g., postgresql://postgres.xxxx:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true):"
-read -r -s DB_URL
+read -r DB_URL
 
 if [ -z "$DB_URL" ]; then
     echo "Error: No connection string provided."
@@ -14,7 +14,7 @@ if [ -z "$DB_URL" ]; then
 fi
 
 echo ""
-echo "You provided a connection string."
+echo "You entered: $DB_URL"
 echo "Are you ABSOLUTELY SURE you want to reset this database? (Type 'yes' to confirm)"
 read -r CONFIRMATION
 
