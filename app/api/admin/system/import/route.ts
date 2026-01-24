@@ -71,6 +71,7 @@ export async function POST(request: Request) {
                 if (evt.timezone !== undefined) eventUpdate.timezone = evt.timezone
                 if (evt.slug !== undefined) eventUpdate.slug = evt.slug
                 if (evt.password !== undefined) eventUpdate.password = evt.password
+                if (evt.description !== undefined) eventUpdate.description = evt.description
                 if (evt.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = evt.authorizedUserIds
 
                 const event = await prisma.event.upsert({
@@ -94,7 +95,9 @@ export async function POST(request: Request) {
                         attendeeTypes: evt.attendeeTypes || [],
                         address: evt.address,
                         timezone: evt.timezone,
+
                         password: evt.password,
+                        description: evt.description,
                         authorizedUserIds: evt.authorizedUserIds || []
                     },
                     update: eventUpdate

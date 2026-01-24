@@ -19,6 +19,7 @@ interface Event {
     status: string
     location?: string
     address: string | null
+    description?: string | null
 }
 
 export default function EventsPage() {
@@ -123,8 +124,10 @@ export default function EventsPage() {
             const query = searchQuery.toLowerCase()
             const matchName = event.name.toLowerCase().includes(query)
             const matchLocation = event.location?.toLowerCase().includes(query) || false
+
             const matchAddress = event.address?.toLowerCase().includes(query) || false
-            if (!matchName && !matchLocation && !matchAddress) return false
+            const matchDescription = event.description?.toLowerCase().includes(query) || false
+            if (!matchName && !matchLocation && !matchAddress && !matchDescription) return false
         }
 
         // Status Filter
