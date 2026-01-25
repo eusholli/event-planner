@@ -2,8 +2,16 @@ import { PrismaClient } from '@prisma/client'
 
 // Force reload for schema updates
 
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
+
+const connectionString = `${process.env.POSTGRES_PRISMA_URL}`
+
+const pool = new Pool({ connectionString })
+const adapter = new PrismaPg(pool)
+
 const prismaClientSingleton = () => {
-  return new PrismaClient()
+  return new PrismaClient({ adapter })
 }
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
