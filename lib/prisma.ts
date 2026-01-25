@@ -7,9 +7,10 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 const connectionString = `${process.env.POSTGRES_PRISMA_URL}`
 
+const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1')
 const pool = new Pool({
-  connectionString,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  connectionString: isLocal ? connectionString : connectionString.replace(/(\?|&)sslmode=[^&]+/, ''),
+  ssl: isLocal ? undefined : { rejectUnauthorized: false },
 })
 const adapter = new PrismaPg(pool)
 
