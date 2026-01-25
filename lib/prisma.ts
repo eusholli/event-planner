@@ -8,8 +8,20 @@ import { PrismaPg } from '@prisma/adapter-pg'
 const connectionString = `${process.env.POSTGRES_PRISMA_URL}`
 
 const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1')
+
+let cleanedConnectionString = connectionString
+if (!isLocal) {
+  try {
+    const url = new URL(connectionString)
+    url.searchParams.delete('sslmode')
+    cleanedConnectionString = url.toString()
+  } catch (error) {
+    console.error('Failed to parse connection string:', error)
+  }
+}
+
 const pool = new Pool({
-  connectionString: isLocal ? connectionString : connectionString.replace(/(\?|&)sslmode=[^&]+/, ''),
+  connectionString: cleanedConnectionString,
   ssl: isLocal ? undefined : { rejectUnauthorized: false },
 })
 const adapter = new PrismaPg(pool)
