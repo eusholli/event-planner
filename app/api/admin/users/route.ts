@@ -6,10 +6,9 @@ import { Roles } from '@/lib/constants'
 export async function GET(req: Request) {
     // Check permissions
     const isRoot = await checkRole(Roles.Root)
-    const isAdmin = await checkRole(Roles.Admin)
     const isMarketing = await checkRole(Roles.Marketing)
 
-    if (!isRoot && !isAdmin && !isMarketing) {
+    if (!isRoot && !isMarketing) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -57,10 +56,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    // Check if user is root
+    // Check if user is root or marketing
     const isRoot = await checkRole(Roles.Root)
+    const isMarketing = await checkRole(Roles.Marketing)
 
-    if (!isRoot) {
+    if (!isRoot && !isMarketing) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -92,10 +92,11 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-    // Check if user is root
+    // Check if user is root or marketing
     const isRoot = await checkRole(Roles.Root)
+    const isMarketing = await checkRole(Roles.Marketing)
 
-    if (!isRoot) {
+    if (!isRoot && !isMarketing) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

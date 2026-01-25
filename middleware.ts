@@ -13,7 +13,10 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 const isRootRoute = createRouteMatcher([
-    '/settings(.*)',
+    '/settings(.*)'
+]);
+
+const isUserManagementRoute = createRouteMatcher([
     '/admin/users(.*)'
 ]);
 
@@ -44,6 +47,10 @@ export default clerkMiddleware(async (auth, req) => {
 
         // Redirect logic for RBAC
         if (isRootRoute(req) && role !== 'root') {
+            return NextResponse.redirect(new URL('/access-denied', req.url));
+        }
+
+        if (isUserManagementRoute(req) && role !== 'root' && role !== 'marketing') {
             return NextResponse.redirect(new URL('/access-denied', req.url));
         }
 
