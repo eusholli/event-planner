@@ -7,6 +7,7 @@ import { Save, Trash2, Download, Upload, AlertTriangle, ArrowLeft } from 'lucide
 import Link from 'next/link'
 import { useUser } from '@/components/auth'
 import { Roles } from '@/lib/constants'
+import { canManageEvents } from '@/lib/role-utils'
 
 interface User {
     id: string
@@ -107,7 +108,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     // Fetch users if privileged
     useEffect(() => {
         const role = currentUser?.publicMetadata?.role as string
-        const canManageAccess = role === Roles.Root || role === Roles.Marketing || role === Roles.Admin
+        const canManageAccess = canManageEvents(role)
 
         if (canManageAccess) {
             setLoadingUsers(true)

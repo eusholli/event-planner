@@ -4,10 +4,12 @@ import { checkRole } from '@/lib/roles'
 import { Roles } from '@/lib/constants'
 
 export async function GET(req: Request) {
-    // Check if user is root
+    // Check permissions
     const isRoot = await checkRole(Roles.Root)
+    const isAdmin = await checkRole(Roles.Admin)
+    const isMarketing = await checkRole(Roles.Marketing)
 
-    if (!isRoot) {
+    if (!isRoot && !isAdmin && !isMarketing) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
