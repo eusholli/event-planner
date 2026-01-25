@@ -1,5 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
+require('dotenv').config();
+
+const connectionString = `${process.env.POSTGRES_PRISMA_URL}`;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({ adapter });
 
 async function waitForDb(retries = 10, delay = 5000) {
   for (let i = 0; i < retries; i++) {
