@@ -15,6 +15,7 @@ interface Attendee {
     name: string
     email: string
     company: string
+    title?: string
     isExternal?: boolean
     bio?: string
     companyDescription?: string
@@ -28,7 +29,7 @@ export interface Meeting {
     endTime: string | null
     resourceId: string // Room ID
     location?: string | null
-    attendees: { id: string, name: string }[]
+    attendees: Attendee[]
     purpose: string
     status: string
     tags: string[]
@@ -614,7 +615,7 @@ export default function MeetingModal({
                                                 if (e.target.checked) {
                                                     onEventChange({
                                                         ...event,
-                                                        attendees: [...currentAttendees, { id: attendee.id, name: attendee.name }]
+                                                        attendees: [...currentAttendees, attendee]
                                                     })
                                                 } else {
                                                     onEventChange({
@@ -650,7 +651,7 @@ export default function MeetingModal({
                                                 if (e.target.checked) {
                                                     onEventChange({
                                                         ...event,
-                                                        attendees: [...currentAttendees, { id: attendee.id, name: attendee.name }]
+                                                        attendees: [...currentAttendees, attendee]
                                                     })
                                                 } else {
                                                     onEventChange({
