@@ -20,16 +20,18 @@ interface Attendee {
     name: string
     email: string
     company: string
+    title?: string
     isExternal?: boolean
     bio?: string
     companyDescription?: string
 }
 
-interface DashboardMeeting extends Meeting {
+interface DashboardMeeting extends Omit<Meeting, 'attendees'> {
     start: Date | null
     end: Date | null
     room?: Room
     location?: string | null
+    attendees: Attendee[]
 }
 
 function DashboardContent() {
@@ -432,10 +434,10 @@ function DashboardContent() {
         }
 
         const headers = [
-            'ID', 'Title', 'Date', 'Start Time', 'End Time', 'Status',
-            'Room/Location', 'Attendees', 'Purpose', 'Tags',
-            'Meeting Type', 'Approved', 'Invite Sent',
-            'Requester Email', 'Other Details', 'Created By'
+            'Title', 'Date', 'Start Time', 'End Time', 'Status',
+            'Purpose', 'Other Details', 'Internal Attendees', 'External Attendees', 'Room/Location',
+            'Tags', 'Meeting Type', 'Approved', 'Invite Sent',
+            'Requester Email', 'Created By'
         ]
 
         const csvContent = [
@@ -445,24 +447,32 @@ function DashboardContent() {
                     ? (m.location || 'External')
                     : (rooms.find(r => r.id === m.resourceId)?.name || 'Unknown Room')
 
-                const attendeeNames = m.attendees.map(a => a.name).join('; ')
+                const internalAttendees = m.attendees
+                    .filter(a => !a.isExternal)
+                    .map(a => `${a.name}, ${a.title || ''}`)
+                    .join('\n')
+
+                const externalAttendees = m.attendees
+                    .filter(a => a.isExternal)
+                    .map(a => `${a.name}, ${a.title || ''}, ${a.company || ''}`)
+                    .join('\n')
 
                 const row = [
-                    m.id,
                     `"${(m.title || '').replace(/"/g, '""')}"`,
                     m.date || '',
                     m.startTime || '',
                     m.endTime || '',
                     m.status || '',
-                    `"${(roomName || '').replace(/"/g, '""')}"`,
-                    `"${(attendeeNames || '').replace(/"/g, '""')}"`,
                     `"${(m.purpose || '').replace(/"/g, '""')}"`,
+                    `"${(m.otherDetails || '').replace(/"/g, '""')}"`,
+                    `"${(internalAttendees || '').replace(/"/g, '""')}"`,
+                    `"${(externalAttendees || '').replace(/"/g, '""')}"`,
+                    `"${(roomName || '').replace(/"/g, '""')}"`,
                     `"${(m.tags?.join('; ') || '').replace(/"/g, '""')}"`,
                     m.meetingType || '',
                     m.isApproved ? 'Yes' : 'No',
                     m.calendarInviteSent ? 'Yes' : 'No',
                     `"${(m.requesterEmail || '').replace(/"/g, '""')}"`,
-                    `"${(m.otherDetails || '').replace(/"/g, '""')}"`,
                     m.createdBy || ''
                 ]
                 return row.join(',')
