@@ -238,6 +238,26 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
         yPos += (purposeLines.length * 5) // Tight line spacing
     }
 
+    // --- Other Details ---
+    if (meeting.otherDetails) {
+        doc.setDrawColor(229, 231, 235)
+        doc.line(margin, yPos, pageWidth - margin, yPos)
+        yPos += GAP_MEDIUM
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor('#6b7280')
+        doc.text('OTHER DETAILS', margin, yPos)
+        yPos += 5
+
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor('#374151')
+        const detailsLines = doc.splitTextToSize(meeting.otherDetails, pageWidth - (margin * 2))
+        doc.text(detailsLines, margin, yPos)
+        yPos += (detailsLines.length * 5) // Tight line spacing
+    }
+
     // --- Attendees ---
     const internalAttendees = meeting.attendees.filter(a => !a.isExternal)
     const externalAttendees = meeting.attendees.filter(a => a.isExternal)
