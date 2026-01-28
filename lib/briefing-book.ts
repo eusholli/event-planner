@@ -43,8 +43,39 @@ const loadImage = (url: string): Promise<string | null> => {
     });
 }
 
+// Function to fetch the font file
+const loadFont = async (url: string): Promise<string> => {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    return arrayBufferToBase64(buffer);
+}
+
+// Helper to convert ArrayBuffer to Base64
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
 export const generateBriefingBook = async (meeting: Meeting, roomName: string) => {
     const doc = new jsPDF()
+
+    // Load and add custom font
+    try {
+        const fontBase64 = await loadFont('/fonts/MPLUS1p-Regular.ttf');
+        if (fontBase64) {
+            doc.addFileToVFS('MPLUS1p-Regular.ttf', fontBase64);
+            doc.addFont('MPLUS1p-Regular.ttf', 'MPLUS1p', 'normal');
+            doc.setFont('MPLUS1p');
+        }
+    } catch (e) {
+        console.error('Failed to load custom font, falling back to default', e);
+    }
+
     await renderMeetingDetails(doc, meeting, roomName, true)
 
     // Save
@@ -56,6 +87,19 @@ export const generateBriefingBook = async (meeting: Meeting, roomName: string) =
 
 export const generateMultiMeetingBriefingBook = async (title: string, subtitle: string, meetings: { meeting: Meeting, roomName: string }[], filenamePrefix?: string) => {
     const doc = new jsPDF()
+
+    // Load and add custom font
+    try {
+        const fontBase64 = await loadFont('/fonts/MPLUS1p-Regular.ttf');
+        if (fontBase64) {
+            doc.addFileToVFS('MPLUS1p-Regular.ttf', fontBase64);
+            doc.addFont('MPLUS1p-Regular.ttf', 'MPLUS1p', 'normal');
+            doc.setFont('MPLUS1p');
+        }
+    } catch (e) {
+        console.error('Failed to load custom font, falling back to default', e);
+    }
+
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 20
 
@@ -64,12 +108,14 @@ export const generateMultiMeetingBriefingBook = async (title: string, subtitle: 
     doc.rect(0, 0, pageWidth, 60, 'F')
 
     doc.setFontSize(24)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('NotoSansJP', 'normal') // Use NotoSansJP instead of helvetica bold
+    // doc.setFont('helvetica', 'bold')
     doc.setTextColor('#FFFFFF')
     doc.text(title, margin, 30)
 
     doc.setFontSize(16)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'normal')
     doc.setTextColor('#E0E0E0')
     doc.text(subtitle, margin, 45)
 
@@ -130,7 +176,8 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
         doc.rect(margin, yPos, pageWidth - (margin * 2), 8, 'F') // Smaller header bar
 
         doc.setFontSize(11)
-        doc.setFont('helvetica', 'bold')
+        doc.setFont('MPLUS1p', 'normal')
+        // doc.setFont('helvetica', 'bold')
         doc.setTextColor('#333333')
         doc.text(title.toUpperCase(), margin + 5, yPos + 5.5) // Centered visually
 
@@ -142,12 +189,14 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
     doc.rect(0, 0, pageWidth, 40, 'F')
 
     doc.setFontSize(22)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'bold')
     doc.setTextColor('#FFFFFF')
     doc.text('Meeting Briefing', margin, 20)
 
     doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'normal')
     doc.setTextColor('#E0E0E0')
     doc.text(`Generated: ${moment().format('MMM D, YYYY')}`, margin, 30)
 
@@ -155,7 +204,8 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
 
     // --- Meeting Info Grid ---
     doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'bold')
     doc.setTextColor('#1f2937')
 
     // Title
@@ -169,12 +219,14 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
 
     // Left Col: Date & Time
     doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'bold')
     doc.setTextColor('#6b7280')
     doc.text('DATE & TIME', margin, yPos)
 
     doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'normal')
     doc.setTextColor('#111827')
 
     let dateStr = 'Date Not Set'
@@ -194,12 +246,14 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
     // Right Col: Location & Type
     const rightColX = margin + colWidth
     doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'bold')
     doc.setTextColor('#6b7280')
     doc.text('LOCATION', rightColX, yPos)
 
     doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'normal')
     doc.setTextColor('#111827')
     doc.text(roomName, rightColX, yPos + 5)
 
@@ -231,7 +285,8 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
         yPos += 5
 
         doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
+        doc.setFont('MPLUS1p', 'normal')
+        // doc.setFont('helvetica', 'normal')
         doc.setTextColor('#374151')
         const purposeLines = doc.splitTextToSize(meeting.purpose, pageWidth - (margin * 2))
         doc.text(purposeLines, margin, yPos)
@@ -251,7 +306,8 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
         yPos += 5
 
         doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
+        doc.setFont('MPLUS1p', 'normal')
+        // doc.setFont('helvetica', 'normal')
         doc.setTextColor('#374151')
         const detailsLines = doc.splitTextToSize(meeting.otherDetails, pageWidth - (margin * 2))
         doc.text(detailsLines, margin, yPos)
@@ -290,14 +346,16 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
 
             // Name
             doc.setFontSize(11)
-            doc.setFont('helvetica', 'bold')
+            doc.setFont('MPLUS1p', 'normal')
+            // doc.setFont('helvetica', 'bold')
             doc.setTextColor('#111827')
             doc.text(`${a.name}`, contentStartX, yPos + 4)
 
             let metaY = yPos + 9
             if (a.company) {
                 doc.setFontSize(9)
-                doc.setFont('helvetica', 'bold')
+                doc.setFont('MPLUS1p', 'normal')
+                // doc.setFont('helvetica', 'bold')
                 doc.setTextColor('#4b5563')
                 doc.text(a.company.toUpperCase(), contentStartX, metaY)
                 metaY += 5
@@ -307,7 +365,8 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
             let bioHeight = 0
             if (a.bio) {
                 doc.setFontSize(9)
-                doc.setFont('helvetica', 'italic')
+                doc.setFont('MPLUS1p', 'normal')
+                // doc.setFont('helvetica', 'italic')
                 doc.setTextColor('#6b7280')
                 const bioLines = doc.splitTextToSize(a.bio, pageWidth - contentStartX - margin)
                 doc.text(bioLines, contentStartX, metaY)
@@ -346,7 +405,7 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
             }
 
             doc.setFontSize(10)
-            doc.setFont('helvetica', 'bold')
+            doc.setFont('MPLUS1p', 'normal')
             doc.setTextColor('#111827')
 
             // Calculate width using the correct Bold/10 font settings BEFORE changing them
@@ -355,9 +414,8 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
 
             if (a.company) {
                 doc.setFontSize(9)
-                doc.setFont('helvetica', 'normal')
+                doc.setFont('MPLUS1p', 'normal')
                 doc.setTextColor('#6b7280')
-                // Use the pre-calculated width + padding (replaced dash with clean spacing)
                 doc.text(a.company, contentStartX + nameWidth + 5, yPos + 4)
             }
 
@@ -365,21 +423,23 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
             yPos += contentHeight + GAP_SMALL
         }
     }
-
-    // --- Footer Pagination ---
-    if (addPageNumbers) {
-        const pageCount = doc.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i)
-            doc.setFontSize(8)
-            doc.setTextColor('#9ca3af')
-            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - 20, pageHeight - 10)
-        }
-    }
 }
 
-export const generateScheduleBriefing = (title: string, subtitle: string, meetings: any[]) => {
+export const generateScheduleBriefing = async (title: string, subtitle: string, meetings: any[]) => {
     const doc = new jsPDF()
+
+    // Load and add custom font
+    try {
+        const fontBase64 = await loadFont('/fonts/MPLUS1p-Regular.ttf');
+        if (fontBase64) {
+            doc.addFileToVFS('MPLUS1p-Regular.ttf', fontBase64);
+            doc.addFont('MPLUS1p-Regular.ttf', 'MPLUS1p', 'normal');
+            doc.setFont('MPLUS1p');
+        }
+    } catch (e) {
+        console.error('Failed to load custom font, falling back to default', e);
+    }
+
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 20
     let yPos = 20
@@ -387,7 +447,8 @@ export const generateScheduleBriefing = (title: string, subtitle: string, meetin
     // Helper to add text and advance yPos
     const addText = (text: string, fontSize: number, fontStyle: string = 'normal', color: string = '#000000') => {
         doc.setFontSize(fontSize)
-        doc.setFont('helvetica', fontStyle)
+        doc.setFont('MPLUS1p', 'normal')
+        // doc.setFont('helvetica', fontStyle)
         doc.setTextColor(color)
 
         const splitText = doc.splitTextToSize(text, pageWidth - (margin * 2))
@@ -400,12 +461,14 @@ export const generateScheduleBriefing = (title: string, subtitle: string, meetin
     doc.rect(0, 0, pageWidth, 40, 'F')
 
     doc.setFontSize(20)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'bold')
     doc.setTextColor('#FFFFFF')
     doc.text(title, margin, 20)
 
     doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('MPLUS1p', 'normal')
+    // doc.setFont('helvetica', 'normal')
     doc.text(subtitle, margin, 30)
 
     yPos = 50
@@ -428,13 +491,15 @@ export const generateScheduleBriefing = (title: string, subtitle: string, meetin
             const dateStr = new Date(meeting.startTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 
             doc.setFontSize(11)
-            doc.setFont('helvetica', 'bold')
+            doc.setFont('MPLUS1p', 'normal')
+            // doc.setFont('helvetica', 'bold')
             doc.setTextColor('#333333')
             doc.text(`${dateStr} ${timeStr} - ${meeting.title}`, margin + 2, yPos)
             yPos += 10
 
             doc.setFontSize(10)
-            doc.setFont('helvetica', 'normal')
+            doc.setFont('MPLUS1p', 'normal')
+            // doc.setFont('helvetica', 'normal')
             doc.setTextColor('#000000')
             doc.text(`Room: ${meeting.room?.name || 'TBD'}`, margin, yPos)
             yPos += 5
@@ -450,7 +515,8 @@ export const generateScheduleBriefing = (title: string, subtitle: string, meetin
             const attendees = meeting.attendees || []
             if (attendees.length > 0) {
                 doc.setFontSize(10)
-                doc.setFont('helvetica', 'bold')
+                doc.setFont('MPLUS1p', 'normal')
+                // doc.setFont('helvetica', 'bold')
                 doc.text("Participants:", margin, yPos)
                 yPos += 5
 
@@ -463,7 +529,7 @@ export const generateScheduleBriefing = (title: string, subtitle: string, meetin
                     let text = `• ${p.name}`
                     if (p.company) text += ` (${p.company})`
 
-                    doc.setFont('helvetica', 'normal')
+                    doc.setFont('MPLUS1p', 'normal')
                     doc.text(text, margin + 4, yPos)
                     yPos += 5
                 })
