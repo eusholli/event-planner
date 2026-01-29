@@ -17,9 +17,17 @@ export async function POST(
 
     try {
         const { id } = await params
-        const { recipientEmail, onsiteName, onsitePhone } = await request.json()
+        const { recipientEmail, recipientEmails, onsiteName, onsitePhone, customBody, customSubject } = await request.json()
 
-        if (!recipientEmail) {
+        // handle backward comaptibility or new format
+        const emailsToProcess: string[] = []
+        if (recipientEmails && Array.isArray(recipientEmails)) {
+            emailsToProcess.push(...recipientEmails)
+        } else if (recipientEmail) {
+            emailsToProcess.push(recipientEmail)
+        }
+
+        if (emailsToProcess.length === 0) {
             return NextResponse.json({ error: 'Recipient email is required' }, { status: 400 })
         }
 
@@ -39,9 +47,19 @@ export async function POST(
         const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
         const content = await generateInviteContent(meeting as any, onsiteContact)
 
+        // Use custom body if provided, otherwise default to generated body
+        const finalBody = customBody || content.body;
+        // If custom body is used, wrap it for HTML, otherwise use generated HTML
+        const finalHtml = customBody ? `<div style="white-space: pre-wrap; font-family: sans-serif;">${customBody}</div>` : content.htmlBody;
+
         // Send Email
         const filename = (meeting.title || 'invite').replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.ics'
-        await sendEmail(recipientEmail, content.subject, content.body, content.htmlBody, content.ics, filename)
+        const toAddress = emailsToProcess.join(', ')
+
+        // Use custom subject if provided, otherwise default to generated subject
+        const finalSubject = customSubject || content.subject;
+
+        await sendEmail(toAddress, finalSubject, finalBody, finalHtml, content.ics, filename)
 
         return NextResponse.json({ success: true })
     } catch (error: any) {

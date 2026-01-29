@@ -86,6 +86,9 @@ export default function MeetingModal({
 
     // Email Sending State
     const [recipientEmail, setRecipientEmail] = useState('')
+    const [selectedAttendeeEmails, setSelectedAttendeeEmails] = useState<Set<string>>(new Set())
+    const [customEmailBody, setCustomEmailBody] = useState('')
+    const [customSubject, setCustomSubject] = useState('')
     const [onsiteName, setOnsiteName] = useState('')
     const [onsitePhone, setOnsitePhone] = useState('')
     const [sendingEmail, setSendingEmail] = useState(false)
@@ -116,6 +119,9 @@ export default function MeetingModal({
             }
             const data = await res.json()
             setInviteContent(data)
+            setCustomEmailBody(data.body)
+            setCustomSubject(data.subject)
+            setSelectedAttendeeEmails(new Set())
             setShowInviteModal(true)
         } catch (err: any) {
             setLocalError(err.message)
@@ -173,14 +179,28 @@ export default function MeetingModal({
 
 
     const handleSendEmail = async () => {
-        if (!event.id || !recipientEmail) return
+        if (!event.id) return
+
+        const emailsToSend = Array.from(selectedAttendeeEmails)
+        if (recipientEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+            emailsToSend.push(recipientEmail)
+        }
+
+        if (emailsToSend.length === 0) return
+
         setSendingEmail(true)
         setEmailSuccess(false)
         try {
             const res = await fetch(`/api/meetings/${event.id}/email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ recipientEmail, onsiteName, onsitePhone })
+                body: JSON.stringify({
+                    recipientEmails: emailsToSend,
+                    onsiteName,
+                    onsitePhone,
+                    customBody: customEmailBody,
+                    customSubject: customSubject
+                })
             })
             if (!res.ok) throw new Error('Failed to send email')
             setEmailSuccess(true)
@@ -212,7 +232,7 @@ export default function MeetingModal({
     return (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             {showInviteModal && inviteContent ? (
-                <div className="bg-white p-8 rounded-3xl w-full md:max-w-2xl my-8 shadow-2xl relative z-[60]">
+                <div className="bg-white p-8 rounded-3xl w-full md:max-w-2xl my-8 shadow-2xl relative z-[60] max-h-[90vh] overflow-y-auto">
                     <h2 className="text-2xl font-bold tracking-tight text-zinc-900 mb-6">Calendar Invite Details</h2>
 
 
@@ -241,11 +261,15 @@ export default function MeetingModal({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-zinc-700 mb-1">Subject</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Subject (Editable)</label>
                             <div className="flex gap-2">
-                                <input readOnly value={inviteContent.subject} className="input-field bg-zinc-50" />
+                                <input
+                                    value={customSubject}
+                                    onChange={(e) => setCustomSubject(e.target.value)}
+                                    className="input-field bg-white"
+                                />
                                 <button
-                                    onClick={() => copyToClipboard(inviteContent.subject)}
+                                    onClick={() => copyToClipboard(customSubject)}
                                     className="p-2 text-zinc-500 hover:text-indigo-600 hover:bg-zinc-100 rounded-lg"
                                     title="Copy Subject"
                                 >
@@ -255,15 +279,15 @@ export default function MeetingModal({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-zinc-700 mb-1">Email Body</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Email Body (Editable)</label>
                             <div className="relative">
                                 <textarea
-                                    readOnly
-                                    value={inviteContent.body}
-                                    className="input-field bg-zinc-50 h-64 font-mono text-xs"
+                                    value={customEmailBody}
+                                    onChange={(e) => setCustomEmailBody(e.target.value)}
+                                    className="input-field bg-white h-64 font-mono text-xs"
                                 />
                                 <button
-                                    onClick={() => copyToClipboard(inviteContent.body)}
+                                    onClick={() => copyToClipboard(customEmailBody)}
                                     className="absolute top-2 right-2 p-2 text-zinc-500 hover:text-indigo-600 hover:bg-zinc-100 rounded-lg bg-white shadow-sm border border-zinc-200"
                                     title="Copy Body"
                                 >
@@ -272,12 +296,46 @@ export default function MeetingModal({
                             </div>
                         </div>
 
+
+
                         <div>
-                            <label className="block text-sm font-medium text-zinc-700 mb-1">Recipient Email</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Send to Attendees</label>
+                            <div className="max-h-48 overflow-y-auto border border-zinc-200 rounded-xl p-2 bg-zinc-50/50 space-y-1">
+                                {event.attendees && event.attendees.length > 0 ? (
+                                    event.attendees.map(attendee => (
+                                        <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-lg cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                checked={selectedAttendeeEmails.has(attendee.email)}
+                                                onChange={(e) => {
+                                                    const newSelected = new Set(selectedAttendeeEmails)
+                                                    if (e.target.checked) {
+                                                        newSelected.add(attendee.email)
+                                                    } else {
+                                                        newSelected.delete(attendee.email)
+                                                    }
+                                                    setSelectedAttendeeEmails(newSelected)
+                                                }}
+                                            />
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-zinc-900">{attendee.name}</span>
+                                                <span className="text-xs text-zinc-500">{attendee.email}</span>
+                                            </div>
+                                        </label>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-zinc-500 p-2 italic">No attendees added to this meeting.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Additional Email (Optional)</label>
                             <input
                                 type="email"
                                 className="input-field"
-                                placeholder="recipient@example.com"
+                                placeholder="e.g. colleague@example.com"
                                 value={recipientEmail}
                                 onChange={e => setRecipientEmail(e.target.value)}
                             />
@@ -310,8 +368,8 @@ export default function MeetingModal({
                             </button>
                             <button
                                 onClick={handleSendEmail}
-                                disabled={!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail) || sendingEmail}
-                                className={`btn-primary flex items-center ${emailSuccess ? 'bg-green-600 hover:bg-green-700' : ''} ${(!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={(selectedAttendeeEmails.size === 0 && (!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail))) || sendingEmail}
+                                className={`btn-primary flex items-center ${emailSuccess ? 'bg-green-600 hover:bg-green-700' : ''} ${(selectedAttendeeEmails.size === 0 && (!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail))) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {sendingEmail ? (
                                     <>
@@ -800,7 +858,8 @@ export default function MeetingModal({
                         </div>
                     </form>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }
