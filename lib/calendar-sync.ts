@@ -12,8 +12,10 @@ export interface Meeting {
     sequence: number
     room?: { name: string } | null
     location?: string | null
-    attendees: { name: string, email: string }[]
+    attendees: { name: string, email: string, title?: string | null, company?: string | null }[]
     requesterEmail?: string | null
+    otherDetails?: string | null
+    createdBy?: string | null
 }
 
 interface OnsiteContact {
@@ -29,6 +31,9 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
     const start = new Date(`${meeting.date}T${meeting.startTime}`)
     const end = new Date(`${meeting.date}T${meeting.endTime}`)
 
+    const organizerEmail = meeting.requesterEmail || meeting.createdBy || 'udai.kanukolanu@rakuten.com'
+    const organizerName = 'Event Planner' // Or derive from email if needed
+
     // 1. Generate ICS
     const event: EventAttributes = {
         start: [start.getFullYear(), start.getMonth() + 1, start.getDate(), start.getHours(), start.getMinutes()],
@@ -39,7 +44,7 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
         uid: meeting.id,
         sequence: meeting.sequence,
         status: 'CONFIRMED',
-        organizer: { name: 'Event Planner', email: meeting.requesterEmail || 'noreply@eventplanner.com' },
+        organizer: { name: organizerName, email: organizerEmail },
         attendees: meeting.attendees.map(a => ({ name: a.name, email: a.email, rsvp: true, partstat: 'NEEDS-ACTION', role: 'REQ-PARTICIPANT' })),
         method: 'REQUEST'
     }
@@ -62,31 +67,35 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
     const startTimeStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     const endTimeStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
-    const attendeesList = meeting.attendees.map(a => a.name).join('\n')
-    const attendeesListHtml = meeting.attendees.map(a => a.name).join('<br>')
+    const formatAttendee = (a: { name: string, email: string, title?: string | null, company?: string | null }) => {
+        const parts = [a.name];
+        if (a.title) parts.push(a.title);
+        if (a.company) parts.push(a.company);
+        return parts.join(', ');
+    }
+
+    const attendeesList = meeting.attendees.map(a => formatAttendee(a)).join('\n')
+    const attendeesListHtml = meeting.attendees.map(a => formatAttendee(a)).join('<br>')
 
     let onsiteLine = ''
     if (onsiteContact) {
         const parts = []
-        if (onsiteContact.name) parts.push(`Contact: ${onsiteContact.name}`)
+        if (onsiteContact.name) parts.push(`Onsite Contact: ${onsiteContact.name}`)
         if (onsiteContact.phone) parts.push(`(call / text: ${onsiteContact.phone})`)
         onsiteLine = parts.join(' ')
     }
 
     const body = `Subject: ${subject}
 Location: ${locationString}
-Organizer: ${meeting.requesterEmail || 'udai.kanukolanu@rakuten.com'}
+Organizer: ${organizerEmail}
 Start time: ${dateString} at ${startTimeStr}
 End time: ${dateString} at ${endTimeStr}
 
-${meeting.title}
+Title: ${meeting.title}
+${meeting.purpose ? `Purpose: ${meeting.purpose}` : ''}
+${meeting.otherDetails ? `Other Details: ${meeting.otherDetails}` : ''}
 
-Meeting
-Date / Time ${dateString} at ${startTimeStr}
-Location
-${locationString}
-
-Attendees
+Attendees:
 ${attendeesList}
 
 ${onsiteLine}
@@ -97,17 +106,15 @@ Ref: ${meeting.id}`
     const htmlBody = `
     <p><b>Subject:</b> ${subject}</p>
     <p><b>Location:</b> ${locationString}</p>
-    <p><b>Organizer:</b> ${meeting.requesterEmail || 'udai.kanukolanu@rakuten.com'}</p>
+    <p><b>Organizer:</b> ${organizerEmail}</p>
     <p><b>Start time:</b> ${dateString} at ${startTimeStr}</p>
     <p><b>End time:</b> ${dateString} at ${endTimeStr}</p>
     <br>
-    <p>${meeting.title}</p>
+    <p><b>Title:</b> ${meeting.title}</p>
+    ${meeting.purpose ? `<p><b>Purpose:</b><br>${meeting.purpose.replace(/\n/g, '<br>')}</p>` : ''}
+    ${meeting.otherDetails ? `<p><b>Other Details:</b><br>${meeting.otherDetails.replace(/\n/g, '<br>')}</p>` : ''}
     <br>
-    <p><b>Meeting</b></p>
-    <p><b>Date / Time</b> ${dateString} at ${startTimeStr}</p>
-    <p><b>Location</b><br>${locationString}</p>
-    <br>
-    <p><b>Attendees</b><br>${attendeesListHtml}</p>
+    <p><b>Attendees:</b><br>${attendeesListHtml}</p>
     <br>
     <p><b>${onsiteLine}</b></p>
     <br>
