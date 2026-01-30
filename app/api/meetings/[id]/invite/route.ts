@@ -2,6 +2,39 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generateInviteContent } from '@/lib/calendar-sync'
 
+// Handle POST request for generating invite with unsaved changes
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { searchParams } = new URL(request.url)
+        const onsiteName = searchParams.get('onsiteName')
+        const onsitePhone = searchParams.get('onsitePhone')
+
+        // Get the override data from request body
+        const meetingOverride = await request.json()
+
+        // Fetch room if resourceId is present but room is missing
+        if (meetingOverride.resourceId && !meetingOverride.room && meetingOverride.resourceId !== 'external') {
+            const room = await prisma.room.findUnique({
+                where: { id: meetingOverride.resourceId }
+            })
+            if (room) {
+                meetingOverride.room = room
+            }
+        }
+
+        // Ensure we have access to settings
+        const settings = await prisma.eventSettings.findFirst()
+        const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
+
+        // We use the override object as the source of truth
+        const content = await generateInviteContent(meetingOverride as any, onsiteContact, settings?.boothLocation || undefined)
+
+        return NextResponse.json(content)
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+}
+
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -33,17 +66,16 @@ export async function GET(
             return NextResponse.json({ error: 'Meeting is missing date or time' }, { status: 400 })
         }
 
-        // Generate content
-        // We cast to any because our Prisma type doesn't perfectly match the strict Meeting interface in calendar-sync 
-        // (dates are strings in DB but interface expects
         const { searchParams } = new URL(request.url)
         const onsiteName = searchParams.get('onsiteName')
         const onsitePhone = searchParams.get('onsitePhone')
-        // Generate Invite Content
+
         const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
 
+        const settings = await prisma.eventSettings.findFirst()
+
         // Generate content
-        const content = await generateInviteContent(meeting as any, onsiteContact)
+        const content = await generateInviteContent(meeting as any, onsiteContact, settings?.boothLocation || undefined)
 
         return NextResponse.json(content)
     } catch (error: any) {

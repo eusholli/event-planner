@@ -31,6 +31,7 @@ export async function GET() {
             meetingTypes: settings.meetingTypes || [],
             attendeeTypes: settings.attendeeTypes || [],
             timezone: settings.timezone || '',
+            boothLocation: settings.boothLocation || '',
         }
 
         return NextResponse.json(response)
@@ -42,7 +43,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { name, startDate, endDate, geminiApiKey, tags, timezone } = body
+        const { name, startDate, endDate, geminiApiKey, tags, timezone, boothLocation } = body
 
         // Parse date strings (YYYY-MM-DD) and set to midnight UTC
         const startDateObj = new Date(startDate + 'T00:00:00.000Z')
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
                     meetingTypes: body.meetingTypes ? Array.from(new Set(body.meetingTypes as string[])).sort() : [],
                     attendeeTypes: body.attendeeTypes ? Array.from(new Set(body.attendeeTypes as string[])).sort() : [],
                     timezone,
+                    boothLocation,
                 },
             })
         } else {
@@ -77,6 +79,7 @@ export async function POST(request: Request) {
                     meetingTypes: body.meetingTypes ? Array.from(new Set(body.meetingTypes as string[])).sort() : [],
                     attendeeTypes: body.attendeeTypes ? Array.from(new Set(body.attendeeTypes as string[])).sort() : [],
                     timezone,
+                    boothLocation,
                 },
             })
         }
@@ -90,6 +93,7 @@ export async function POST(request: Request) {
             meetingTypes: settings.meetingTypes || [],
             attendeeTypes: settings.attendeeTypes || [],
             timezone: settings.timezone || '',
+            boothLocation: settings.boothLocation || '',
         }
 
         return NextResponse.json(response)

@@ -20,6 +20,7 @@ model EventSettings {
   meetingTypes String[] @default([])
   attendeeTypes String[] @default([])
   timezone      String?
+  boothLocation String?
 }
 
 model Attendee {

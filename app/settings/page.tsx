@@ -216,6 +216,7 @@ export default function SettingsPage() {
     const [meetingTypes, setMeetingTypes] = useState('')
     const [attendeeTypes, setAttendeeTypes] = useState('')
     const [timezone, setTimezone] = useState('')
+    const [boothLocation, setBoothLocation] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
@@ -231,6 +232,7 @@ export default function SettingsPage() {
                 setMeetingTypes(data.meetingTypes ? data.meetingTypes.join(', ') : '')
                 setAttendeeTypes(data.attendeeTypes ? data.attendeeTypes.join(', ') : '')
                 setTimezone(data.timezone || '')
+                setBoothLocation(data.boothLocation || '')
                 setLoading(false)
             })
     }, [])
@@ -252,6 +254,7 @@ export default function SettingsPage() {
                     meetingTypes: meetingTypes.split(',').map(t => t.trim()).filter(t => t !== ''),
                     attendeeTypes: attendeeTypes.split(',').map(t => t.trim()).filter(t => t !== ''),
                     timezone,
+                    boothLocation,
                 }),
             })
 
@@ -264,6 +267,7 @@ export default function SettingsPage() {
                 setTags(data.tags ? data.tags.join(', ') : '')
                 setAttendeeTypes(data.attendeeTypes ? data.attendeeTypes.join(', ') : '')
                 setTimezone(data.timezone || '')
+                setBoothLocation(data.boothLocation || '')
 
                 alert('Settings saved successfully!')
                 router.refresh()
@@ -339,6 +343,19 @@ export default function SettingsPage() {
                             ))}
                         </select>
                         <p className="mt-1 text-sm text-slate-500">The timezone for the event.</p>
+                    </div>
+
+                    <div>
+                        <label htmlFor="boothLocation" className="block text-sm font-medium text-slate-700 mb-1">Booth Location (Optional)</label>
+                        <input
+                            type="text"
+                            id="boothLocation"
+                            className="input-field"
+                            value={boothLocation}
+                            onChange={e => setBoothLocation(e.target.value)}
+                            placeholder="e.g. Hall 2, 2C70"
+                        />
+                        <p className="mt-1 text-sm text-slate-500">If set, this will be prefixed to room locations in calendar invites.</p>
                     </div>
 
                     <div>
