@@ -24,6 +24,7 @@ model Event {
   attendeeTypes   String[]   @default([])
   authorizedUserIds String[] @default([])
   timezone        String?
+  boothLocation   String?
   url             String?
   address         String?
   requesterEmail  String?

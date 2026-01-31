@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
     try {
         let settings = await prisma.systemSettings.findFirst()
-        
+
         if (!settings) {
             // Create default settings if not exists
             settings = await prisma.systemSettings.create({
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         }
 
         const json = await request.json()
-        
+
         let settings = await prisma.systemSettings.findFirst()
 
         const data = {
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
             attendeeTypes: settings.defaultAttendeeTypes,
             meetingTypes: settings.defaultMeetingTypes,
             tags: settings.defaultTags,
-            name: '', 
+            name: '',
             startDate: '',
             endDate: '',
             timezone: ''

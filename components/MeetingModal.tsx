@@ -94,7 +94,19 @@ export default function MeetingModal({
     const [sendingEmail, setSendingEmail] = useState(false)
     const [emailSuccess, setEmailSuccess] = useState(false)
 
+    const [initialEvent, setInitialEvent] = useState<string>('')
+
     const { user } = useUser()
+
+    // track initial state for dirty checking
+    useEffect(() => {
+        if (isOpen && event && !initialEvent) {
+            setInitialEvent(JSON.stringify(event))
+        }
+        if (!isOpen) {
+            setInitialEvent('')
+        }
+    }, [isOpen, event]) // Update when event loads (if initialEvent is empty)
 
     useEffect(() => {
         setLocalError('')
@@ -104,6 +116,21 @@ export default function MeetingModal({
         if (error) setLocalError(error)
     }, [error])
 
+    const checkUnsavedChanges = () => {
+        if (!event) return true
+        const currentEventStr = JSON.stringify(event)
+        if (initialEvent && currentEventStr !== initialEvent) {
+            return window.confirm('You have unsaved changes. Are you sure you want to close?')
+        }
+        return true
+    }
+
+    const handleClose = () => {
+        if (checkUnsavedChanges()) {
+            onClose()
+        }
+    }
+
     const handleGenerateInvite = async () => {
         if (!event?.id) return
         setInviteLoading(true)
@@ -112,7 +139,13 @@ export default function MeetingModal({
             if (onsiteName) params.append('onsiteName', onsiteName)
             if (onsitePhone) params.append('onsitePhone', onsitePhone)
 
-            const res = await fetch(`/api/meetings/${event.id}/invite?${params.toString()}`)
+            // Use POST to send current form data (override DB data)
+            const res = await fetch(`/api/meetings/${event.id}/invite?${params.toString()}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event)
+            })
+
             if (!res.ok) {
                 const data = await res.json()
                 throw new Error(data.error || 'Failed to generate invite')
@@ -138,7 +171,7 @@ export default function MeetingModal({
             }, 500)
             return () => clearTimeout(timer)
         }
-    }, [onsiteName, onsitePhone, showInviteModal, event])
+    }, [onsiteName, onsitePhone, showInviteModal, event]) // Added event dependency so it regenerates if event data changes while modal is open
 
     if (!isOpen || !event) return null
 
@@ -844,7 +877,7 @@ export default function MeetingModal({
                             <div className="flex space-x-3 ml-auto">
                                 <button
                                     type="button"
-                                    onClick={onClose}
+                                    onClick={handleClose}
                                     className="btn-secondary"
                                 >
                                     {readOnly ? 'Close' : 'Cancel'}

@@ -44,13 +44,17 @@ export async function POST(
         }
 
         // Generate Invite Content
+        const userSettings = await prisma.eventSettings.findFirst()
         const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
-        const content = await generateInviteContent(meeting as any, onsiteContact)
+        const content = await generateInviteContent(meeting as any, onsiteContact, userSettings?.boothLocation || undefined)
 
         // Use custom body if provided, otherwise default to generated body
         const finalBody = customBody || content.body;
         // If custom body is used, wrap it for HTML, otherwise use generated HTML
-        const finalHtml = customBody ? `<div style="white-space: pre-wrap; font-family: sans-serif;">${customBody}</div>` : content.htmlBody;
+        // Outlook requires explicit <br> tags instead of just white-space: pre-wrap
+        const finalHtml = customBody
+            ? `<div style="font-family: sans-serif;">${customBody.replace(/\r?\n/g, '<br>')}</div>`
+            : content.htmlBody;
 
         // Send Email
         const filename = (meeting.title || 'invite').replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.ics'
