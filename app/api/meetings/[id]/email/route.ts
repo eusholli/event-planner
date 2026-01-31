@@ -44,9 +44,18 @@ export async function POST(
         }
 
         // Generate Invite Content
-        const userSettings = await prisma.eventSettings.findFirst()
+        // Fetch Event for boothLocation
+        let boothLocation: string | undefined = undefined
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { boothLocation: true }
+            })
+            boothLocation = event?.boothLocation || undefined
+        }
+
         const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
-        const content = await generateInviteContent(meeting as any, onsiteContact, userSettings?.boothLocation || undefined)
+        const content = await generateInviteContent(meeting as any, onsiteContact, boothLocation)
 
         // Use custom body if provided, otherwise default to generated body
         const finalBody = customBody || content.body;

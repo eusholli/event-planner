@@ -22,12 +22,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             }
         }
 
-        // Ensure we have access to settings
-        const settings = await prisma.eventSettings.findFirst()
+        // Fetch Event for boothLocation
+        let boothLocation: string | undefined = undefined
+        const eventId = meetingOverride.eventId
+
+        if (eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: eventId },
+                select: { boothLocation: true }
+            })
+            boothLocation = event?.boothLocation || undefined
+        } else {
+            // Fallback: try to fetch meeting from DB to get eventId
+            const id = (await params).id
+            const existing = await prisma.meeting.findUnique({
+                where: { id },
+                select: { eventId: true }
+            })
+            if (existing?.eventId) {
+                const event = await prisma.event.findUnique({
+                    where: { id: existing.eventId },
+                    select: { boothLocation: true }
+                })
+                boothLocation = event?.boothLocation || undefined
+            }
+        }
+
         const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
 
         // We use the override object as the source of truth
-        const content = await generateInviteContent(meetingOverride as any, onsiteContact, settings?.boothLocation || undefined)
+        const content = await generateInviteContent(meetingOverride as any, onsiteContact, boothLocation)
 
         return NextResponse.json(content)
     } catch (error: any) {
@@ -72,10 +96,17 @@ export async function GET(
 
         const onsiteContact = (onsiteName || onsitePhone) ? { name: onsiteName || '', phone: onsitePhone || '' } : undefined
 
-        const settings = await prisma.eventSettings.findFirst()
+        let boothLocation: string | undefined = undefined
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { boothLocation: true }
+            })
+            boothLocation = event?.boothLocation || undefined
+        }
 
         // Generate content
-        const content = await generateInviteContent(meeting as any, onsiteContact, settings?.boothLocation || undefined)
+        const content = await generateInviteContent(meeting as any, onsiteContact, boothLocation)
 
         return NextResponse.json(content)
     } catch (error: any) {

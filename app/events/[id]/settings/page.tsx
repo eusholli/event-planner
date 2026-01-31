@@ -40,6 +40,7 @@ interface EventSettings {
     authorizedUserIds: string[]
     password?: string
     description?: string | null
+    boothLocation?: string | null
 }
 
 export default function EventSettingsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -87,7 +88,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     tags: data.tags || [],
                     meetingTypes: data.meetingTypes || [],
                     attendeeTypes: data.attendeeTypes || [],
-                    authorizedUserIds: data.authorizedUserIds || []
+                    authorizedUserIds: data.authorizedUserIds || [],
+                    boothLocation: data.boothLocation || ''
                 }
                 setEvent(loadedEvent)
                 setInitialEvent(loadedEvent)
@@ -215,6 +217,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
             endDate: data.endDate || prev!.endDate,
             address: data.address || data.location || prev!.address, // added location fallback
             region: data.region || prev!.region,
+            boothLocation: data.boothLocation || prev!.boothLocation,
             targetCustomers: data.targetCustomers || prev!.targetCustomers,
             budget: data.budget ? parseFloat(data.budget) : prev!.budget,
             expectedRoi: data.expectedRoi || prev!.expectedRoi,
@@ -472,6 +475,19 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 disabled={isLocked}
                                 value={event.address || ''}
                                 onChange={e => setEvent({ ...event, address: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label htmlFor="boothLocation" className="block text-sm font-medium text-neutral-700">Booth Location</label>
+                            <input
+                                id="boothLocation"
+                                type="text"
+                                disabled={isLocked}
+                                value={event.boothLocation || ''}
+                                onChange={e => setEvent({ ...event, boothLocation: e.target.value })}
+                                placeholder="e.g. Hall B, Booth 123"
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>

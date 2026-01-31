@@ -202,6 +202,7 @@ export async function importEventData(eventId: string, data: any) {
         if (data.event.password !== undefined) eventUpdate.password = data.event.password
         if (data.event.description !== undefined) eventUpdate.description = data.event.description
         if (data.event.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = data.event.authorizedUserIds
+        if (data.event.boothLocation !== undefined) eventUpdate.boothLocation = data.event.boothLocation
 
         // Geocode if address exists but coords are missing
         if (data.event.address && (data.event.latitude === undefined || data.event.longitude === undefined)) {
