@@ -129,6 +129,7 @@ export async function PATCH(
         const finalStartDate = json.startDate !== undefined ? json.startDate : currentEvent.startDate
         const finalEndDate = json.endDate !== undefined ? json.endDate : currentEvent.endDate
         const finalAddress = json.address !== undefined ? json.address : currentEvent.address
+        const finalBoothLocation = json.boothLocation !== undefined ? json.boothLocation : currentEvent.boothLocation
 
         if (finalStatus === 'COMMITTED') {
             if (!finalStartDate || !finalEndDate || !finalAddress || finalAddress.trim() === '') {
@@ -172,7 +173,8 @@ export async function PATCH(
                 password: json.password,
                 description: json.description,
                 latitude: (json as any).latitude,
-                longitude: (json as any).longitude
+                longitude: (json as any).longitude,
+                boothLocation: json.boothLocation
             }
         })
 

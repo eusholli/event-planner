@@ -113,7 +113,8 @@ export async function POST(request: Request) {
                 password: json.password,
                 address: json.address,
                 latitude,
-                longitude
+                longitude,
+                boothLocation: json.boothLocation
             }
         })
 

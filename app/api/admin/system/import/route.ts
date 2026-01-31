@@ -74,6 +74,7 @@ export async function POST(request: Request) {
                 if (evt.password !== undefined) eventUpdate.password = evt.password
                 if (evt.description !== undefined) eventUpdate.description = evt.description
                 if (evt.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = evt.authorizedUserIds
+                if (evt.boothLocation !== undefined) eventUpdate.boothLocation = evt.boothLocation
 
                 // Geocode if address exists but coords are missing
                 let latitude = (evt as any).latitude
@@ -120,7 +121,8 @@ export async function POST(request: Request) {
 
                         password: evt.password,
                         description: evt.description,
-                        authorizedUserIds: evt.authorizedUserIds || []
+                        authorizedUserIds: evt.authorizedUserIds || [],
+                        boothLocation: evt.boothLocation || ''
                     },
                     update: eventUpdate
                 })
