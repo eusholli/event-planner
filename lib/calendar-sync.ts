@@ -23,7 +23,7 @@ interface OnsiteContact {
     phone: string
 }
 
-export async function generateInviteContent(meeting: Meeting, onsiteContact?: OnsiteContact) {
+export async function generateInviteContent(meeting: Meeting, onsiteContact?: OnsiteContact, boothLocation?: string) {
     if (!meeting.date || !meeting.startTime || !meeting.endTime) {
         throw new Error('Missing date or time')
     }
@@ -34,13 +34,20 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
     const organizerEmail = meeting.requesterEmail || meeting.createdBy || 'udai.kanukolanu@rakuten.com'
     const organizerName = 'Event Planner' // Or derive from email if needed
 
+    // Location Logic
+    // Location Logic
+    const specificLocation = meeting.location || meeting.room?.name || 'TBD';
+    const locationString = boothLocation
+        ? `${boothLocation} - ${specificLocation}`
+        : specificLocation;
+
     // 1. Generate ICS
     const event: EventAttributes = {
         start: [start.getFullYear(), start.getMonth() + 1, start.getDate(), start.getHours(), start.getMinutes()],
         end: [end.getFullYear(), end.getMonth() + 1, end.getDate(), end.getHours(), end.getMinutes()],
         title: meeting.title,
         description: meeting.purpose || '',
-        location: meeting.location || meeting.room?.name || 'TBD',
+        location: locationString,
         uid: meeting.id,
         sequence: meeting.sequence,
         status: 'CONFIRMED',
@@ -57,25 +64,60 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
     })
 
     // 2. Generate Email Subject
-    // Format: [9:00AM] EchoStar x Rakuten - Hall 2 Booth 2C70 (Room 1)
+    // Format: [10:00AM] Iridium x Rakuten Symphony - Meeting Room 2 (Sharad)
     const timeString = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(' ', '')
-    const locationString = meeting.location || meeting.room?.name || 'TBD'
-    const subject = `[${timeString}] ${meeting.title} - ${locationString}`
+    const subject = `[${timeString}] ${meeting.title}`
 
     // 3. Generate Email Body (Text & HTML)
+    // Meeting Date / Time: Monday, March 2, 2026 at 10:00 AM - 10:30 AM
     const dateString = start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     const startTimeStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     const endTimeStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    const meetingDateTime = `${dateString} at ${startTimeStr} - ${endTimeStr}`
 
-    const formatAttendee = (a: { name: string, email: string, title?: string | null, company?: string | null }) => {
-        const parts = [a.name];
-        if (a.title) parts.push(a.title);
-        if (a.company) parts.push(a.company);
-        return parts.join(', ');
+    // Group Attendees
+    const rakutenAttendees: string[] = []
+    const otherAttendees: { company: string, details: string }[] = []
+
+    meeting.attendees.forEach(a => {
+        const detail = a.title ? `${a.name}, ${a.title}` : a.name
+        if (a.company?.toLowerCase().includes('rakuten')) {
+            rakutenAttendees.push(detail)
+        } else {
+            const company = a.company || 'Other'
+            otherAttendees.push({ company, details: detail })
+        }
+    })
+
+    // Helper to format groups
+    const formatGroup = (title: string, items: string[]) => {
+        if (items.length === 0) return ''
+        return `${title}\n${items.join('\n')}\n`
     }
 
-    const attendeesList = meeting.attendees.map(a => formatAttendee(a)).join('\n')
-    const attendeesListHtml = meeting.attendees.map(a => formatAttendee(a)).join('<br>')
+    // Group "Other" attendees by company
+    const otherGroups: Record<string, string[]> = {}
+    otherAttendees.forEach(a => {
+        if (!otherGroups[a.company]) otherGroups[a.company] = []
+        otherGroups[a.company].push(a.details)
+    })
+
+    let attendeesText = ''
+    let attendeesHtml = ''
+
+    // Process non-Rakuten groups first (usually customers/partners) or just append all
+    // Request implies strict ordering: "Iridium Attendees" then "Rakuten Symphony Attendees"
+    // We will list all non-Rakuten companies first, then Rakuten
+
+    for (const [company, details] of Object.entries(otherGroups)) {
+        attendeesText += formatGroup(`${company} Attendees:`, details) + '\n'
+        attendeesHtml += `<p><b>${company} Attendees</b><br>${details.join('<br>')}</p><br>`
+    }
+
+    if (rakutenAttendees.length > 0) {
+        attendeesText += formatGroup('Rakuten Symphony Attendees', rakutenAttendees)
+        attendeesHtml += `<p><b>Rakuten Symphony Attendees</b><br>${rakutenAttendees.join('<br>')}</p><br>`
+    }
 
     let onsiteLine = ''
     if (onsiteContact) {
@@ -88,15 +130,11 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
     const body = `Subject: ${subject}
 Location: ${locationString}
 Organizer: ${organizerEmail}
-Start time: ${dateString} at ${startTimeStr}
-End time: ${dateString} at ${endTimeStr}
+Meeting Date / Time: ${meetingDateTime}
 
-Title: ${meeting.title}
-${meeting.purpose ? `Purpose: ${meeting.purpose}` : ''}
-${meeting.otherDetails ? `Other Details: ${meeting.otherDetails}` : ''}
-
-Attendees:
-${attendeesList}
+${attendeesText}
+${meeting.purpose ? `Purpose: ${meeting.purpose}\n` : ''}
+${meeting.otherDetails ? `Other Details: ${meeting.otherDetails}\n` : ''}
 
 ${onsiteLine}
 
@@ -104,25 +142,26 @@ ${onsiteLine}
 Ref: ${meeting.id}`
 
     const htmlBody = `
+    <div style="font-family: sans-serif;">
     <p><b>Subject:</b> ${subject}</p>
     <p><b>Location:</b> ${locationString}</p>
     <p><b>Organizer:</b> ${organizerEmail}</p>
-    <p><b>Start time:</b> ${dateString} at ${startTimeStr}</p>
-    <p><b>End time:</b> ${dateString} at ${endTimeStr}</p>
+    <p><b>Meeting Date / Time:</b> ${meetingDateTime}</p>
     <br>
-    <p><b>Title:</b> ${meeting.title}</p>
-    ${meeting.purpose ? `<p><b>Purpose:</b><br>${meeting.purpose.replace(/\n/g, '<br>')}</p>` : ''}
-    ${meeting.otherDetails ? `<p><b>Other Details:</b><br>${meeting.otherDetails.replace(/\n/g, '<br>')}</p>` : ''}
-    <br>
-    <p><b>Attendees:</b><br>${attendeesListHtml}</p>
-    <br>
+    ${attendeesHtml}
+    ${meeting.purpose ? `<p><b>Purpose:</b><br>${meeting.purpose.replace(/\n/g, '<br>')}</p><br>` : ''}
+    ${meeting.otherDetails ? `<p><b>Other Details:</b><br>${meeting.otherDetails.replace(/\n/g, '<br>')}</p><br>` : ''}
     <p><b>${onsiteLine}</b></p>
     <br>
     <hr>
     <p style="font-size: 10px; color: #666;">Ref: ${meeting.id}</p>
+    </div>
     `
 
-    return { subject, body, htmlBody, ics: icsContent }
+    const finalBody = body.replace(/\n{3,}/g, '\n\n')
+    const finalHtmlBody = htmlBody.replace(/(<br>\s*){3,}/g, '<br><br>').trim()
+
+    return { subject, body: finalBody, htmlBody: finalHtmlBody, ics: icsContent }
 }
 
 // Keep the old function for backward compatibility if needed, using the new core logic
