@@ -54,17 +54,23 @@ export async function POST(request: Request) {
             })
 
             if (attendeeConflicts.length > 0) {
-                const conflictedAttendeeNames = new Set<string>()
+                const conflictedAttendees = new Map<string, string[]>()
+
                 attendeeConflicts.forEach((m: any) => {
                     m.attendees.forEach((a: any) => {
                         if (attendeeIds.includes(a.id)) {
-                            conflictedAttendeeNames.add(a.name)
+                            const existing = conflictedAttendees.get(a.name) || []
+                            existing.push(m.title)
+                            conflictedAttendees.set(a.name, existing)
                         }
                     })
                 })
 
-                if (conflictedAttendeeNames.size > 0) {
-                    conflicts.push(`The following attendees are busy: ${Array.from(conflictedAttendeeNames).join(', ')}`)
+                if (conflictedAttendees.size > 0) {
+                    const details = Array.from(conflictedAttendees.entries())
+                        .map(([name, titles]) => `${name} (in: ${titles.join(', ')})`)
+                        .join('; ')
+                    conflicts.push(`The following attendees are busy: ${details}`)
                 }
             }
         }

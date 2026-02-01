@@ -123,6 +123,7 @@ export async function PUT(
         }
 
         // 2. Check Attendee Availability (excluding current meeting, only if attendees, date, and times provided)
+        let warningMessage = null;
         if (attendeeIds && attendeeIds.length > 0 && date && startTime && endTime) {
             const attendeeConflicts = await prisma.meeting.findMany({
                 where: {
@@ -143,18 +144,24 @@ export async function PUT(
             })
 
             if (attendeeConflicts.length > 0) {
-                const conflictedAttendeeIds = new Set<string>()
+                const conflictedAttendees = new Map<string, string[]>()
+
                 attendeeConflicts.forEach((m: any) => {
                     m.attendees.forEach((a: any) => {
                         if (attendeeIds.includes(a.id)) {
-                            conflictedAttendeeIds.add(a.name)
+                            const existing = conflictedAttendees.get(a.name) || []
+                            existing.push(m.title)
+                            conflictedAttendees.set(a.name, existing)
                         }
                     })
                 })
 
-                return NextResponse.json({
-                    error: `The following attendees are busy: ${Array.from(conflictedAttendeeIds).join(', ')}`
-                }, { status: 409 })
+                if (conflictedAttendees.size > 0) {
+                    const details = Array.from(conflictedAttendees.entries())
+                        .map(([name, titles]) => `${name} (in: ${titles.join(', ')})`)
+                        .join('; ')
+                    warningMessage = `The following attendees are busy: ${details}`
+                }
             }
         }
 
@@ -228,7 +235,7 @@ export async function PUT(
             console.error('Failed to send calendar updates:', error)
         }
 
-        return NextResponse.json(updatedMeeting)
+        return NextResponse.json(warningMessage ? { ...updatedMeeting, warning: warningMessage } : updatedMeeting)
     } catch (error: any) {
         console.error('Update meeting error:', error)
         return NextResponse.json({ error: 'Failed to update meeting', details: error.message }, { status: 500 })
