@@ -7,7 +7,9 @@
     "build": "node scripts/db-check.js && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:main": "node scripts/switch-env.js main",
+    "db:multi": "node scripts/switch-env.js multi"
   },
   "engines": {
     "node": ">=24.0.0"

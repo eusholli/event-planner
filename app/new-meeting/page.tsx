@@ -179,7 +179,11 @@ export default function SchedulePage() {
             if (!res.ok) {
                 setError(data.error || 'Failed to book meeting')
             } else {
-                setSuccessMessage('Meeting started')
+                if (data.warning) {
+                    setSuccessMessage(`Meeting created with Warning: ${data.warning}`)
+                } else {
+                    setSuccessMessage('Meeting started')
+                }
                 setFormData({
                     title: '',
                     purpose: '',
@@ -236,7 +240,7 @@ export default function SchedulePage() {
                     <div className="card">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {successMessage && (
-                                <div className="p-4 bg-green-50 text-green-700 rounded-2xl border border-green-200 text-sm font-medium">
+                                <div className={`p-4 rounded-2xl border text-sm font-medium ${successMessage.includes('Warning') || successMessage.includes('warnings') ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
                                     {successMessage}
                                 </div>
                             )}

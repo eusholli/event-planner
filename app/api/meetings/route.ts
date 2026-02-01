@@ -181,6 +181,7 @@ export async function POST(request: Request) {
         }
 
         // 2. Check Attendee Availability (only if attendees, date, and times are provided)
+        let warningMessage = null;
         if (attendeeIds && attendeeIds.length > 0 && date && startTime && endTime) {
             const attendeeConflicts = await prisma.meeting.findMany({
                 where: {
@@ -200,19 +201,25 @@ export async function POST(request: Request) {
             })
 
             if (attendeeConflicts.length > 0) {
-                // Find which attendees are conflicted
-                const conflictedAttendeeNames = new Set<string>()
+                // Find which attendees are conflicted and with which meetings
+                const conflictedAttendees = new Map<string, string[]>()
+
                 attendeeConflicts.forEach((m: any) => {
                     m.attendees.forEach((a: any) => {
                         if (attendeeIds.includes(a.id)) {
-                            conflictedAttendeeNames.add(a.name)
+                            const existing = conflictedAttendees.get(a.name) || []
+                            existing.push(m.title)
+                            conflictedAttendees.set(a.name, existing)
                         }
                     })
                 })
 
-                return NextResponse.json({
-                    error: `The following attendees are busy: ${Array.from(conflictedAttendeeNames).join(', ')}`
-                }, { status: 409 })
+                if (conflictedAttendees.size > 0) {
+                    const details = Array.from(conflictedAttendees.entries())
+                        .map(([name, titles]) => `${name} (in: ${titles.join(', ')})`)
+                        .join('; ')
+                    warningMessage = `The following attendees are busy: ${details}`
+                }
             }
         }
 
@@ -270,7 +277,7 @@ export async function POST(request: Request) {
             console.error('Failed to send calendar invites:', error)
         }
 
-        return NextResponse.json(meeting)
+        return NextResponse.json(warningMessage ? { ...meeting, warning: warningMessage } : meeting)
     } catch (error: any) {
         console.error('Create meeting error:', error)
         return NextResponse.json({ error: 'Failed to create meeting', details: error.message }, { status: 500 })
