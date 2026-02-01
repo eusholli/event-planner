@@ -230,6 +230,32 @@ function DashboardContent({ eventId }: { eventId: string }) {
         }
     }
 
+    const conflictedEventIds = useMemo(() => {
+        const ids = new Set<string>()
+        // Filter out meetings without valid times
+        const validMeetings = meetings.filter(m => m.start && m.end)
+
+        for (let i = 0; i < validMeetings.length; i++) {
+            for (let j = i + 1; j < validMeetings.length; j++) {
+                const eventA = validMeetings[i]
+                const eventB = validMeetings[j]
+
+                // Check time overlap (startA < endB && startB < endA)
+                // Ensure non-null dates (checked by filter but TS might need help)
+                if (eventA.start! < eventB.end! && eventB.start! < eventA.end!) {
+                    // Check attendee overlap
+                    const attendeesA = new Set(eventA.attendees?.map(a => a.id) || [])
+                    // Check intersection
+                    if (eventB.attendees?.some(a => attendeesA.has(a.id))) {
+                        ids.add(eventA.id)
+                        ids.add(eventB.id)
+                    }
+                }
+            }
+        }
+        return ids
+    }, [meetings])
+
     // Filter Logic - MOVED TO SERVER
     // We still keep the sort logic client-side as requested in the plan
     const filteredMeetings = useMemo(() => {
@@ -350,6 +376,11 @@ function DashboardContent({ eventId }: { eventId: string }) {
                     location: savedData.location
                 }
                 setMeetings(prev => prev.map(m => m.id === formattedSaved.id ? formattedSaved : m))
+
+                if (savedData.warning) {
+                    alert(`Warning: ${savedData.warning}`)
+                }
+
                 setIsModalOpen(false)
                 setSelectedEvent(null)
             } else {
@@ -786,6 +817,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                     meeting={meeting}
                                     rooms={rooms}
                                     onDoubleClick={() => handleEventClick(meeting)}
+                                    hasConflict={conflictedEventIds.has(meeting.id)}
                                 />
                             ))}
                         </div>

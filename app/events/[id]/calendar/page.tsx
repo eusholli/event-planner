@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Calendar, momentLocalizer, Views, View } from 'react-big-calendar'
 import moment from 'moment'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
@@ -187,6 +187,28 @@ function CalendarContent({ eventId }: { eventId: string }) {
         setDate(newDate)
     }, [eventSettings])
 
+    const conflictedEventIds = useMemo(() => {
+        const ids = new Set<string>()
+        for (let i = 0; i < events.length; i++) {
+            for (let j = i + 1; j < events.length; j++) {
+                const eventA = events[i]
+                const eventB = events[j]
+
+                // Check time overlap (startA < endB && startB < endA)
+                if (eventA.start < eventB.end && eventB.start < eventA.end) {
+                    // Check attendee overlap
+                    const attendeesA = new Set(eventA.attendees?.map(a => a.id) || [])
+                    // Check intersection
+                    if (eventB.attendees?.some(a => attendeesA.has(a.id))) {
+                        ids.add(eventA.id)
+                        ids.add(eventB.id)
+                    }
+                }
+            }
+        }
+        return ids
+    }, [events])
+
     const handleEventUpdate = useCallback(async (updatedEvent: Partial<CalendarEvent>) => {
         const originalEvent = events.find(e => e.id === updatedEvent.id)
         if (!originalEvent) return
@@ -216,11 +238,15 @@ function CalendarContent({ eventId }: { eventId: string }) {
                     calendarInviteSent: updatedEvent.calendarInviteSent
                 }),
             })
+
+            const data = await res.json()
+
             if (!res.ok) {
-                const data = await res.json()
                 setError(data.error || 'Failed to update meeting')
                 // Revert UI
                 setEvents(prev => prev.map(ev => ev.id === updatedEvent.id ? originalEvent : ev))
+            } else if (data.warning) {
+                alert(`Warning: ${data.warning}`)
             }
         } catch (err) {
             setError('Failed to update meeting')
@@ -432,6 +458,11 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 } else {
                     setEvents(prev => prev.map(ev => ev.id === formattedEvent.id ? formattedEvent : ev))
                 }
+
+                if (savedEvent.warning) {
+                    alert(`Warning: ${savedEvent.warning}`)
+                }
+
                 setIsModalOpen(false)
                 setSelectedEvent(null)
                 setError('')
@@ -528,7 +559,8 @@ function CalendarContent({ eventId }: { eventId: string }) {
                                     // React Big Calendar handles event clicks via onSelectEvent prop usually.
                                 }}
                             >
-                                <div className="font-bold text-xs text-zinc-900 leading-tight pr-6 truncate">
+                                <div className="font-bold text-xs text-zinc-900 leading-tight pr-6 truncate flex items-center">
+                                    {conflictedEventIds.has(event.id) && <span className="mr-1 text-red-500" title="Attendee Conflict">⚠️</span>}
                                     {event.title}
                                 </div>
 
