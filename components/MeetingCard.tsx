@@ -19,9 +19,10 @@ interface MeetingCardProps {
     onClick?: (e: React.MouseEvent) => void
     onDoubleClick?: (e: React.MouseEvent) => void
     className?: string
+    hasConflict?: boolean
 }
 
-export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '' }: MeetingCardProps) {
+export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '', hasConflict = false }: MeetingCardProps) {
 
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { label: string; className: string }> = {
@@ -91,7 +92,14 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                         {getStatusBadge(meeting.status)}
                     </div>
 
-                    <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors truncate">
+                    <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors truncate flex items-center gap-2">
+                        {hasConflict && (
+                            <span title="Attendee Conflict" className="text-amber-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                </svg>
+                            </span>
+                        )}
                         {meeting.title}
                     </h3>
 
