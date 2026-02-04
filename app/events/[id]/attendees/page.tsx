@@ -182,19 +182,19 @@ function AttendeesContent({ eventId }: { eventId: string }) {
 
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this attendee?')) return
+        if (!confirm('Are you sure you want to remove this attendee from this event?')) return
 
         try {
-            const res = await fetch(`/api/attendees/${id}`, {
+            const res = await fetch(`/api/attendees/${id}?eventId=${eventId}`, {
                 method: 'DELETE',
             })
             if (res.ok) {
                 fetchAttendees()
             } else {
-                alert('Failed to delete attendee')
+                alert('Failed to remove attendee')
             }
         } catch (error) {
-            console.error('Error deleting attendee:', error)
+            console.error('Error removing attendee:', error)
         }
     }
 

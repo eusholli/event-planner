@@ -1,69 +1,94 @@
 import { test, expect } from '@playwright/test';
 import { createTestEvent, deleteTestEvent } from './helpers';
 
-test.describe('Attendees API (Scoped)', () => {
-    let eventId: string;
+test.describe('Attendees API (System-wide Scoped)', () => {
+    let eventId1: string;
+    let eventId2: string;
     let createdAttendeeId: string;
+    const testEmail = `attendee${Date.now()}@example.com`;
 
     test.beforeAll(async ({ request }) => {
-        const event = await createTestEvent(request);
-        eventId = event.id;
+        const event1 = await createTestEvent(request);
+        eventId1 = event1.id;
+        const event2 = await createTestEvent(request);
+        eventId2 = event2.id;
     });
 
     test.afterAll(async ({ request }) => {
-        if (eventId) {
-            await deleteTestEvent(request, eventId);
+        if (eventId1) await deleteTestEvent(request, eventId1);
+        if (eventId2) await deleteTestEvent(request, eventId2);
+        // Cleanup attendee if it still exists
+        if (createdAttendeeId) {
+            await request.delete(`/api/attendees/${createdAttendeeId}`);
         }
     });
 
-    test('should create an attendee for the event', async ({ request }) => {
-        const email = `attendee${Date.now()}@example.com`;
+    test('should create an attendee for Event 1', async ({ request }) => {
         const response = await request.post('/api/attendees', {
             multipart: {
                 name: 'John Doe',
-                email: email,
-                title: 'Software Engineer', // Required
-                company: 'Acme Corp',     // Required
-                eventId: eventId
+                email: testEmail,
+                title: 'Software Engineer',
+                company: 'Acme Corp',
+                eventId: eventId1
             }
         });
         expect(response.ok()).toBeTruthy();
         const body = await response.json();
-        expect(body.email).toBe(email);
-        expect(body.eventId).toBe(eventId);
+        expect(body.email).toBe(testEmail);
         createdAttendeeId = body.id;
     });
 
-    test('should list attendees for the event', async ({ request }) => {
-        const response = await request.get(`/api/attendees?eventId=${eventId}`);
+    test('should link SAME attendee to Event 2', async ({ request }) => {
+        // Post same email to different event
+        const response = await request.post('/api/attendees', {
+            multipart: {
+                name: 'John Doe Modified', // Name change ignored on link usually, or maybe captured? Current logic links only.
+                email: testEmail,
+                title: 'Software Engineer',
+                company: 'Acme Corp',
+                eventId: eventId2
+            }
+        });
         expect(response.ok()).toBeTruthy();
         const body = await response.json();
-        expect(Array.isArray(body)).toBeTruthy();
-        expect(body.some((a: any) => a.id === createdAttendeeId)).toBeTruthy();
+        expect(body.id).toBe(createdAttendeeId); // ID should be same
     });
 
-    test('should NOT list attendees for another event', async ({ request }) => {
-        const otherEvent = await createTestEvent(request);
+    test('should list attendee in BOTH events', async ({ request }) => {
+        const res1 = await request.get(`/api/attendees?eventId=${eventId1}`);
+        const body1 = await res1.json();
+        expect(body1.some((a: any) => a.id === createdAttendeeId)).toBeTruthy();
 
-        const response = await request.get(`/api/attendees?eventId=${otherEvent.id}`);
+        const res2 = await request.get(`/api/attendees?eventId=${eventId2}`);
+        const body2 = await res2.json();
+        expect(body2.some((a: any) => a.id === createdAttendeeId)).toBeTruthy();
+    });
+
+    test('should UNLINK attendee from Event 1', async ({ request }) => {
+        // Delete with eventId param = Unlink
+        const response = await request.delete(`/api/attendees/${createdAttendeeId}?eventId=${eventId1}`);
         expect(response.ok()).toBeTruthy();
-        const body = await response.json();
-        expect(body.some((a: any) => a.id === createdAttendeeId)).toBeFalsy();
 
-        await deleteTestEvent(request, otherEvent.id);
+        // Check Event 1 list - should be gone
+        const res1 = await request.get(`/api/attendees?eventId=${eventId1}`);
+        const body1 = await res1.json();
+        expect(body1.some((a: any) => a.id === createdAttendeeId)).toBeFalsy();
+
+        // Check Event 2 list - should STILL be there
+        const res2 = await request.get(`/api/attendees?eventId=${eventId2}`);
+        const body2 = await res2.json();
+        expect(body2.some((a: any) => a.id === createdAttendeeId)).toBeTruthy();
     });
 
-    test('should update an attendee', async ({ request }) => {
-        if (!createdAttendeeId) test.skip();
-        const newName = 'Jane Doe';
-        // Needs all required fields
+    test('should allow Global Update', async ({ request }) => {
+        const newName = 'John Updated';
         const response = await request.put(`/api/attendees/${createdAttendeeId}`, {
             multipart: {
                 name: newName,
                 title: 'Senior Tester',
                 company: 'Acme Corp',
-                email: 'updated@example.com',
-                // Keep eventId consistent if needed, though route might not check it for update, but good practice
+                email: testEmail,
             }
         });
         expect(response.ok()).toBeTruthy();
@@ -71,13 +96,14 @@ test.describe('Attendees API (Scoped)', () => {
         expect(body.name).toBe(newName);
     });
 
-    test('should delete an attendee', async ({ request }) => {
-        if (!createdAttendeeId) test.skip();
+    test('should SYSTEM DELETE attendee', async ({ request }) => {
+        // Delete without param
         const response = await request.delete(`/api/attendees/${createdAttendeeId}`);
         expect(response.ok()).toBeTruthy();
 
-        const listResponse = await request.get(`/api/attendees?eventId=${eventId}`);
-        const listBody = await listResponse.json();
-        expect(listBody.some((a: any) => a.id === createdAttendeeId)).toBeFalsy();
+        // Check Event 2 list - should be gone now
+        const res2 = await request.get(`/api/attendees?eventId=${eventId2}`);
+        const body2 = await res2.json();
+        expect(body2.some((a: any) => a.id === createdAttendeeId)).toBeFalsy();
     });
 });

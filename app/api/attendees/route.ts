@@ -10,19 +10,42 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const rawEventId = searchParams.get('eventId')
+        const query = searchParams.get('query')
+
+        if (query) {
+            const { canWrite } = await import('@/lib/roles')
+            // Basic permission check - ideally should be more granular but ensuring only authorized users search global list
+            if (!await canWrite()) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
+
+            const attendees = await prisma.attendee.findMany({
+                where: {
+                    OR: [
+                        { name: { contains: query, mode: 'insensitive' } },
+                        { email: { contains: query, mode: 'insensitive' } },
+                        { company: { contains: query, mode: 'insensitive' } }
+                    ]
+                },
+                take: 10,
+                orderBy: { name: 'asc' }
+            })
+            return NextResponse.json(attendees)
+        }
+
         const eventId = await resolveEventId(rawEventId || '')
 
         if (!eventId) {
-            // Option: return all if root? Or fail?
-            // Safer to return empty or error if no context provided.
-            // But legacy code might call without eventId?
-            // Legacy code is broken by this refactor until frontend is updated.
-            return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
+            return NextResponse.json({ error: 'eventId or query is required' }, { status: 400 })
         }
 
         const attendees = await prisma.attendee.findMany({
             where: {
-                eventId
+                events: {
+                    some: {
+                        id: eventId
+                    }
+                }
             },
             orderBy: {
                 name: 'asc'
@@ -68,6 +91,38 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 error: 'Event has occurred and is read-only.'
             }, { status: 403 })
+        }
+
+        // Check for existing attendee
+        const existingAttendee = await prisma.attendee.findUnique({
+            where: { email }
+        })
+
+        if (existingAttendee) {
+            // Link to event if not already linked
+            const isLinked = await prisma.event.findFirst({
+                where: {
+                    id: eventId,
+                    attendees: {
+                        some: {
+                            id: existingAttendee.id
+                        }
+                    }
+                }
+            })
+
+            if (!isLinked) {
+                await prisma.event.update({
+                    where: { id: eventId },
+                    data: {
+                        attendees: {
+                            connect: { id: existingAttendee.id }
+                        }
+                    }
+                })
+            }
+
+            return NextResponse.json(existingAttendee)
         }
 
         // Image Handling
@@ -126,7 +181,9 @@ export async function POST(request: Request) {
                 imageUrl: finalImageUrl || null,
                 isExternal,
                 type,
-                eventId
+                events: {
+                    connect: { id: eventId }
+                }
             },
         })
         return NextResponse.json(attendee)
