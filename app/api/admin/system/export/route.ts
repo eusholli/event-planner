@@ -18,32 +18,46 @@ export async function GET() {
             }
         })
 
-        // Normalize data to reduce size and duplication
-        const normalizedEvents = events.map(event => ({
-            ...event,
-            attendees: event.attendees.map(attendee => {
-                // Remove nested meetings from attendees
-                const { meetings, ...rest } = attendee
-                return rest
-            }),
-            meetings: event.meetings.map(meeting => {
-                // Convert full attendee objects to just IDs
-                // Remove room object (roomId is already there)
+        // Normalize data: Extract unique attendees to top-level
+        const attendeeMap = new Map<string, any>()
+
+        const normalizedEvents = events.map(event => {
+            // Processing Event Attendees
+            const attendeeIds = event.attendees.map(attendee => {
+                // Add to global map if not present
+                if (!attendeeMap.has(attendee.id)) {
+                    // Remove nested meetings from attendee object for the global list
+                    const { meetings, ...rest } = attendee
+                    attendeeMap.set(attendee.id, rest)
+                }
+                return attendee.id
+            })
+
+            // Processing Event Meetings
+            const normalizedMeetings = event.meetings.map(meeting => {
                 const { attendees, room, ...rest } = meeting
                 return {
                     ...rest,
-                    attendees: attendees.map(a => a.id)
+                    attendees: attendees.map(a => a.id) // Reference by ID
                 }
             })
-        }))
+
+            return {
+                ...event,
+                attendees: undefined, // Remove full object array
+                attendeeIds,          // Add ID reference array
+                meetings: normalizedMeetings
+            }
+        })
 
         const settings = await prisma.systemSettings.findFirst()
 
         const exportData = {
             systemSettings: settings,
+            attendees: Array.from(attendeeMap.values()), // Global Unique List
             events: normalizedEvents,
             exportedAt: new Date().toISOString(),
-            version: '2.1-normalized-system'
+            version: '3.0-normalized-system'
         }
 
         return NextResponse.json(exportData)
