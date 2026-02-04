@@ -50,7 +50,41 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Restore Events and their scoped data
+        // 2. Restore Global Attendees (Phase 1)
+        if (json.attendees && Array.isArray(json.attendees)) {
+            for (const att of json.attendees) {
+                await prisma.attendee.upsert({
+                    where: { id: att.id },
+                    create: {
+                        id: att.id,
+                        name: att.name,
+                        email: att.email,
+                        title: att.title,
+                        company: att.company,
+                        companyDescription: att.companyDescription,
+                        bio: att.bio,
+                        linkedin: att.linkedin,
+                        imageUrl: att.imageUrl,
+                        isExternal: att.isExternal,
+                        type: att.type
+                    },
+                    update: {
+                        name: att.name,
+                        email: att.email,
+                        title: att.title,
+                        company: att.company,
+                        companyDescription: att.companyDescription,
+                        bio: att.bio,
+                        linkedin: att.linkedin,
+                        imageUrl: att.imageUrl,
+                        isExternal: att.isExternal,
+                        type: att.type
+                    }
+                }).catch(e => console.warn('Global Attendee import skip', e))
+            }
+        }
+
+        // 3. Restore Events and their scoped data
         if (events && Array.isArray(events)) {
             for (const evt of events) {
                 // Upsert Event
@@ -95,6 +129,12 @@ export async function POST(request: Request) {
                 if (latitude !== undefined) eventUpdate.latitude = latitude
                 if (longitude !== undefined) eventUpdate.longitude = longitude
 
+                // Prepare Linkage for Normalized Import
+                let attendeeConnects: any = undefined
+                if (evt.attendeeIds && Array.isArray(evt.attendeeIds)) {
+                    attendeeConnects = evt.attendeeIds.map((id: string) => ({ id }))
+                }
+
                 const event = await prisma.event.upsert({
                     where: { id: evt.id || 'new_impossible_id' },
                     create: {
@@ -122,9 +162,13 @@ export async function POST(request: Request) {
                         password: evt.password,
                         description: evt.description,
                         authorizedUserIds: evt.authorizedUserIds || [],
-                        boothLocation: evt.boothLocation || ''
+                        boothLocation: evt.boothLocation || '',
+                        attendees: attendeeConnects ? { connect: attendeeConnects } : undefined
                     },
-                    update: eventUpdate
+                    update: {
+                        ...eventUpdate,
+                        attendees: attendeeConnects ? { connect: attendeeConnects } : undefined
+                    }
                 })
 
                 const eventId = event.id
@@ -149,8 +193,8 @@ export async function POST(request: Request) {
                     }
                 }
 
-                // Restore Attendees
-                if (evt.attendees) {
+                // Restore Legacy Embedded Attendees (Backwards Compatibility)
+                if (!json.attendees && evt.attendees) {
                     for (const att of evt.attendees) {
                         const attUpdate: any = {}
                         if (att.name !== undefined) attUpdate.name = att.name
