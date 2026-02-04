@@ -81,7 +81,7 @@ async function runTest() {
     try {
         // cleanup
         await prisma.meeting.deleteMany({ where: { eventId: TEST_EVENT_ID } })
-        await prisma.attendee.deleteMany({ where: { eventId: TEST_EVENT_ID } })
+        await prisma.attendee.deleteMany({ where: { events: { some: { id: TEST_EVENT_ID } } } })
         await prisma.room.deleteMany({ where: { eventId: TEST_EVENT_ID } })
         await prisma.event.deleteMany({ where: { id: TEST_EVENT_ID } })
 
@@ -148,7 +148,7 @@ async function runTest() {
 
         console.log("4. Simulating Data Loss (Reset)...")
         await prisma.meeting.deleteMany({ where: { eventId: TEST_EVENT_ID } })
-        await prisma.attendee.deleteMany({ where: { eventId: TEST_EVENT_ID } })
+        await prisma.attendee.deleteMany({ where: { events: { some: { id: TEST_EVENT_ID } } } })
         await prisma.room.deleteMany({ where: { eventId: TEST_EVENT_ID } })
         // Keep Event, just delete data, similar to Import overwrite or Reset
 
@@ -266,11 +266,11 @@ async function importEventWithMockAuth(eventId: string, data: any) {
                 where: { id: att.id },
                 create: {
                     ...att,
-                    eventId
+                    events: { connect: { id: eventId } }
                 },
                 update: {
                     ...att,
-                    eventId
+                    events: { connect: { id: eventId } }
                 } // Simplified for test script, but strictly we should check undefined.
                 // For the purpose of this test, exact spread is fine as we want to test DATA persistence.
             })

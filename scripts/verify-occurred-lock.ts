@@ -27,7 +27,7 @@ async function main() {
             data: { name: 'Test Room', capacity: 10, eventId: event.id }
         })
         const attendee = await prisma.attendee.create({
-            data: { name: 'Test Attendee', email: `test-${Date.now()}@example.com`, eventId: event.id, company: 'Test Corp', title: 'Tester' }
+            data: { name: 'Test Attendee', email: `test-${Date.now()}@example.com`, events: { connect: { id: event.id } }, company: 'Test Corp', title: 'Tester' }
         })
         const meeting = await prisma.meeting.create({
             data: { title: 'Test Meeting', roomId: room.id, eventId: event.id, status: 'CONFIRMED' }
