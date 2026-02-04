@@ -162,7 +162,10 @@ export async function resetEventData(eventId: string) {
     // Delete children only
     await prisma.$transaction([
         prisma.meeting.deleteMany({ where: { eventId } }),
-        prisma.attendee.deleteMany({ where: { eventId } }),
+        prisma.event.update({
+            where: { id: eventId },
+            data: { attendees: { set: [] } }
+        }),
         prisma.room.deleteMany({ where: { eventId } })
     ])
 
@@ -276,9 +279,16 @@ export async function importEventData(eventId: string, data: any) {
                     imageUrl: att.imageUrl,
                     isExternal: att.isExternal,
                     type: att.type,
-                    eventId
+                    events: {
+                        connect: { id: eventId }
+                    }
                 },
-                update: attUpdate
+                update: {
+                    ...attUpdate,
+                    events: {
+                        connect: { id: eventId }
+                    }
+                }
             }).catch(e => console.warn('Attendee import skip', e))
         }
     }

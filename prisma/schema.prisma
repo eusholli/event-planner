@@ -55,11 +55,8 @@ model Attendee {
   title              String
   isExternal         Boolean   @default(false)
   type               String?
-  eventId            String?
-  event              Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  events             Event[]
   meetings           Meeting[] @relation("AttendeeMeetings")
-
-  @@unique([email, eventId])
 }
 
 model Room {

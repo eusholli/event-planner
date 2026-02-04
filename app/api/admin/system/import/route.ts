@@ -178,9 +178,16 @@ export async function POST(request: Request) {
                                 imageUrl: att.imageUrl,
                                 isExternal: att.isExternal,
                                 type: att.type,
-                                eventId
+                                events: {
+                                    connect: { id: eventId }
+                                }
                             },
-                            update: attUpdate
+                            update: {
+                                ...attUpdate,
+                                events: {
+                                    connect: { id: eventId }
+                                }
+                            }
                         }).catch(e => console.warn('Attendee skip', e))
                     }
                 }

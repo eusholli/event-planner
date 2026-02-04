@@ -44,15 +44,8 @@ export async function PUT(
             return NextResponse.json({ error: 'Attendee not found' }, { status: 404 })
         }
 
-        // LOCK CHECK
-        if (existingAttendee.eventId) {
-            const { isEventEditable } = await import('@/lib/events')
-            if (!await isEventEditable(existingAttendee.eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
-            }
-        }
+        // Note: Attendee is now system-wide, so we don't check for event lock on the attendee itself.
+        // Editing an attendee updates it globally for all events.
 
         // 3. Parse Form Data
         const formData = await request.formData()
@@ -171,6 +164,9 @@ export async function DELETE(
 ) {
     const id = (await params).id
     try {
+        const { searchParams } = new URL(request.url)
+        const eventId = searchParams.get('eventId')
+
         const { canWrite } = await import('@/lib/roles')
         const { deleteImageFromR2 } = await import('@/lib/storage')
 
@@ -178,34 +174,49 @@ export async function DELETE(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Fetch attendee first to get the image URL and Event ID
+        // If eventId provided, we are Unlinking
+        if (eventId) {
+            // LOCK CHECK for the specific event
+            const { isEventEditable } = await import('@/lib/events')
+            if (!await isEventEditable(eventId)) {
+                return NextResponse.json({
+                    error: 'Event has occurred and is read-only.'
+                }, { status: 403 })
+            }
+
+            // Disconnect
+            await prisma.event.update({
+                where: { id: eventId },
+                data: {
+                    attendees: {
+                        disconnect: { id }
+                    }
+                }
+            })
+            return NextResponse.json({ success: true, action: 'unlinked' })
+        }
+
+        // Otherwise, System Delete
+        // Fetch attendee first to get the image URL
         const attendee = await prisma.attendee.findUnique({
             where: { id },
-            select: { imageUrl: true, eventId: true }
+            select: { imageUrl: true }
         })
 
         if (!attendee) {
             return NextResponse.json({ error: 'Attendee not found' }, { status: 404 })
         }
 
-        // LOCK CHECK
-        if (attendee.eventId) {
-            const { isEventEditable } = await import('@/lib/events')
-            if (!await isEventEditable(attendee.eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
-            }
-        }
-
         if (attendee?.imageUrl) {
             await deleteImageFromR2(attendee.imageUrl)
         }
 
+        // Delete (automatically unlinks from all events due to implied M-N or cascade?)
+        // In implicit M-N, deleting the record cleans up the link table entries.
         await prisma.attendee.delete({
             where: { id },
         })
-        return NextResponse.json({ success: true })
+        return NextResponse.json({ success: true, action: 'deleted' })
     } catch (error) {
         console.error('Delete error:', error)
         return NextResponse.json({ error: 'Failed to delete attendee' }, { status: 500 })

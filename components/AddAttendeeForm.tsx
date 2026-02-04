@@ -94,6 +94,11 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
         checkSettings()
     }, [])
 
+    const [searchResults, setSearchResults] = useState<Attendee[]>([])
+    const [showResults, setShowResults] = useState(false)
+    const [isLinking, setIsLinking] = useState(false)
+    const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+
     const checkSettings = async () => {
         try {
             // Fetch global settings ONLY for API Key
@@ -122,6 +127,63 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
         } catch (error) {
             console.error('Error checking settings:', error)
         }
+    }
+
+    const performSearch = async (query: string) => {
+        if (!query || query.length < 2) {
+            setSearchResults([])
+            setShowResults(false)
+            return
+        }
+
+        try {
+            const res = await fetch(`/api/attendees?query=${encodeURIComponent(query)}`)
+            if (res.ok) {
+                const data = await res.json()
+                setSearchResults(data)
+                setShowResults(true)
+            }
+        } catch (err) {
+            console.error('Search failed', err)
+        }
+    }
+
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value
+        setFormData({ ...formData, name: val })
+
+        // Clear linking state if user modifies name manually (assuming they might want a new person)
+        if (isLinking && val !== formData.name) {
+            setIsLinking(false)
+            // Optional: Clear other fields if they were auto-filled? 
+            // For better UX, let's keep them but unlock them.
+        }
+
+        if (searchTimeout) clearTimeout(searchTimeout)
+
+        const timeout = setTimeout(() => {
+            performSearch(val)
+        }, 300)
+        setSearchTimeout(timeout)
+    }
+
+    const selectExisting = (attendee: Attendee) => {
+        setFormData({
+            name: attendee.name,
+            title: attendee.title,
+            email: attendee.email,
+            company: attendee.company,
+            bio: attendee.bio || '',
+            companyDescription: attendee.companyDescription || '',
+            linkedin: attendee.linkedin || '',
+            imageUrl: attendee.imageUrl || '',
+            isExternal: false, // Default to internal/linked for existing? Or preserve? We don't have isExternal in search result type explicitly but interface has it.
+            type: attendee.type || ''
+        })
+        setIsLinking(true)
+        setShowResults(false)
+        setSearchResults([])
+        if (searchTimeout) clearTimeout(searchTimeout)
     }
 
     const handleAutoComplete = async () => {
@@ -193,6 +255,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
             if (res.ok) {
                 setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false, type: '' })
                 setSelectedFile(null)
+                setIsLinking(false)
                 if (onSuccess) {
                     onSuccess(data)
                 }
@@ -209,8 +272,22 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
 
     return (
         <>
-            <div className="card sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-6">Add Attendee</h2>
+            <div className={`card sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto ${isLinking ? 'border-2 border-green-500' : ''}`}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold tracking-tight text-zinc-900">
+                        {isLinking ? 'Link Existing Attendee' : 'Add Attendee'}
+                    </h2>
+                    {isLinking && (
+                        <button
+                            type="button"
+                            onClick={() => { setIsLinking(false); setFormData({ ...formData, name: '' }); }}
+                            className="text-xs text-red-600 hover:underline"
+                        >
+                            Cancel Link
+                        </button>
+                    )}
+                </div>
+
                 {error && (
                     <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-sm">
                         {error}
@@ -220,8 +297,8 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                     {/* Photo Input */}
                     <div className="flex flex-col items-center mb-6 space-y-3">
                         <div
-                            className="relative group cursor-pointer"
-                            onClick={() => document.getElementById('add-photo-upload')?.click()}
+                            className={`relative group ${isLinking ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                            onClick={() => !isLinking && document.getElementById('add-photo-upload')?.click()}
                         >
                             <div className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 ${formData.imageUrl ? 'border-indigo-500' : 'border-zinc-200 bg-zinc-50'}`}>
                                 {formData.imageUrl ? (
@@ -232,56 +309,85 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                     </svg>
                                 )}
                             </div>
-                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                            </div>
+                            {!isLinking && (
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                </div>
+                            )}
                         </div>
-                        <input
-                            type="file"
-                            id="add-photo-upload"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={async (e) => {
-                                if (e.target.files?.[0]) {
-                                    try {
-                                        const resizedFile = await resizeImage(e.target.files[0])
-                                        setSelectedFile(resizedFile)
-                                        setFormData({ ...formData, imageUrl: URL.createObjectURL(resizedFile) })
-                                    } catch (err) {
-                                        console.error("Error resizing image:", err)
-                                    }
-                                }
-                            }}
-                        />
-                        <div className="text-center w-full max-w-xs">
-                            <div className="text-xs text-zinc-500 mb-1">or enter URL</div>
-                            <input
-                                type="url"
-                                placeholder="https://example.com/photo.jpg"
-                                className="input-field text-xs py-1.5"
-                                value={selectedFile ? '' : formData.imageUrl}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, imageUrl: e.target.value })
-                                    setSelectedFile(null)
-                                }}
-                            />
-                            {selectedFile && <div className="text-[10px] text-green-600 mt-1">Image selected</div>}
-                        </div>
+                        {!isLinking && (
+                            <>
+                                <input
+                                    type="file"
+                                    id="add-photo-upload"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                        if (e.target.files?.[0]) {
+                                            try {
+                                                const resizedFile = await resizeImage(e.target.files[0])
+                                                setSelectedFile(resizedFile)
+                                                setFormData({ ...formData, imageUrl: URL.createObjectURL(resizedFile) })
+                                            } catch (err) {
+                                                console.error("Error resizing image:", err)
+                                            }
+                                        }
+                                    }}
+                                />
+                                <div className="text-center w-full max-w-xs">
+                                    <div className="text-xs text-zinc-500 mb-1">or enter URL</div>
+                                    <input
+                                        type="url"
+                                        placeholder="https://example.com/photo.jpg"
+                                        className="input-field text-xs py-1.5"
+                                        value={selectedFile ? '' : formData.imageUrl}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, imageUrl: e.target.value })
+                                            setSelectedFile(null)
+                                        }}
+                                    />
+                                    {selectedFile && <div className="text-[10px] text-green-600 mt-1">Image selected</div>}
+                                </div>
+                            </>
+                        )}
                     </div>
 
-                    <div>
+                    <div className="relative">
                         <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1.5">Name</label>
                         <input
                             type="text"
                             id="name"
                             required
-                            className="input-field"
+                            className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={handleNameChange}
+                            onFocus={() => {
+                                if (searchResults.length > 0 && !isLinking) setShowResults(true)
+                            }}
+                            onBlur={() => {
+                                // Delay hide to allow click
+                                setTimeout(() => setShowResults(false), 200)
+                            }}
+                            readOnly={isLinking}
                         />
+                        {/* Search Results Dropdown */}
+                        {showResults && searchResults.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
+                                {searchResults.map((result) => (
+                                    <div
+                                        key={result.id}
+                                        className="px-4 py-2 hover:bg-indigo-50 cursor-pointer border-b border-zinc-50 last:border-none"
+                                        onClick={() => selectExisting(result)}
+                                    >
+                                        <div className="font-medium text-zinc-900">{result.name}</div>
+                                        <div className="text-xs text-zinc-500">{result.company} • {result.email}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label htmlFor="title" className="block text-sm font-medium text-zinc-700 mb-1.5">Title</label>
@@ -289,8 +395,9 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                             type="text"
                             id="title"
                             required
-                            className="input-field"
+                            className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             value={formData.title}
+                            readOnly={isLinking}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
                     </div>
@@ -300,8 +407,9 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                             type="text"
                             id="company"
                             required
-                            className="input-field"
+                            className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             value={formData.company}
+                            readOnly={isLinking}
                             onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                         />
                     </div>
@@ -311,51 +419,60 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                             type="email"
                             id="email"
                             required
-                            className="input-field"
+                            className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             value={formData.email}
+                            readOnly={isLinking}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         />
                     </div>
-                    <div>
-                        <label htmlFor="linkedin" className="block text-sm font-medium text-zinc-700 mb-1.5">LinkedIn URL</label>
-                        <input
-                            type="url"
-                            id="linkedin"
-                            className="input-field"
-                            value={formData.linkedin}
-                            onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-                            placeholder="https://linkedin.com/in/..."
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="bio" className="block text-sm font-medium text-zinc-700 mb-1.5">Bio</label>
-                        <textarea
-                            id="bio"
-                            className="input-field h-24 resize-none"
-                            value={formData.bio}
-                            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                        />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="isExternal"
-                            className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
-                            checked={formData.isExternal}
-                            onChange={(e) => setFormData({ ...formData, isExternal: e.target.checked })}
-                        />
-                        <label htmlFor="isExternal" className="text-sm font-medium text-zinc-700">
-                            External Attendee
-                        </label>
-                    </div>
+                    {!isLinking && (
+                        <div>
+                            <label htmlFor="linkedin" className="block text-sm font-medium text-zinc-700 mb-1.5">LinkedIn URL</label>
+                            <input
+                                type="url"
+                                id="linkedin"
+                                className="input-field"
+                                value={formData.linkedin}
+                                onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                                placeholder="https://linkedin.com/in/..."
+                            />
+                        </div>
+                    )}
+                    {!isLinking && (
+                        <div>
+                            <label htmlFor="bio" className="block text-sm font-medium text-zinc-700 mb-1.5">Bio</label>
+                            <textarea
+                                id="bio"
+                                className="input-field h-24 resize-none"
+                                value={formData.bio}
+                                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                            />
+                        </div>
+                    )}
+
+                    {!isLinking && (
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="isExternal"
+                                className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                                checked={formData.isExternal}
+                                onChange={(e) => setFormData({ ...formData, isExternal: e.target.checked })}
+                            />
+                            <label htmlFor="isExternal" className="text-sm font-medium text-zinc-700">
+                                External Attendee
+                            </label>
+                        </div>
+                    )}
 
                     {attendeeTypes.length > 0 && (
                         <div>
                             <label htmlFor="type" className="block text-sm font-medium text-zinc-700 mb-1.5">Attendee Type</label>
                             <select
                                 id="type"
-                                className="input-field"
+                                className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 value={formData.type}
+                                disabled={isLinking}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                             >
                                 <option value="">Select a type...</option>
@@ -366,49 +483,52 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                         </div>
                     )}
                     <div className="flex gap-3">
-                        <div className="relative flex-grow group">
-                            <button
-                                type="button"
-                                onClick={handleAutoComplete}
-                                disabled={loading || !hasApiKey || !formData.name || !formData.company}
-                                className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {autoCompleting ? (
-                                    <>
-                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        <span>Thinking...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        <span>Auto Complete</span>
-                                    </>
+                        {!isLinking && (
+                            <div className="relative flex-grow group">
+                                <button
+                                    type="button"
+                                    onClick={handleAutoComplete}
+                                    disabled={loading || !hasApiKey || !formData.name || !formData.company}
+                                    className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {autoCompleting ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Thinking...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                            <span>Auto Complete</span>
+                                        </>
+                                    )}
+                                </button>
+                                {!hasApiKey && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-zinc-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                        Gemini API Key required in Settings
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
+                                    </div>
                                 )}
-                            </button>
-                            {!hasApiKey && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-zinc-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                    Gemini API Key required in Settings
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6"
+                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6 w-full"
                         >
-                            {loading ? 'Adding...' : 'Add'}
+                            {loading ? (isLinking ? 'Linking...' : 'Adding...') : (isLinking ? 'Link Attendee' : 'Add')}
                         </button>
                     </div>
                 </form>
             </div>
 
             {/* Suggestions Modal */}
+
             {suggestions && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
