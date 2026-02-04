@@ -98,7 +98,7 @@ export const createMeetingTools = (eventId: string) => ({
                 const attendees = await prisma.attendee.findMany({
                     where: {
                         email: { in: attendeeEmails },
-                        eventId: eventId
+                        events: { some: { id: eventId } }
                     },
                 });
                 attendeeIds = attendees.map(a => a.id);

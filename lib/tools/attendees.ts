@@ -18,7 +18,9 @@ export const createAttendeeTools = (eventId: string) => ({
         description: 'Get attendees with advanced search and filtering. Use this to find people.',
         inputSchema: getAttendeesParameters,
         execute: async ({ search, company, title, types, isExternal, email }: z.infer<typeof getAttendeesParameters>) => {
-            const where: any = { eventId };
+            const where: any = {
+                events: { some: { id: eventId } }
+            };
             if (company) where.company = { contains: company, mode: 'insensitive' };
             if (title) where.title = { contains: title, mode: 'insensitive' };
             if (email) where.email = { contains: email, mode: 'insensitive' };
@@ -78,7 +80,9 @@ export const createAttendeeTools = (eventId: string) => ({
                         company,
                         linkedin,
                         bio,
-                        eventId // Scope to event
+                        events: {
+                            connect: { id: eventId }
+                        }
                     },
                 });
                 return { message: `Attendee added: ${attendee.name} (${attendee.email})`, attendeeId: attendee.id };
@@ -98,7 +102,10 @@ export const createAttendeeTools = (eventId: string) => ({
         }),
         execute: async ({ attendeeEmail, date, startTime, endTime }: { attendeeEmail: string; date: string; startTime: string; endTime: string }) => {
             const attendee = await prisma.attendee.findFirst({
-                where: { email: attendeeEmail, eventId },
+                where: {
+                    email: attendeeEmail,
+                    events: { some: { id: eventId } }
+                },
             });
 
             if (!attendee) {
