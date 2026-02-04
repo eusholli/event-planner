@@ -377,6 +377,9 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
             // Bio
             let bioHeight = 0
             if (a.bio) {
+                // Fix: Advance yPos to ensure we don't write over the Name/Company
+                yPos = Math.max(yPos, metaY) + 2
+
                 doc.setFontSize(9)
                 doc.setFont('MPLUS1p', 'normal')
                 // doc.setFont('helvetica', 'italic')
