@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import moment from 'moment'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook, generateScheduleBriefing, generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
+import { generateCalendarViewPDF } from '@/lib/calendar-pdf'
 import MeetingCard from '@/components/MeetingCard'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess } from '@/lib/role-utils'
@@ -284,7 +285,7 @@ function DashboardContent() {
 
     // Stats
     const stats = useMemo(() => {
-        const counts = {
+        let counts: Record<string, number> = {
             PIPELINE: 0,
             CONFIRMED: 0,
             OCCURRED: 0,
@@ -567,6 +568,51 @@ function DashboardContent() {
         )
     }
 
+    const handleExportCalendarView = async () => {
+        if (filteredMeetings.length === 0) {
+            alert('No meetings to export.')
+            return
+        }
+
+        // Transform for Calendar PDF
+        // Remove External meetings
+        // Needs proper Date objects for start/end
+        const meetingsForCalendar = filteredMeetings
+            .filter(m => m.resourceId !== 'external')
+            .map(m => {
+                let start = m.start
+                let end = m.end
+
+                // Ensure Date objects if missing (fallback for safety)
+                if (!start && m.date && m.startTime) {
+                    start = new Date(`${m.date}T${m.startTime}`)
+                }
+                if (!end && m.date && m.endTime) {
+                    end = new Date(`${m.date}T${m.endTime}`)
+                }
+
+                // Map attendees to simpler structure if needed
+                const simpleAttendees = m.attendees.map(a => ({
+                    id: a.id,
+                    name: a.name,
+                    company: a.company,
+                    isExternal: a.isExternal
+                }))
+
+                return {
+                    id: m.id,
+                    title: m.title,
+                    start,
+                    end,
+                    resourceId: m.resourceId,
+                    attendees: simpleAttendees,
+                    location: m.location
+                }
+            })
+
+        await generateCalendarViewPDF(meetingsForCalendar, rooms)
+    }
+
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center">
@@ -590,6 +636,12 @@ function DashboardContent() {
                         className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
                     >
                         Clear Filters
+                    </button>
+                    <button
+                        onClick={handleExportCalendarView}
+                        className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
+                    >
+                        Export Calendar View
                     </button>
                     <button
                         onClick={handleExportPdf}
