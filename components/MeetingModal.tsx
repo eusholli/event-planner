@@ -673,6 +673,34 @@ export default function MeetingModal({
                                 />
                             </div>
                         )}
+
+                        {event.attendees && event.attendees.length > 0 && (
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                    Selected Attendees
+                                </label>
+                                <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
+                                    {event.attendees.map(attendee => (
+                                        <label key={attendee.id} className={`flex items-center space-x-3 p-1 rounded-lg transition-colors ${readOnly ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-100 cursor-pointer'}`}>
+                                            <input
+                                                type="checkbox"
+                                                disabled={readOnly}
+                                                className={`w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500 ${readOnly ? 'cursor-not-allowed' : ''}`}
+                                                checked={true}
+                                                onChange={() => {
+                                                    const currentAttendees = event.attendees || []
+                                                    onEventChange({
+                                                        ...event,
+                                                        attendees: currentAttendees.filter(a => a.id !== attendee.id)
+                                                    })
+                                                }}
+                                            />
+                                            <span className="text-sm text-zinc-700">{attendee.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
                                 Internal Attendees{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
