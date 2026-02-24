@@ -18,6 +18,7 @@ export default function Navigation() {
         { href: '/rooms', label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
         { href: '/calendar', label: 'Calendar' },
         { href: '/chat', label: 'Chat' },
+        { href: '/intelligence', label: 'Intelligence' },
         { href: '/settings', label: 'Settings', roles: [Roles.Root] },
         { href: '/admin/users', label: 'Users', roles: [Roles.Root] },
         { href: '/reports', label: 'Reports' },
