@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Send, Terminal, Loader2, AlertCircle } from "lucide-react";
@@ -36,9 +37,12 @@ type Message = {
     id: string;
 };
 
-export default function IntelligencePage() {
+function IntelligenceContent() {
     const { getToken } = useAuth();
     const { user } = useUser();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isConnected, setIsConnected] = useState(false);
@@ -49,6 +53,7 @@ export default function IntelligencePage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const getTokenRef = useRef(getToken);
     getTokenRef.current = getToken;
+    const autoQuerySentRef = useRef(false);
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -59,12 +64,15 @@ export default function IntelligencePage() {
     useEffect(() => {
         let ws: WebSocket | null = null;
         let reconnectTimer: NodeJS.Timeout;
+        let cancelled = false;
 
         const connect = async () => {
+            if (cancelled) return;
+
             try {
                 const token = await getTokenRef.current();
-                if (!token) {
-                    setError("Failed to get authentication token");
+                if (!token || cancelled) {
+                    if (!cancelled) setError("Failed to get authentication token");
                     return;
                 }
 
@@ -81,16 +89,39 @@ export default function IntelligencePage() {
                     wsUrl = `${protocol}://${host}/?token=${token}`;
                 }
 
+                if (cancelled) return;
+
                 console.log("Connecting to:", wsUrl);
                 ws = new WebSocket(wsUrl);
 
                 ws.onopen = () => {
+                    if (cancelled) { ws?.close(); return; }
                     console.log("Connected to Chat Gateway");
                     setIsConnected(true);
                     setError(null);
+
+                    // Auto-send query from URL params (e.g. from attendee intelligence button)
+                    const autoQuery = new URLSearchParams(window.location.search).get("autoQuery");
+                    if (autoQuery && !autoQuerySentRef.current) {
+                        autoQuerySentRef.current = true;
+                        // Small delay to let history load first
+                        setTimeout(() => {
+                            if (cancelled || !ws || ws.readyState !== WebSocket.OPEN) return;
+                            const userMsg: Message = { role: "user", content: autoQuery, id: Date.now().toString() };
+                            setMessages((prev) => [...prev, userMsg]);
+                            setIsWaitingForResponse(true);
+                            ws.send(JSON.stringify({ type: "message", content: autoQuery }));
+                            // Clear the param from URL so refresh won't re-send
+                            const params = new URLSearchParams(window.location.search);
+                            params.delete("autoQuery");
+                            const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+                            router.replace(newUrl, { scroll: false });
+                        }, 500);
+                    }
                 };
 
                 ws.onmessage = (event) => {
+                    if (cancelled) return;
                     try {
                         const data = JSON.parse(event.data);
 
@@ -154,28 +185,31 @@ export default function IntelligencePage() {
                     console.log("Disconnected");
                     setIsConnected(false);
                     wsRef.current = null;
-                    // Try to reconnect
-                    reconnectTimer = setTimeout(connect, 3000);
+                    // Only reconnect if the effect hasn't been cleaned up
+                    if (!cancelled) {
+                        reconnectTimer = setTimeout(connect, 3000);
+                    }
                 };
 
                 ws.onerror = (err) => {
                     console.error("WebSocket Error:", err);
-                    setError("Connection error");
+                    if (!cancelled) setError("Connection error");
                     ws?.close();
                 };
 
                 wsRef.current = ws;
             } catch (err) {
                 console.error("Auth error:", err);
-                setError("Authentication failed");
+                if (!cancelled) setError("Authentication failed");
             }
         };
 
         connect();
 
         return () => {
-            ws?.close();
+            cancelled = true;
             clearTimeout(reconnectTimer);
+            ws?.close();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -211,7 +245,7 @@ export default function IntelligencePage() {
                     <div className="flex items-center gap-3">
                         <div className={clsx("w-3 h-3 rounded-full transition-colors", isConnected ? "bg-emerald-500" : "bg-red-400 animate-pulse")} />
                         <div>
-                            <h2 className="text-base font-semibold text-zinc-900">Intelligence</h2>
+                            <h2 className="text-base font-semibold text-zinc-900">OpenClaw Insights</h2>
                             <p className="text-xs text-zinc-500 font-mono">
                                 {isConnected ? "CONNECTED" : "CONNECTING..."}
                             </p>
@@ -227,7 +261,7 @@ export default function IntelligencePage() {
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-zinc-400 space-y-4 py-10">
                             <Terminal size={48} className="text-zinc-300" />
-                            <p className="text-sm">Start a conversation to query intelligence...</p>
+                            <p className="text-sm">Start a conversation to get insights...</p>
                         </div>
                     )}
 
@@ -335,5 +369,13 @@ export default function IntelligencePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function IntelligencePage() {
+    return (
+        <Suspense fallback={<div className="p-10 text-center text-zinc-500">Loading OpenClaw Insights...</div>}>
+            <IntelligenceContent />
+        </Suspense>
     );
 }
