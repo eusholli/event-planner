@@ -13,7 +13,7 @@ export default function Navigation() {
 
     const allLinks = [
         { href: '/dashboard', label: 'Meeting Tracker' },
-        { href: '/new-meeting', label: 'New Meeting', roles: [Roles.Root, Roles.Admin] },
+        { href: '/new-meeting', label: 'New Meeting' },
         { href: '/attendees', label: 'Attendees' },
         { href: '/rooms', label: 'Rooms', roles: [Roles.Root, Roles.Admin] },
         { href: '/calendar', label: 'Calendar' },
