@@ -73,7 +73,8 @@ export const createMeeting = tool({
     description: 'Create a new meeting. Requires Title, Date, Start Time, End Time. Optional: Room, Attendees.',
     inputSchema: createMeetingParameters,
     execute: async ({ title, purpose, date, startTime, endTime, roomId, attendeeEmails }: z.infer<typeof createMeetingParameters>) => {
-        if (!(await canWrite())) {
+        const { canCreate } = await import('@/lib/roles');
+        if (!(await canCreate())) {
             return 'Permission Denied: You do not have permission to create meetings.';
         }
 
@@ -129,10 +130,27 @@ export const cancelMeeting = tool({
         id: z.string(),
     }),
     execute: async ({ id: meetingId }: { id: string }) => {
-        if (!(await canWrite())) {
-            return 'Permission Denied: You do not have permission to cancel meetings.';
-        }
+        const hasWriteAccess = await canWrite();
+
         try {
+            const meeting = await prisma.meeting.findUnique({
+                where: { id: meetingId }
+            });
+
+            if (!meeting) {
+                return { error: `Meeting ${meetingId} not found` };
+            }
+
+            if (!hasWriteAccess) {
+                const { currentUser } = await import('@clerk/nextjs/server');
+                const user = await currentUser();
+                const userEmail = user?.emailAddresses[0]?.emailAddress;
+
+                if (meeting.createdBy !== userEmail) {
+                    return 'Permission Denied: You do not have permission to cancel this meeting.';
+                }
+            }
+
             await prisma.meeting.update({
                 where: { id: meetingId },
                 data: {

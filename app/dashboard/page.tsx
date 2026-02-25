@@ -655,11 +655,9 @@ function DashboardContent() {
                     >
                         Export CSV
                     </button>
-                    {!readOnly && (
-                        <Link href="/new-meeting" className="btn-primary">
-                            New Meeting
-                        </Link>
-                    )}
+                    <Link href="/new-meeting" className="btn-primary">
+                        New Meeting
+                    </Link>
                 </div>
             </div>
 
@@ -905,7 +903,7 @@ function DashboardContent() {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
-                readOnly={readOnly}
+                readOnly={!selectedEvent?.id ? false : (readOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress))}
             />
         </div>
     )
