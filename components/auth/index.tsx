@@ -10,6 +10,7 @@ const mockUser = {
     firstName: 'Mock',
     lastName: 'User',
     primaryEmailAddress: { emailAddress: 'mock@example.com' },
+    emailAddresses: [{ emailAddress: 'mock@example.com' }],
     imageUrl: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
     publicMetadata: { role: 'root' },
     reload: async () => { },

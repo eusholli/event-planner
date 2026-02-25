@@ -30,11 +30,27 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { canWrite } = await import('@/lib/roles')
-    if (!await canWrite()) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const hasWriteAccess = await canWrite()
     const id = (await params).id
     try {
+        const meeting = await prisma.meeting.findUnique({
+            where: { id },
+        })
+
+        if (!meeting) {
+            return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        }
+
+        // Check ownership if no write access
+        if (!hasWriteAccess) {
+            const { currentUser } = await import('@clerk/nextjs/server')
+            const user = await currentUser()
+            const userEmail = user?.emailAddresses[0]?.emailAddress
+
+            if (meeting.createdBy !== userEmail) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
+        }
         const body = await request.json()
         const {
             title,
@@ -192,7 +208,7 @@ export async function PUT(
             updateData.location = null;
         }
 
-        const meeting = await prisma.meeting.update({
+        const updatedMeetingResult = await prisma.meeting.update({
             where: { id },
             data: updateData,
             include: {
@@ -230,15 +246,27 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { canWrite } = await import('@/lib/roles')
-    if (!await canWrite()) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const hasWriteAccess = await canWrite()
     const id = (await params).id
     try {
         const meeting = await prisma.meeting.findUnique({
             where: { id },
             include: { room: true, attendees: true }
         })
+
+        if (!meeting) {
+            return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        }
+
+        if (!hasWriteAccess) {
+            const { currentUser } = await import('@clerk/nextjs/server')
+            const user = await currentUser()
+            const userEmail = user?.emailAddresses[0]?.emailAddress
+
+            if (meeting.createdBy !== userEmail) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
+        }
 
         if (meeting && meeting.date && meeting.startTime && meeting.endTime) {
             try {
