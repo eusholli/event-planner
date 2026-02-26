@@ -26,7 +26,7 @@ export default function Navigation() {
         { href: `/events/${eventId}/attendees`, label: 'Attendees' },
         { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
         { href: `/events/${eventId}/calendar`, label: 'Calendar' },
-        { href: `/events/${eventId}/chat`, label: 'Chat' },
+        { href: `/events/${eventId}/intelligence`, label: 'OpenClaw Insights' },
         { href: `/events/${eventId}/reports`, label: 'Reports' },
 
     ] : []

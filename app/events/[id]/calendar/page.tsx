@@ -285,6 +285,12 @@ function CalendarContent({ eventId }: { eventId: string }) {
     }, [rooms])
 
     const onEventDrop = useCallback(({ event, start, end, resourceId }: any) => {
+        const userEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
+        if (readOnly && event.createdBy !== userEmail) {
+            alert('You do not have permission to edit this meeting.');
+            return;
+        }
+
         const updatedEvent = {
             ...event,
             start,
@@ -296,7 +302,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
             endTime: moment(end).format('HH:mm')
         }
         handleEventUpdate(updatedEvent)
-    }, [handleEventUpdate])
+    }, [handleEventUpdate, readOnly, user])
 
     const handleDoubleClickEvent = (event: Meeting) => {
         setSelectedEvent(event)
@@ -592,7 +598,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
-                readOnly={readOnly}
+                readOnly={isCreating ? false : (readOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress))}
             />
 
             {/* View Modal */}

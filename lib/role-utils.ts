@@ -8,3 +8,7 @@ export const hasWriteAccess = (role?: string) => {
 export const canManageEvents = (role?: string) => {
     return role === Roles.Root || role === Roles.Marketing
 }
+
+export const hasCreateAccess = (role?: string) => {
+    return role === Roles.Root || role === Roles.Admin || role === Roles.User
+}
