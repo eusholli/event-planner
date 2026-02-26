@@ -9,7 +9,7 @@ import { generateBriefingBook, generateScheduleBriefing, generateMultiMeetingBri
 import { generateCalendarViewPDF } from '@/lib/calendar-pdf'
 import MeetingCard from '@/components/MeetingCard'
 import { useUser } from '@/components/auth'
-import { hasWriteAccess } from '@/lib/role-utils'
+import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
 
 interface Room {
     id: string
@@ -44,7 +44,11 @@ function DashboardContent({ eventId }: { eventId: string }) {
     const [loading, setLoading] = useState(true)
     const [eventSettings, setEventSettings] = useState<{ startDate?: string, endDate?: string } | null>(null)
     const { user } = useUser()
-    const readOnly = !hasWriteAccess(user?.publicMetadata?.role as string)
+    const role = user?.publicMetadata?.role as string
+    const userPermissionReadOnly = !hasWriteAccess(role)
+    const canCreate = hasCreateAccess(role)
+    const [isLocked, setIsLocked] = useState(false)
+    const readOnly = userPermissionReadOnly || isLocked
     const searchParams = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
@@ -92,6 +96,9 @@ function DashboardContent({ eventId }: { eventId: string }) {
             setRooms(roomsData)
             setAllAttendees(attendeesData)
             if (eventData) {
+                if (eventData.status === 'OCCURRED') {
+                    setIsLocked(true)
+                }
                 if (eventData.tags) setAvailableTags(eventData.tags)
                 if (eventData.meetingTypes) setMeetingTypes(eventData.meetingTypes)
                 setEventSettings({
@@ -650,9 +657,11 @@ function DashboardContent({ eventId }: { eventId: string }) {
                     >
                         Export CSV
                     </button>
-                    <Link href="/new-meeting" className="btn-primary">
-                        New Meeting
-                    </Link>
+                    {canCreate && (
+                        <Link href={`/events/${eventId}/new-meeting`} className="btn-primary">
+                            New Meeting
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -898,7 +907,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
-                readOnly={!selectedEvent?.id ? false : (readOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress))}
+                readOnly={!selectedEvent?.id ? false : (isLocked || (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress)))}
             />
         </div>
     )

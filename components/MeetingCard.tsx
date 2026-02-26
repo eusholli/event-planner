@@ -3,7 +3,7 @@
 import { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook } from '@/lib/briefing-book'
 import moment from 'moment'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
 
 interface Room {
@@ -28,6 +28,8 @@ interface MeetingCardProps {
 
 export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '', hasConflict = false }: MeetingCardProps) {
     const router = useRouter()
+    const params = useParams()
+    const eventId = params?.id as string
 
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { label: string; className: string }> = {
@@ -138,7 +140,7 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                                 `Attendees: ${meeting.attendees?.map(a => `${a.name} (${a.company || 'Unknown Company'})`).join(', ') || 'None'}`
                             ]
                             const prompt = `Return the latest market intelligence relevant to the following meeting purpose, the companies involved, the meeting itself, and the latest intelligence on the external attendees. Also recommend what the most impactful speaking points and conversation should be, based on the market research and analysis. Here are the meeting details:\n\n${queryParts.join('\n')}`
-                            router.push(`/intelligence?autoQuery=${encodeURIComponent(prompt)}`)
+                            router.push(`/events/${eventId}/intelligence?autoQuery=${encodeURIComponent(prompt)}`)
                         }}
                         className="p-2 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                         title="Get latest meeting recommendations"
