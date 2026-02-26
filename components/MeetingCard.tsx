@@ -1,6 +1,10 @@
+'use client'
+
 import { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook } from '@/lib/briefing-book'
 import moment from 'moment'
+import { useRouter } from 'next/navigation'
+import { Sparkles } from 'lucide-react'
 
 interface Room {
     id: string
@@ -23,6 +27,7 @@ interface MeetingCardProps {
 }
 
 export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '', hasConflict = false }: MeetingCardProps) {
+    const router = useRouter()
 
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { label: string; className: string }> = {
@@ -121,7 +126,25 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                         ))}
                     </div>
                 </div>
-                <div className="flex flex-col justify-center pl-4 border-l border-zinc-100">
+                <div className="flex flex-col justify-center gap-2 pl-4 border-l border-zinc-100">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            const queryParts = [
+                                `Meeting Title: ${meeting.title}`,
+                                `Date: ${meeting.date ? moment(meeting.date).format('YYYY-MM-DD') : (meeting.start ? moment(meeting.start).format('YYYY-MM-DD') : 'Unknown')}`,
+                                `Purpose: ${meeting.purpose || 'None provided'}`,
+                                `Other Details: ${meeting.otherDetails || 'None'}`,
+                                `Attendees: ${meeting.attendees?.map(a => `${a.name} (${a.company || 'Unknown Company'})`).join(', ') || 'None'}`
+                            ]
+                            const prompt = `Return the latest market intelligence relevant to the following meeting purpose, the companies involved, the meeting itself, and the latest intelligence on the external attendees. Also recommend what the most impactful speaking points and conversation should be, based on the market research and analysis. Here are the meeting details:\n\n${queryParts.join('\n')}`
+                            router.push(`/intelligence?autoQuery=${encodeURIComponent(prompt)}`)
+                        }}
+                        className="p-2 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Get latest meeting recommendations"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                    </button>
                     <button
                         onClick={async (e) => {
                             e.stopPropagation()

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { Sparkles, Building2 } from 'lucide-react'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
 import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { useUser } from '@/components/auth'
@@ -314,8 +315,25 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors">{attendee.name}</h3>
-                        <p className="text-sm text-zinc-500 font-medium">
-                            {attendee.title ? `${attendee.title} at ` : ''}{attendee.company}
+                        <p className="text-sm text-zinc-500 font-medium flex items-center flex-wrap gap-x-1">
+                            {attendee.title ? `${attendee.title} at ` : ''}
+                            {attendee.company && (
+                                <>
+                                    <span>{attendee.company}</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            const query = `Give me the latest market intelligence on company ${attendee.company}.`
+                                            router.push(`/intelligence?autoQuery=${encodeURIComponent(query)}`)
+                                        }}
+                                        className="inline-flex items-center p-0.5 text-zinc-300 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                        title={`Get OpenClaw Insights on ${attendee.company}`}
+                                    >
+                                        <Building2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </>
+                            )}
+                            {!attendee.company && ''}
                             {attendee.isExternal && (
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                     External
@@ -330,6 +348,20 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                     </div>
                 </div>
                 <div className="flex space-x-1">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            const parts = [attendee.name]
+                            if (attendee.title) parts.push(attendee.title)
+                            if (attendee.company) parts.push(attendee.company)
+                            const query = `Give me the latest market intelligence on person ${parts.join(', ')}.`
+                            router.push(`/intelligence?autoQuery=${encodeURIComponent(query)}`)
+                        }}
+                        className="p-1.5 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title={`Get OpenClaw Insights on ${attendee.name}`}
+                    >
+                        <Sparkles className="w-4 h-4" />
+                    </button>
                     {(!readOnly || (userEmail && attendee.email === userEmail)) && (
                         <button
                             onClick={() => openEditModal(attendee)}
