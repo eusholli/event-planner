@@ -7,7 +7,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
 import { useUser } from '@/components/auth'
-import { hasWriteAccess } from '@/lib/role-utils'
+import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop(Calendar)
@@ -74,6 +74,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
     const [isLocked, setIsLocked] = useState(false)
     const role = user?.publicMetadata?.role as string
     const userPermissionReadOnly = !hasWriteAccess(role)
+    const canCreate = hasCreateAccess(role)
     const readOnly = userPermissionReadOnly || isLocked
 
     useEffect(() => {
@@ -286,7 +287,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
 
     const onEventDrop = useCallback(({ event, start, end, resourceId }: any) => {
         const userEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
-        if (readOnly && event.createdBy !== userEmail) {
+        if (isLocked || (userPermissionReadOnly && event.createdBy !== userEmail)) {
             alert('You do not have permission to edit this meeting.');
             return;
         }
@@ -302,7 +303,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
             endTime: moment(end).format('HH:mm')
         }
         handleEventUpdate(updatedEvent)
-    }, [handleEventUpdate, readOnly, user])
+    }, [handleEventUpdate, isLocked, userPermissionReadOnly, user])
 
     const handleDoubleClickEvent = (event: Meeting) => {
         setSelectedEvent(event)
@@ -535,9 +536,9 @@ function CalendarContent({ eventId }: { eventId: string }) {
                     resources={rooms.map(r => ({ id: r.id, title: r.name }))}
                     resourceIdAccessor={(resource: any) => resource.id}
                     resourceTitleAccessor={(resource: any) => resource.title}
-                    onSelectSlot={(slotInfo) => !readOnly && handleSelectSlot(slotInfo)}
-                    selectable={!readOnly}
-                    onEventDrop={(args) => !readOnly && onEventDrop(args)}
+                    onSelectSlot={(slotInfo) => !isLocked && canCreate && handleSelectSlot(slotInfo)}
+                    selectable={!isLocked && canCreate}
+                    onEventDrop={(args) => onEventDrop(args)}
                     onDoubleClickEvent={(event: any) => {
                         if (clickTimeoutRef.current) {
                             clearTimeout(clickTimeoutRef.current)
@@ -598,7 +599,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
-                readOnly={isCreating ? false : (readOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress))}
+                readOnly={isCreating ? false : (isLocked || (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress)))}
             />
 
             {/* View Modal */}

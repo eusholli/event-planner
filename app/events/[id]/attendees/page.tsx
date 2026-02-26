@@ -324,7 +324,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             const query = `Give me the latest market intelligence on company ${attendee.company}.`
-                                            router.push(`/intelligence?autoQuery=${encodeURIComponent(query)}`)
+                                            router.push(`/events/${eventId}/intelligence?autoQuery=${encodeURIComponent(query)}`)
                                         }}
                                         className="inline-flex items-center p-0.5 text-zinc-300 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
                                         title={`Get OpenClaw Insights on ${attendee.company}`}
@@ -355,7 +355,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                             if (attendee.title) parts.push(attendee.title)
                             if (attendee.company) parts.push(attendee.company)
                             const query = `Give me the latest market intelligence on person ${parts.join(', ')}.`
-                            router.push(`/intelligence?autoQuery=${encodeURIComponent(query)}`)
+                            router.push(`/events/${eventId}/intelligence?autoQuery=${encodeURIComponent(query)}`)
                         }}
                         className="p-1.5 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                         title={`Get OpenClaw Insights on ${attendee.name}`}

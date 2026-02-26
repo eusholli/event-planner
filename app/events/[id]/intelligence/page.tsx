@@ -2,7 +2,7 @@
 
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useRef, useState, Suspense } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useSearchParams, useRouter, usePathname, useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Send, Terminal, Loader2, AlertCircle } from "lucide-react";
@@ -43,6 +43,8 @@ function IntelligenceContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
+    const params = useParams();
+    const eventId = params?.id as string;
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isConnected, setIsConnected] = useState(false);
@@ -80,13 +82,13 @@ function IntelligenceContent() {
                 const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
                 let wsUrl: string;
                 if (envWsUrl) {
-                    wsUrl = `${envWsUrl}${envWsUrl.includes("?") ? "&" : "?"}token=${token}`;
+                    wsUrl = `${envWsUrl}${envWsUrl.includes("?") ? "&" : "?"}token=${token}&eventId=${eventId}`;
                 } else {
                     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
                     const host = window.location.hostname === "localhost"
                         ? "localhost:8080"
                         : window.location.host;
-                    wsUrl = `${protocol}://${host}/?token=${token}`;
+                    wsUrl = `${protocol}://${host}/?token=${token}&eventId=${eventId}`;
                 }
 
                 if (cancelled) return;
