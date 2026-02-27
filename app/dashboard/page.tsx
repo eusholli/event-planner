@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import moment from 'moment'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook, generateScheduleBriefing, generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { generateCalendarViewPDF } from '@/lib/calendar-pdf'
@@ -60,6 +61,7 @@ function DashboardContent() {
     const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
     const [filterApproved, setFilterApproved] = useState(false)
     const [filterInviteSent, setFilterInviteSent] = useState(false)
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -689,170 +691,178 @@ function DashboardContent() {
                 {/* Filters Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm space-y-6">
-                        <h3 className="font-semibold text-zinc-900">Filters</h3>
-
-                        {/* Status (First Filter) */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
-                            <div className="space-y-2">
-                                {['PIPELINE', 'CONFIRMED', 'OCCURRED', 'CANCELED'].map(status => (
-                                    <label key={status} className="flex items-center space-x-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedStatuses.includes(status)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedStatuses(prev => [...prev, status])
-                                                } else {
-                                                    setSelectedStatuses(prev => prev.filter(s => s !== status))
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                        />
-                                        <span className="text-sm text-zinc-600 capitalize">{status.toLowerCase()}</span>
-                                    </label>
-                                ))}
+                        <div
+                            className="flex justify-between items-center cursor-pointer lg:cursor-default"
+                            onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                        >
+                            <h3 className="font-semibold text-zinc-900">Filters</h3>
+                            <div className="lg:hidden text-zinc-400">
+                                {isFiltersExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                             </div>
                         </div>
 
-                        {/* Search */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Search</label>
-                            <input
-                                type="text"
-                                placeholder="Search requester, creator, text, room, attendees, other details..."
-                                className="input-field text-sm"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Date */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Date</label>
-                            <input
-                                type="date"
-                                className="input-field text-sm"
-                                value={selectedDate}
-                                min={eventSettings?.startDate}
-                                max={eventSettings?.endDate}
-                                onChange={e => setSelectedDate(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Room */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Room</label>
-                            <select
-                                className="input-field text-sm"
-                                value={selectedRoomId}
-                                onChange={e => setSelectedRoomId(e.target.value)}
-                            >
-                                <option value="">All Rooms</option>
-                                {rooms.map(room => (
-                                    <option key={room.id} value={room.id}>{room.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Meeting Type */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Meeting Type</label>
-                            <div className="flex flex-wrap gap-2">
-                                {meetingTypes.map(type => (
-                                    <button
-                                        key={type}
-                                        onClick={() => {
-                                            setSelectedMeetingTypes(prev =>
-                                                prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-                                            )
-                                        }}
-                                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedMeetingTypes.includes(type)
-                                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                            : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
-                                            }`}
-                                    >
-                                        {type}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Status Flags */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
-                            <div className="space-y-2">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={filterApproved}
-                                        onChange={(e) => setFilterApproved(e.target.checked)}
-                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                    />
-                                    <span className="text-sm text-zinc-600">Approved</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={filterInviteSent}
-                                        onChange={(e) => setFilterInviteSent(e.target.checked)}
-                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                    />
-                                    <span className="text-sm text-zinc-600">Invite Sent</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Tags */}
-                        {availableTags.length > 0 && (
+                        <div className={`space-y-6 ${isFiltersExpanded ? 'block' : 'hidden'} lg:block`}>
+                            {/* Status (First Filter) */}
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Tags</label>
+                                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
+                                <div className="space-y-2">
+                                    {['PIPELINE', 'CONFIRMED', 'OCCURRED', 'CANCELED'].map(status => (
+                                        <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStatuses.includes(status)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedStatuses(prev => [...prev, status])
+                                                    } else {
+                                                        setSelectedStatuses(prev => prev.filter(s => s !== status))
+                                                    }
+                                                }}
+                                                className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                            />
+                                            <span className="text-sm text-zinc-600 capitalize">{status.toLowerCase()}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Search */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Search</label>
+                                <input
+                                    type="text"
+                                    placeholder="Search requester, creator, text, room, attendees, other details..."
+                                    className="input-field text-sm"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Date */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Date</label>
+                                <input
+                                    type="date"
+                                    className="input-field text-sm"
+                                    value={selectedDate}
+                                    min={eventSettings?.startDate}
+                                    max={eventSettings?.endDate}
+                                    onChange={e => setSelectedDate(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Room */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Room</label>
+                                <select
+                                    className="input-field text-sm"
+                                    value={selectedRoomId}
+                                    onChange={e => setSelectedRoomId(e.target.value)}
+                                >
+                                    <option value="">All Rooms</option>
+                                    {rooms.map(room => (
+                                        <option key={room.id} value={room.id}>{room.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Meeting Type */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Meeting Type</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {availableTags.map(tag => (
+                                    {meetingTypes.map(type => (
                                         <button
-                                            key={tag}
+                                            key={type}
                                             onClick={() => {
-                                                setSelectedTags(prev =>
-                                                    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                                setSelectedMeetingTypes(prev =>
+                                                    prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
                                                 )
                                             }}
-                                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedTags.includes(tag)
+                                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedMeetingTypes.includes(type)
                                                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                                 : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
                                                 }`}
                                         >
-                                            {tag}
+                                            {type}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                        )}
 
-                        {/* Attendees */}
-                        <div>
-                            <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Attendees</label>
-                            <div className="max-h-48 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
-                                {allAttendees.map(attendee => (
-                                    <label key={attendee.id} className="flex items-center space-x-2.5 p-1.5 hover:bg-zinc-50 rounded-lg cursor-pointer transition-colors">
+                            {/* Status Flags */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
+                                <div className="space-y-2">
+                                    <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            className="w-3.5 h-3.5 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                            checked={selectedAttendees.includes(attendee.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedAttendees(prev => [...prev, attendee.id])
-                                                } else {
-                                                    setSelectedAttendees(prev => prev.filter(id => id !== attendee.id))
-                                                }
-                                            }}
+                                            checked={filterApproved}
+                                            onChange={(e) => setFilterApproved(e.target.checked)}
+                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
                                         />
-                                        <span className="text-sm text-zinc-600 truncate">{attendee.name}</span>
+                                        <span className="text-sm text-zinc-600">Approved</span>
                                     </label>
-                                ))}
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={filterInviteSent}
+                                            onChange={(e) => setFilterInviteSent(e.target.checked)}
+                                            className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                        />
+                                        <span className="text-sm text-zinc-600">Invite Sent</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            {availableTags.length > 0 && (
+                                <div>
+                                    <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Tags</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableTags.map(tag => (
+                                            <button
+                                                key={tag}
+                                                onClick={() => {
+                                                    setSelectedTags(prev =>
+                                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                                    )
+                                                }}
+                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedTags.includes(tag)
+                                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                                                    }`}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Attendees */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Attendees</label>
+                                <div className="max-h-48 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
+                                    {allAttendees.map(attendee => (
+                                        <label key={attendee.id} className="flex items-center space-x-2.5 p-1.5 hover:bg-zinc-50 rounded-lg cursor-pointer transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                className="w-3.5 h-3.5 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                checked={selectedAttendees.includes(attendee.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedAttendees(prev => [...prev, attendee.id])
+                                                    } else {
+                                                        setSelectedAttendees(prev => prev.filter(id => id !== attendee.id))
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-sm text-zinc-600 truncate">{attendee.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-
-
                     </div>
                 </div>
 

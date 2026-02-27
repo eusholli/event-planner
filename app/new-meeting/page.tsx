@@ -414,28 +414,6 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="col-span-full">
-                                    <label className="block text-sm font-medium text-zinc-700 mb-2">Internal Attendees</label>
-                                    <div className="max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
-                                                <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.attendeeIds.includes(attendee.id)}
-                                                        onChange={() => toggleAttendee(attendee.id)}
-                                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                                    />
-                                                    <span className="text-sm text-zinc-700">{attendee.name} <span className="text-zinc-400 text-xs">({attendee.company})</span></span>
-                                                </label>
-                                            ))}
-                                            {attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
-                                                <p className="text-xs text-zinc-400 italic col-span-full px-2">No internal attendees found.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="col-span-full">
                                     <label className="block text-sm font-medium text-zinc-700 mb-2">External Attendees</label>
                                     <div className="max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -452,6 +430,28 @@ export default function SchedulePage() {
                                             ))}
                                             {attendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
                                                 <p className="text-xs text-zinc-400 italic col-span-full px-2">No external attendees found.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-full">
+                                    <label className="block text-sm font-medium text-zinc-700 mb-2">Internal Attendees</label>
+                                    <div className="max-h-48 overflow-y-auto p-3 border border-zinc-200 rounded-2xl bg-zinc-50/50">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
+                                                <label key={attendee.id} className="flex items-center space-x-3 p-2 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.attendeeIds.includes(attendee.id)}
+                                                        onChange={() => toggleAttendee(attendee.id)}
+                                                        className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-sm text-zinc-700">{attendee.name} <span className="text-zinc-400 text-xs">({attendee.company})</span></span>
+                                                </label>
+                                            ))}
+                                            {attendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                                <p className="text-xs text-zinc-400 italic col-span-full px-2">No internal attendees found.</p>
                                             )}
                                         </div>
                                     </div>
