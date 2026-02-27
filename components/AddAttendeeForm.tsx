@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Attendee {
     id: string
@@ -39,6 +40,7 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
     const [hasApiKey, setHasApiKey] = useState(false)
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<Partial<Attendee> | null>(null)
+    const [isExpanded, setIsExpanded] = useState(false)
 
     const resizeImage = (file: File): Promise<File> => {
         return new Promise((resolve, reject) => {
@@ -189,202 +191,213 @@ export default function AddAttendeeForm({ onSuccess }: AddAttendeeFormProps) {
     return (
         <>
             <div className="card sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-6">Add Attendee</h2>
-                {error && (
-                    <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-sm">
-                        {error}
+                <div
+                    className="flex justify-between items-center cursor-pointer lg:cursor-default mb-6"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
+                    <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-0">Add Attendee</h2>
+                    <div className="lg:hidden text-zinc-400">
+                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </div>
-                )}
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Photo Input */}
-                    <div className="flex flex-col items-center mb-6 space-y-3">
-                        <div
-                            className="relative group cursor-pointer"
-                            onClick={() => document.getElementById('add-photo-upload')?.click()}
-                        >
-                            <div className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 ${formData.imageUrl ? 'border-indigo-500' : 'border-zinc-200 bg-zinc-50'}`}>
-                                {formData.imageUrl ? (
-                                    <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                ) : (
-                                    <svg className="w-10 h-10 text-zinc-300" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-                                    </svg>
-                                )}
-                            </div>
-                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                        <input
-                            type="file"
-                            id="add-photo-upload"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={async (e) => {
-                                if (e.target.files?.[0]) {
-                                    try {
-                                        const resizedFile = await resizeImage(e.target.files[0])
-                                        setSelectedFile(resizedFile)
-                                        setFormData({ ...formData, imageUrl: URL.createObjectURL(resizedFile) })
-                                    } catch (err) {
-                                        console.error("Error resizing image:", err)
-                                    }
-                                }
-                            }}
-                        />
-                        <div className="text-center w-full max-w-xs">
-                            <div className="text-xs text-zinc-500 mb-1">or enter URL</div>
-                            <input
-                                type="url"
-                                placeholder="https://example.com/photo.jpg"
-                                className="input-field text-xs py-1.5"
-                                value={selectedFile ? '' : formData.imageUrl}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, imageUrl: e.target.value })
-                                    setSelectedFile(null)
-                                }}
-                            />
-                            {selectedFile && <div className="text-[10px] text-green-600 mt-1">Image selected</div>}
-                        </div>
-                    </div>
+                </div>
 
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1.5">Name</label>
-                        <input
-                            type="text"
-                            id="name"
-                            required
-                            className="input-field"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-zinc-700 mb-1.5">Title</label>
-                        <input
-                            type="text"
-                            id="title"
-                            required
-                            className="input-field"
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="company" className="block text-sm font-medium text-zinc-700 mb-1.5">Company</label>
-                        <input
-                            type="text"
-                            id="company"
-                            required
-                            className="input-field"
-                            value={formData.company}
-                            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email</label>
-                        <input
-                            type="email"
-                            id="email"
-                            required
-                            className="input-field"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="linkedin" className="block text-sm font-medium text-zinc-700 mb-1.5">LinkedIn URL</label>
-                        <input
-                            type="url"
-                            id="linkedin"
-                            className="input-field"
-                            value={formData.linkedin}
-                            onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-                            placeholder="https://linkedin.com/in/..."
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="bio" className="block text-sm font-medium text-zinc-700 mb-1.5">Bio</label>
-                        <textarea
-                            id="bio"
-                            className="input-field h-24 resize-none"
-                            value={formData.bio}
-                            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                        />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="isExternal"
-                            className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
-                            checked={formData.isExternal}
-                            onChange={(e) => setFormData({ ...formData, isExternal: e.target.checked })}
-                        />
-                        <label htmlFor="isExternal" className="text-sm font-medium text-zinc-700">
-                            External Attendee
-                        </label>
-                    </div>
-
-                    {attendeeTypes.length > 0 && (
-                        <div>
-                            <label htmlFor="type" className="block text-sm font-medium text-zinc-700 mb-1.5">Attendee Type</label>
-                            <select
-                                id="type"
-                                className="input-field"
-                                value={formData.type}
-                                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                            >
-                                <option value="">Select a type...</option>
-                                {attendeeTypes.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
+                <div className={`${isExpanded ? 'block' : 'hidden'} lg:block`}>
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-sm">
+                            {error}
                         </div>
                     )}
-                    <div className="flex gap-3">
-                        <div className="relative flex-grow group">
-                            <button
-                                type="button"
-                                onClick={handleAutoComplete}
-                                disabled={loading || !hasApiKey || !formData.name || !formData.company}
-                                className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Photo Input */}
+                        <div className="flex flex-col items-center mb-6 space-y-3">
+                            <div
+                                className="relative group cursor-pointer"
+                                onClick={() => document.getElementById('add-photo-upload')?.click()}
                             >
-                                {autoCompleting ? (
-                                    <>
-                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <div className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 ${formData.imageUrl ? 'border-indigo-500' : 'border-zinc-200 bg-zinc-50'}`}>
+                                    {formData.imageUrl ? (
+                                        <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <svg className="w-10 h-10 text-zinc-300" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                                         </svg>
-                                        <span>Thinking...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        <span>Auto Complete</span>
-                                    </>
-                                )}
-                            </button>
-                            {!hasApiKey && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-zinc-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                    Gemini API Key required in Settings
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
+                                    )}
                                 </div>
-                            )}
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <input
+                                type="file"
+                                id="add-photo-upload"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                    if (e.target.files?.[0]) {
+                                        try {
+                                            const resizedFile = await resizeImage(e.target.files[0])
+                                            setSelectedFile(resizedFile)
+                                            setFormData({ ...formData, imageUrl: URL.createObjectURL(resizedFile) })
+                                        } catch (err) {
+                                            console.error("Error resizing image:", err)
+                                        }
+                                    }
+                                }}
+                            />
+                            <div className="text-center w-full max-w-xs">
+                                <div className="text-xs text-zinc-500 mb-1">or enter URL</div>
+                                <input
+                                    type="url"
+                                    placeholder="https://example.com/photo.jpg"
+                                    className="input-field text-xs py-1.5"
+                                    value={selectedFile ? '' : formData.imageUrl}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, imageUrl: e.target.value })
+                                        setSelectedFile(null)
+                                    }}
+                                />
+                                {selectedFile && <div className="text-[10px] text-green-600 mt-1">Image selected</div>}
+                            </div>
                         </div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6"
-                        >
-                            {loading ? 'Adding...' : 'Add'}
-                        </button>
-                    </div>
-                </form>
+
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1.5">Name</label>
+                            <input
+                                type="text"
+                                id="name"
+                                required
+                                className="input-field"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="title" className="block text-sm font-medium text-zinc-700 mb-1.5">Title</label>
+                            <input
+                                type="text"
+                                id="title"
+                                required
+                                className="input-field"
+                                value={formData.title}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="company" className="block text-sm font-medium text-zinc-700 mb-1.5">Company</label>
+                            <input
+                                type="text"
+                                id="company"
+                                required
+                                className="input-field"
+                                value={formData.company}
+                                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email</label>
+                            <input
+                                type="email"
+                                id="email"
+                                required
+                                className="input-field"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="linkedin" className="block text-sm font-medium text-zinc-700 mb-1.5">LinkedIn URL</label>
+                            <input
+                                type="url"
+                                id="linkedin"
+                                className="input-field"
+                                value={formData.linkedin}
+                                onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                                placeholder="https://linkedin.com/in/..."
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="bio" className="block text-sm font-medium text-zinc-700 mb-1.5">Bio</label>
+                            <textarea
+                                id="bio"
+                                className="input-field h-24 resize-none"
+                                value={formData.bio}
+                                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="isExternal"
+                                className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                                checked={formData.isExternal}
+                                onChange={(e) => setFormData({ ...formData, isExternal: e.target.checked })}
+                            />
+                            <label htmlFor="isExternal" className="text-sm font-medium text-zinc-700">
+                                External Attendee
+                            </label>
+                        </div>
+
+                        {attendeeTypes.length > 0 && (
+                            <div>
+                                <label htmlFor="type" className="block text-sm font-medium text-zinc-700 mb-1.5">Attendee Type</label>
+                                <select
+                                    id="type"
+                                    className="input-field"
+                                    value={formData.type}
+                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                >
+                                    <option value="">Select a type...</option>
+                                    {attendeeTypes.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        <div className="flex gap-3">
+                            <div className="relative flex-grow group">
+                                <button
+                                    type="button"
+                                    onClick={handleAutoComplete}
+                                    disabled={loading || !hasApiKey || !formData.name || !formData.company}
+                                    className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {autoCompleting ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Thinking...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                            <span>Auto Complete</span>
+                                        </>
+                                    )}
+                                </button>
+                                {!hasApiKey && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-zinc-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                        Gemini API Key required in Settings
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-6"
+                            >
+                                {loading ? 'Adding...' : 'Add'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             {/* Suggestions Modal */}
