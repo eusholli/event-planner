@@ -7,7 +7,7 @@ import { Sparkles, Building2 } from 'lucide-react'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
 import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { useUser } from '@/components/auth'
-import { hasWriteAccess } from '@/lib/role-utils'
+import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
 
 interface Attendee {
     id: string
@@ -32,6 +32,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const role = user?.publicMetadata?.role as string
     const userPermissionReadOnly = !hasWriteAccess(role)
     const readOnly = userPermissionReadOnly || isLocked
+    const canCreate = hasCreateAccess(role)
     const userEmail = user?.primaryEmailAddress?.emailAddress
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -444,7 +445,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Add Attendee Form */}
                 <div className="lg:col-span-1">
-                    {!readOnly && <AddAttendeeForm onSuccess={fetchAttendees} eventId={eventId} />}
+                    {(!isLocked && canCreate) && <AddAttendeeForm onSuccess={fetchAttendees} eventId={eventId} />}
                 </div>
 
                 {/* Attendees List */}
@@ -464,24 +465,6 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                         </div>
                     )}
 
-                    {/* Internal Attendees */}
-                    <div>
-                        <div className="flex items-center mb-6">
-                            <h2 className="text-xl font-bold text-zinc-900">Internal Attendees</h2>
-                            <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600">
-                                {internalAttendees.length}
-                            </span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {internalAttendees.map(renderAttendeeCard)}
-                            {internalAttendees.length === 0 && (
-                                <div className="col-span-full text-center py-12 text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
-                                    No internal attendees found.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
                     {/* External Attendees */}
                     <div>
                         <div className="flex items-center mb-6">
@@ -495,6 +478,24 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                             {externalAttendees.length === 0 && (
                                 <div className="col-span-full text-center py-12 text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
                                     No external attendees found.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Internal Attendees */}
+                    <div>
+                        <div className="flex items-center mb-6">
+                            <h2 className="text-xl font-bold text-zinc-900">Internal Attendees</h2>
+                            <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600">
+                                {internalAttendees.length}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {internalAttendees.map(renderAttendeeCard)}
+                            {internalAttendees.length === 0 && (
+                                <div className="col-span-full text-center py-12 text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
+                                    No internal attendees found.
                                 </div>
                             )}
                         </div>
