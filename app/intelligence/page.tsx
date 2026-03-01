@@ -12,7 +12,7 @@ import clsx from "clsx";
 function TypingIndicator({ statusMessage }: { statusMessage?: string | null }) {
     return (
         <div className="flex flex-col max-w-[85%] self-start items-start">
-            <div className="text-xs text-zinc-500 mb-1 px-1 font-mono uppercase">Operator</div>
+            <div className="text-xs text-zinc-500 mb-1 px-1 font-mono uppercase">Kenji</div>
             <div className="rounded-lg px-4 py-3 shadow-sm bg-zinc-50 text-zinc-800 rounded-bl-none border border-zinc-100">
                 {statusMessage ? (
                     <div className="flex items-center gap-2 text-sm">
@@ -177,7 +177,7 @@ function IntelligenceContent() {
                                 { role: "user", content: data.content, id: `broadcast-${Date.now()}` }
                             ]);
                             setIsWaitingForResponse(true);
-                            setStatusMessage("Processing…");
+                            setStatusMessage("Thinking…");
                         } else if (data.type === "error") {
                             setError(data.message);
                             setIsWaitingForResponse(false);
@@ -281,7 +281,7 @@ function IntelligenceContent() {
                             )}
                         >
                             <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 px-1">
-                                {msg.role === "user" ? "You" : msg.role === "system" ? "Thinking" : "Operator"}
+                                {msg.role === "user" ? "You" : msg.role === "system" ? "Thinking" : "Kenji"}
                             </div>
                             <div
                                 className={clsx(
