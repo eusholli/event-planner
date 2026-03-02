@@ -352,7 +352,28 @@ function IntelligenceContent() {
                             </div>
                             {msg.role === "assistant" && (
                                 <button
-                                    onClick={() => downloadMarkdownAsPdf(msg.content)}
+                                    onClick={() => {
+                                        const match = msg.content.match(/^#{1,3}\s+(.*)/m);
+                                        let subject = "Insights";
+                                        if (match) {
+                                            subject = match[1].trim();
+                                        } else {
+                                            const idx = messages.findIndex(m => m.id === msg.id);
+                                            for (let i = idx - 1; i >= 0; i--) {
+                                                if (messages[i].role === "user") {
+                                                    subject = messages[i].content.trim();
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        subject = subject.substring(0, 40).replace(/[^a-zA-Z0-9_ -]/g, "").trim().replace(/\s+/g, "_");
+                                        if (!subject) subject = "Insights";
+
+                                        const now = new Date();
+                                        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+
+                                        downloadMarkdownAsPdf(msg.content, `${subject}_${dateStr}.pdf`);
+                                    }}
                                     title="Download as PDF"
                                     className="mt-1 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
                                 >
