@@ -5,8 +5,9 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname, useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Terminal, Loader2, AlertCircle } from "lucide-react";
+import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download } from "lucide-react";
 import clsx from "clsx";
+import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
 
 /* ── Typing indicator (three bouncing dots + optional status text) ── */
 function TypingIndicator({ statusMessage }: { statusMessage?: string | null }) {
@@ -173,6 +174,11 @@ function IntelligenceContent() {
                         } else if (data.type === "final") {
                             setIsWaitingForResponse(false);
                             setStatusMessage(null);
+                        } else if (data.type === "session-cleared") {
+                            setMessages([]);
+                            setIsWaitingForResponse(false);
+                            setStatusMessage(null);
+                            setError(null);
                         } else if (data.type === "user-message") {
                             setMessages((prev) => [
                                 ...prev,
@@ -239,6 +245,11 @@ function IntelligenceContent() {
         setInput("");
     };
 
+    const handleNewSession = () => {
+        if (!wsRef.current || !isConnected || isWaitingForResponse) return;
+        wsRef.current.send(JSON.stringify({ type: "new-session" }));
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -260,9 +271,25 @@ function IntelligenceContent() {
                             </p>
                         </div>
                     </div>
-                    <span className="text-sm text-zinc-400">
-                        {user?.primaryEmailAddress?.emailAddress}
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleNewSession}
+                            disabled={!isConnected || isWaitingForResponse}
+                            title="New Session"
+                            className={clsx(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                                !isConnected || isWaitingForResponse
+                                    ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                                    : "bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 shadow-sm"
+                            )}
+                        >
+                            <RotateCcw size={13} />
+                            New Session
+                        </button>
+                        <span className="text-sm text-zinc-400">
+                            {user?.primaryEmailAddress?.emailAddress}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Messages Area */}
@@ -325,6 +352,37 @@ function IntelligenceContent() {
                                     </ReactMarkdown>
                                 </div>
                             </div>
+                            {msg.role === "assistant" && (
+                                <button
+                                    onClick={() => {
+                                        const match = msg.content.match(/^#{1,3}\s+(.*)/m);
+                                        let subject = "Insights";
+                                        if (match) {
+                                            subject = match[1].trim();
+                                        } else {
+                                            const idx = messages.findIndex(m => m.id === msg.id);
+                                            for (let i = idx - 1; i >= 0; i--) {
+                                                if (messages[i].role === "user") {
+                                                    subject = messages[i].content.trim();
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        subject = subject.substring(0, 40).replace(/[^a-zA-Z0-9_ -]/g, "").trim().replace(/\s+/g, "_");
+                                        if (!subject) subject = "Insights";
+
+                                        const now = new Date();
+                                        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+
+                                        downloadMarkdownAsPdf(msg.content, `${subject}_${dateStr}.pdf`);
+                                    }}
+                                    title="Download as PDF"
+                                    className="mt-1 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
+                                >
+                                    <Download size={12} />
+                                    Download as PDF
+                                </button>
+                            )}
                         </div>
                     ))}
 
