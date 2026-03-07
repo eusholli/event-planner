@@ -17,6 +17,10 @@ ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 ARG SENTRY_AUTH_TOKEN
 ENV SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
 ENV NEXT_TELEMETRY_DISABLED=1
+# Placeholder values so Prisma/Clerk modules don't crash during "Collecting page data".
+# These are NOT used at runtime — real values come from the container environment.
+ENV POSTGRES_PRISMA_URL=postgresql://build:build@localhost:5432/build
+ENV CLERK_SECRET_KEY=sk_test_placeholder_build_only
 RUN npx next build
 
 # ── Stage 3: Lightweight production runner (standalone output) ──────────────
