@@ -579,28 +579,30 @@ export default function ROIPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Targeted Reach</label>
-                                <input type="number" value={targets.actualTargetedReach ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualTargetedReach: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
+                                <input type="number" value={targets.actualTargetedReach ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, actualTargetedReach: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${isLocked || !canEdit ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`} placeholder="0" />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Speaking</label>
-                                <input type="number" value={targets.actualSpeaking ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualSpeaking: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
+                                <input type="number" value={targets.actualSpeaking ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, actualSpeaking: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${isLocked || !canEdit ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`} placeholder="0" />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Media / PR</label>
-                                <input type="number" value={targets.actualMediaPR ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
+                                <input type="number" value={targets.actualMediaPR ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, actualMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${isLocked || !canEdit ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`} placeholder="0" />
                             </div>
                         </div>
                     </section>
 
                     <div className="flex items-center gap-3">
-                        <button onClick={handleSaveActuals} disabled={saving}
-                            className="bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm">
-                            <Save className="w-4 h-4" />
-                            Save Actuals
-                        </button>
+                        {canEdit && (
+                            <button onClick={handleSaveActuals} disabled={saving}
+                                className="bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm">
+                                <Save className="w-4 h-4" />
+                                Save Actuals
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
