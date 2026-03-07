@@ -46,9 +46,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
         }
 
-        // Check for existing company with same name
-        const existing = await prisma.company.findUnique({
-            where: { name: name.trim() }
+        // Check for existing company with same name (case-insensitive)
+        const existing = await prisma.company.findFirst({
+            where: {
+                name: {
+                    equals: name.trim(),
+                    mode: 'insensitive'
+                }
+            }
         })
 
         if (existing) {

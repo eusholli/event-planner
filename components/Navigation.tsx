@@ -24,6 +24,7 @@ export default function Navigation() {
         { href: `/events/${eventId}/roi`, label: 'ROI' },
 
         { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin, Roles.Marketing, Roles.User] },
+        { href: `/events/${eventId}/companies`, label: 'Companies' },
         { href: `/events/${eventId}/attendees`, label: 'Attendees' },
         { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
         { href: `/events/${eventId}/calendar`, label: 'Calendar' },

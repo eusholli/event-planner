@@ -21,6 +21,7 @@ export async function POST() {
         await prisma.$transaction([
             prisma.meeting.deleteMany(),
             prisma.attendee.deleteMany(),
+            prisma.company.deleteMany(),
             prisma.room.deleteMany(),
             prisma.event.deleteMany(),
             // Clear System Settings (Factory Reset means blank slate)

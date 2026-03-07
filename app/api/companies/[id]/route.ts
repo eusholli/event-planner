@@ -55,7 +55,13 @@ export async function PUT(
         // Check for name uniqueness if name is being updated
         if (name) {
             const existing = await prisma.company.findFirst({
-                where: { name: name.trim(), NOT: { id } }
+                where: {
+                    name: {
+                        equals: name.trim(),
+                        mode: 'insensitive'
+                    },
+                    NOT: { id }
+                }
             })
             if (existing) {
                 return NextResponse.json({ error: 'A company with this name already exists' }, { status: 409 })
