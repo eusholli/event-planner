@@ -28,7 +28,6 @@ interface EventSettings {
     url: string
     budget: number
     targetCustomers: string
-    expectedRoi: string
     requesterEmail: string
     status: string
     tags: string[]
@@ -220,7 +219,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
             boothLocation: data.boothLocation || prev!.boothLocation,
             targetCustomers: data.targetCustomers || prev!.targetCustomers,
             budget: data.budget ? parseFloat(data.budget) : prev!.budget,
-            expectedRoi: data.expectedRoi || prev!.expectedRoi,
             tags: data.tags ? [...new Set([...prev!.tags, ...data.tags])] : prev!.tags,
             meetingTypes: data.meetingTypes ? [...new Set([...prev!.meetingTypes, ...data.meetingTypes])] : prev!.meetingTypes,
             attendeeTypes: data.attendeeTypes ? [...new Set([...prev!.attendeeTypes, ...data.attendeeTypes])] : prev!.attendeeTypes,
@@ -531,18 +529,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 disabled={isLocked}
                                 value={event.targetCustomers || ''}
                                 onChange={e => setEvent({ ...event, targetCustomers: e.target.value })}
-                                rows={2}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
-                            />
-                        </div>
-
-                        <div className="col-span-2">
-                            <label htmlFor="expectedRoi" className="block text-sm font-medium text-neutral-700">Expected ROI</label>
-                            <textarea
-                                id="expectedRoi"
-                                disabled={isLocked}
-                                value={event.expectedRoi || ''}
-                                onChange={e => setEvent({ ...event, expectedRoi: e.target.value })}
                                 rows={2}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />

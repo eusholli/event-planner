@@ -10,11 +10,17 @@ export async function GET() {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
+        // Fetch all companies
+        const companies = await prisma.company.findMany({
+            orderBy: { name: 'asc' }
+        })
+
         const events = await prisma.event.findMany({
             include: {
                 attendees: { include: { meetings: true } },
                 rooms: true,
-                meetings: { include: { attendees: true, room: true } }
+                meetings: { include: { attendees: true, room: true } },
+                roiTargets: { include: { targetCompanies: true } }
             }
         })
 
@@ -42,11 +48,21 @@ export async function GET() {
                 }
             })
 
+            // Normalize ROI targets
+            const roiTargets = event.roiTargets ? (() => {
+                const { targetCompanies, ...rest } = event.roiTargets
+                return {
+                    ...rest,
+                    targetCompanyIds: targetCompanies.map(c => c.id)
+                }
+            })() : null
+
             return {
                 ...event,
                 attendees: undefined, // Remove full object array
                 attendeeIds,          // Add ID reference array
-                meetings: normalizedMeetings
+                meetings: normalizedMeetings,
+                roiTargets
             }
         })
 
@@ -54,10 +70,11 @@ export async function GET() {
 
         const exportData = {
             systemSettings: settings,
+            companies: companies,  // Global Company List
             attendees: Array.from(attendeeMap.values()), // Global Unique List
             events: normalizedEvents,
             exportedAt: new Date().toISOString(),
-            version: '3.0-normalized-system'
+            version: '4.0-company-model'
         }
 
         return NextResponse.json(exportData)

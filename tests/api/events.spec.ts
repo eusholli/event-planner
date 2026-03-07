@@ -23,8 +23,7 @@ test.describe('Events API', () => {
                 region: 'EU_UK',
                 status: 'PIPELINE',
                 budget: 5000,
-                targetCustomers: 'Developers',
-                expectedRoi: 'Medium'
+                targetCustomers: 'Developers'
             }
         });
 

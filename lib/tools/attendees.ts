@@ -5,8 +5,8 @@ import { canWrite } from '@/lib/roles';
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment';
 
 const getAttendeesParameters = z.object({
-    search: z.string().optional().describe('Search term for name, title, email, company, bio, description'),
-    company: z.string().optional().describe('Filter by specific company'),
+    search: z.string().optional().describe('Search term for name, title, email, company name, bio'),
+    company: z.string().optional().describe('Filter by specific company name'),
     title: z.string().optional().describe('Filter by specific title'),
     types: z.array(z.string()).optional().describe('Filter by attendee types'),
     isExternal: z.boolean().optional().describe('Filter by external status'),
@@ -21,7 +21,7 @@ export const createAttendeeTools = (eventId: string) => ({
             const where: any = {
                 events: { some: { id: eventId } }
             };
-            if (company) where.company = { contains: company, mode: 'insensitive' };
+            if (company) where.company = { name: { contains: company, mode: 'insensitive' } };
             if (title) where.title = { contains: title, mode: 'insensitive' };
             if (email) where.email = { contains: email, mode: 'insensitive' };
             if (types && types.length > 0) where.type = { in: types };
@@ -32,16 +32,16 @@ export const createAttendeeTools = (eventId: string) => ({
                     { name: { contains: search, mode: 'insensitive' } },
                     { email: { contains: search, mode: 'insensitive' } },
                     { title: { contains: search, mode: 'insensitive' } },
-                    { company: { contains: search, mode: 'insensitive' } },
+                    { company: { name: { contains: search, mode: 'insensitive' } } },
                     { bio: { contains: search, mode: 'insensitive' } },
-                    { companyDescription: { contains: search, mode: 'insensitive' } },
                 ];
             }
 
             const attendees = await prisma.attendee.findMany({
                 where,
                 take: 50,
-                orderBy: { name: 'asc' }
+                orderBy: { name: 'asc' },
+                include: { company: true }
             });
             return { attendees };
         }
@@ -53,7 +53,7 @@ export const createAttendeeTools = (eventId: string) => ({
             name: z.string(),
             email: z.string(),
             title: z.string(),
-            company: z.string(),
+            company: z.string().describe('Company name - will be looked up or created'),
         }),
         execute: async ({ name, email, title, company }: { name: string; email: string; title: string; company: string }) => {
             if (!(await canWrite())) {
@@ -61,6 +61,16 @@ export const createAttendeeTools = (eventId: string) => ({
             }
 
             try {
+                // Resolve or create company
+                let companyRecord = await prisma.company.findFirst({
+                    where: { name: { equals: company, mode: 'insensitive' } }
+                });
+                if (!companyRecord) {
+                    companyRecord = await prisma.company.create({
+                        data: { name: company }
+                    });
+                }
+
                 let linkedin: string | undefined;
                 let bio: string | undefined;
 
@@ -77,7 +87,7 @@ export const createAttendeeTools = (eventId: string) => ({
                         name,
                         email,
                         title,
-                        company,
+                        companyId: companyRecord.id,
                         linkedin,
                         bio,
                         events: {

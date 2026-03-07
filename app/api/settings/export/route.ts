@@ -13,6 +13,7 @@ export async function GET() {
                 attendees: true
             }
         })
+        const roiTargets = await prisma.eventROITargets.findMany()
 
         // Helper to remove ID and other internal fields
         const cleanData = (data: any) => {
@@ -21,9 +22,21 @@ export async function GET() {
             return rest
         }
 
+        // Group ROI targets by eventId
+        const roiByEvent = new Map(roiTargets.map(r => [r.eventId, r]))
+
         const exportData = {
             system: settings ? cleanData(settings) : null,
-            events: events.map(e => cleanData(e)),
+            events: events.map(e => {
+                const roi = roiByEvent.get(e.id)
+                return {
+                    ...cleanData(e),
+                    roiTargets: roi ? (() => {
+                        const { id: _id, eventId: _eid, event: _ev, ...rest } = roi as any
+                        return rest
+                    })() : null
+                }
+            }),
             attendees: attendees.map(a => cleanData(a)),
             rooms: rooms.map(r => cleanData(r)),
             meetings: meetings.map(m => {

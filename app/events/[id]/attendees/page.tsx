@@ -1,26 +1,34 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { Sparkles, Building2 } from 'lucide-react'
+import { Sparkles, Building2, Plus } from 'lucide-react'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
 import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
+
+interface Company {
+    id: string
+    name: string
+    description?: string | null
+    pipelineValue?: number | null
+}
 
 interface Attendee {
     id: string
     name: string
     title: string
     email: string
-    company: string
+    companyId: string
+    company: Company
     bio: string
-    companyDescription?: string
     linkedin?: string
     imageUrl?: string
     isExternal?: boolean
     type?: string
+    seniorityLevel?: string
 }
 
 function AttendeesContent({ eventId }: { eventId: string }) {
@@ -45,24 +53,50 @@ function AttendeesContent({ eventId }: { eventId: string }) {
         name: '',
         title: '',
         email: '',
-        company: '',
+        companyId: '',
         bio: '',
-        companyDescription: '',
         linkedin: '',
         imageUrl: '',
         isExternal: false,
-        type: ''
+        type: '',
+        seniorityLevel: ''
     })
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
 
+    // Company selector state for edit modal
+    const [editCompanies, setEditCompanies] = useState<Company[]>([])
+    const [editCompanySearch, setEditCompanySearch] = useState('')
+    const [showEditCompanyDropdown, setShowEditCompanyDropdown] = useState(false)
+    const [selectedEditCompany, setSelectedEditCompany] = useState<Company | null>(null)
+    const editCompanyDropdownRef = useRef<HTMLDivElement>(null)
+
     useEffect(() => {
         if (eventId) {
             fetchAttendees()
             fetchSettings()
+            fetchCompanies()
         }
     }, [eventId])
+
+    // Close company dropdown when clicking outside
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (editCompanyDropdownRef.current && !editCompanyDropdownRef.current.contains(e.target as Node)) {
+                setShowEditCompanyDropdown(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
+    }, [])
+
+    const fetchCompanies = async () => {
+        try {
+            const res = await fetch('/api/companies')
+            if (res.ok) setEditCompanies(await res.json())
+        } catch (err) { console.error('Failed to fetch companies', err) }
+    }
 
     useEffect(() => {
         if (attendeeIdParam) {
@@ -203,17 +237,19 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const openEditModal = (attendee: Attendee) => {
         setEditingAttendee(attendee)
         setSelectedFile(null)
+        setSelectedEditCompany(attendee.company)
+        setEditCompanySearch(attendee.company.name)
         setEditFormData({
             name: attendee.name,
             title: attendee.title || '',
             email: attendee.email,
-            company: attendee.company || '',
+            companyId: attendee.companyId,
             bio: attendee.bio || '',
-            companyDescription: attendee.companyDescription || '',
             linkedin: attendee.linkedin || '',
             imageUrl: attendee.imageUrl || '',
             isExternal: attendee.isExternal || false,
-            type: attendee.type || ''
+            type: attendee.type || '',
+            seniorityLevel: attendee.seniorityLevel || ''
         })
         setIsEditModalOpen(true)
     }
@@ -237,13 +273,13 @@ function AttendeesContent({ eventId }: { eventId: string }) {
             formData.append('name', editFormData.name)
             formData.append('title', editFormData.title)
             formData.append('email', editFormData.email)
-            formData.append('company', editFormData.company)
+            formData.append('companyId', editFormData.companyId)
             formData.append('bio', editFormData.bio)
-            formData.append('companyDescription', editFormData.companyDescription)
             formData.append('linkedin', editFormData.linkedin)
             formData.append('imageUrl', editFormData.imageUrl)
             formData.append('isExternal', String(editFormData.isExternal))
             formData.append('type', editFormData.type)
+            formData.append('seniorityLevel', editFormData.seniorityLevel)
 
             if (selectedFile) {
                 formData.append('imageFile', selectedFile)
@@ -283,7 +319,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
 
             await generateMultiMeetingBriefingBook(
                 `Attendee Briefing Book`,
-                `${attendee.name} - ${attendee.title ? attendee.title + ' at ' : ''}${attendee.company}`,
+                `${attendee.name} - ${attendee.title ? attendee.title + ' at ' : ''}${attendee.company?.name || 'Unknown'}`,
                 meetingsForPdf,
                 `${attendee.name}_Briefing_Book`
             )
@@ -298,8 +334,9 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const currentUserAttendee = attendees.find(a => userEmail && a.email === userEmail)
     const otherAttendees = attendees.filter(a => !userEmail || a.email !== userEmail)
 
-    const internalAttendees = otherAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
-    const externalAttendees = otherAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase())))
+    const companyName = (a: Attendee) => a.company?.name || ''
+    const internalAttendees = otherAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || companyName(a).toLowerCase().includes(searchQuery.toLowerCase())))
+    const externalAttendees = otherAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || companyName(a).toLowerCase().includes(searchQuery.toLowerCase())))
 
     const renderAttendeeCard = (attendee: Attendee) => (
         <div key={attendee.id} className="card hover:border-zinc-200 group relative flex flex-col">
@@ -318,23 +355,23 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                         <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors">{attendee.name}</h3>
                         <p className="text-sm text-zinc-500 font-medium flex items-center flex-wrap gap-x-1">
                             {attendee.title ? `${attendee.title} at ` : ''}
-                            {attendee.company && (
+                            {attendee.company?.name && (
                                 <>
-                                    <span>{attendee.company}</span>
+                                    <span>{attendee.company.name}</span>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            const query = `Give me the latest market intelligence on company ${attendee.company}.`
+                                            const query = `Give me the latest market intelligence on company ${attendee.company.name}.`
                                             router.push(`/events/${eventId}/intelligence?autoQuery=${encodeURIComponent(query)}`)
                                         }}
                                         className="inline-flex items-center p-0.5 text-zinc-300 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                                        title={`Get OpenClaw Insights on ${attendee.company}`}
+                                        title={`Get OpenClaw Insights on ${attendee.company.name}`}
                                     >
                                         <Building2 className="w-3.5 h-3.5" />
                                     </button>
                                 </>
                             )}
-                            {!attendee.company && ''}
+                            {!attendee.company?.name && ''}
                             {attendee.isExternal && (
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                     External
@@ -354,7 +391,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                             e.stopPropagation()
                             const parts = [attendee.name]
                             if (attendee.title) parts.push(attendee.title)
-                            if (attendee.company) parts.push(attendee.company)
+                            if (attendee.company?.name) parts.push(attendee.company.name)
                             const query = `Give me the latest market intelligence on person ${parts.join(', ')}.`
                             router.push(`/events/${eventId}/intelligence?autoQuery=${encodeURIComponent(query)}`)
                         }}
@@ -586,17 +623,48 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                                     onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
                                 />
                             </div>
-                            <div>
+                            <div ref={editCompanyDropdownRef} className="relative">
                                 <label htmlFor="edit-company" className="block text-sm font-medium text-zinc-700 mb-1.5">Company</label>
                                 <input
                                     type="text"
                                     id="edit-company"
-                                    required
                                     className="input-field"
-                                    value={editFormData.company}
-                                    onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                                    value={editCompanySearch}
+                                    onChange={(e) => {
+                                        setEditCompanySearch(e.target.value)
+                                        setShowEditCompanyDropdown(true)
+                                        if (selectedEditCompany && e.target.value !== selectedEditCompany.name) {
+                                            setSelectedEditCompany(null)
+                                            setEditFormData({ ...editFormData, companyId: '' })
+                                        }
+                                    }}
+                                    onFocus={() => setShowEditCompanyDropdown(true)}
+                                    placeholder="Search or create company..."
                                 />
+                                {showEditCompanyDropdown && (
+                                    <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
+                                        {editCompanies.filter(c => c.name.toLowerCase().includes(editCompanySearch.toLowerCase())).map((company) => (
+                                            <div
+                                                key={company.id}
+                                                className="px-4 py-2 hover:bg-indigo-50 cursor-pointer border-b border-zinc-50 last:border-none"
+                                                onClick={() => {
+                                                    setSelectedEditCompany(company)
+                                                    setEditFormData({ ...editFormData, companyId: company.id })
+                                                    setEditCompanySearch(company.name)
+                                                    setShowEditCompanyDropdown(false)
+                                                }}
+                                            >
+                                                <div className="font-medium text-zinc-900">{company.name}</div>
+                                                {company.pipelineValue && <div className="text-xs text-zinc-500">Pipeline: ${company.pipelineValue.toLocaleString()}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {selectedEditCompany && (
+                                    <div className="mt-1 text-xs text-emerald-600 font-medium">✓ {selectedEditCompany.name}</div>
+                                )}
                             </div>
+
                             <div>
                                 <label htmlFor="edit-email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email</label>
                                 <input
@@ -638,6 +706,23 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                                 <label htmlFor="edit-isExternal" className="text-sm font-medium text-zinc-700">
                                     External Attendee
                                 </label>
+                            </div>
+
+                            <div>
+                                <label htmlFor="edit-seniorityLevel" className="block text-sm font-medium text-zinc-700 mb-1.5">Seniority Level</label>
+                                <select
+                                    id="edit-seniorityLevel"
+                                    className="input-field"
+                                    value={editFormData.seniorityLevel}
+                                    onChange={(e) => setEditFormData({ ...editFormData, seniorityLevel: e.target.value })}
+                                >
+                                    <option value="">Select level...</option>
+                                    <option value="C-Level">C-Level</option>
+                                    <option value="VP">VP</option>
+                                    <option value="Director">Director</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="IC">IC (Individual Contributor)</option>
+                                </select>
                             </div>
 
                             {attendeeTypes.length > 0 && (

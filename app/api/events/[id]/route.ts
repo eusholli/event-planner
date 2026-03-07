@@ -163,7 +163,6 @@ export async function PATCH(
                 url: json.url,
                 budget: json.budget !== undefined && json.budget !== null ? parseFloat(json.budget) : undefined, // Fix 0 being treated as false
                 targetCustomers: json.targetCustomers,
-                expectedRoi: json.expectedRoi,
                 requesterEmail: json.requesterEmail,
                 tags: json.tags,
                 meetingTypes: json.meetingTypes,

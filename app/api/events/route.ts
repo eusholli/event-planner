@@ -103,7 +103,6 @@ export async function POST(request: Request) {
                 url: json.url,
                 budget: json.budget ? parseFloat(json.budget) : undefined,
                 targetCustomers: json.targetCustomers,
-                expectedRoi: json.expectedRoi,
                 requesterEmail: json.requesterEmail,
                 tags: json.tags || defaultTags,
                 meetingTypes: json.meetingTypes || defaultMeetingTypes,

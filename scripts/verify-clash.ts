@@ -38,7 +38,7 @@ async function main() {
         data: {
             name: attendeeName,
             email: `test-${Date.now()}@example.com`,
-            company: 'Test Co',
+            company: { create: { name: 'Test Co' } },
             title: 'Test Title'
         }
     })

@@ -21,11 +21,10 @@ interface Attendee {
     id: string
     name: string
     email: string
-    company: string
+    company: { id: string; name: string }
     title?: string
     isExternal?: boolean
     bio?: string
-    companyDescription?: string
 }
 
 interface DashboardMeeting extends Omit<Meeting, 'attendees'> {
@@ -490,7 +489,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
 
                 const externalAttendees = m.attendees
                     .filter(a => a.isExternal)
-                    .map(a => `${a.name}, ${a.title || ''}, ${a.company || ''}`)
+                    .map(a => `${a.name}, ${a.title || ''}, ${a.company?.name || ''}`)
                     .join('\n')
 
                 const row = [
@@ -599,7 +598,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
                 const simpleAttendees = m.attendees.map(a => ({
                     id: a.id,
                     name: a.name,
-                    company: a.company,
+                    company: a.company?.name || '',
                     isExternal: a.isExternal
                 }))
 

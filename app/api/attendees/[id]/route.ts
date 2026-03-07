@@ -54,11 +54,11 @@ export async function PUT(
         const title = formData.get('title') as string
         const email = formData.get('email') as string
         let bio = formData.get('bio') as string
-        const company = formData.get('company') as string
-        const companyDescription = formData.get('companyDescription') as string
+        const companyId = formData.get('companyId') as string
         let linkedin = formData.get('linkedin') as string
         const isExternal = formData.get('isExternal') === 'true'
         const type = formData.get('type') as string
+        const seniorityLevel = formData.get('seniorityLevel') as string
 
         // Image Handling
         const imageFile = formData.get('imageFile') as File | null
@@ -67,8 +67,14 @@ export async function PUT(
         let finalImageUrl = existingAttendee.imageUrl
 
         // Validation
-        if (!name || !title || !company || !email) {
+        if (!name || !title || !companyId || !email) {
             return NextResponse.json({ error: 'Name, Title, Company, and Email cannot be empty.' }, { status: 400 })
+        }
+
+        // Verify company exists and get name for enrichment
+        const companyRecord = await prisma.company.findUnique({ where: { id: companyId } })
+        if (!companyRecord) {
+            return NextResponse.json({ error: 'Company not found' }, { status: 400 })
         }
 
         try {
@@ -121,15 +127,16 @@ export async function PUT(
         }
 
         // Auto-enrichment Logic (only if fields are missing)
-        if (!linkedin && name && company) {
-            const foundUrl = await findLinkedInUrl(name, company)
+        const companyName = companyRecord.name
+        if (!linkedin && name && companyName) {
+            const foundUrl = await findLinkedInUrl(name, companyName)
             if (foundUrl) {
                 linkedin = foundUrl
             }
         }
 
-        if (!bio && linkedin && name && company) {
-            const generatedBio = await generateBio(name, company, linkedin)
+        if (!bio && linkedin && name && companyName) {
+            const generatedBio = await generateBio(name, companyName, linkedin)
             if (generatedBio) {
                 bio = generatedBio
             }
@@ -142,13 +149,14 @@ export async function PUT(
                 title,
                 email,
                 bio,
-                company,
-                companyDescription,
+                companyId,
                 linkedin,
                 imageUrl: finalImageUrl,
                 isExternal,
                 type,
+                seniorityLevel: seniorityLevel || null,
             },
+            include: { company: true }
         })
 
         return NextResponse.json(attendee)

@@ -27,9 +27,8 @@ export async function POST(request: Request) {
         - Title (Job Title)
         - Bio (Short professional biography, max 3 sentences)
         - LinkedIn URL (Best guess or placeholder if unknown)
-        - Company Description (Short description of what ${company} does)
 
-        Return ONLY a JSON object with keys: title, bio, linkedin, companyDescription.
+        Return ONLY a JSON object with keys: title, bio, linkedin.
         Do not include markdown formatting or backticks.
         `
 

@@ -17,7 +17,6 @@ const config = {
             "email": "alice@example.com",
             "bio": "CEO with 20 years of experience in tech.",
             "company": "TechCorp",
-            "companyDescription": "Leading provider of enterprise software.",
             "imageUrl": ""
         },
         {
@@ -26,7 +25,6 @@ const config = {
             "email": "bob@example.com",
             "bio": "Managing Partner at VentureFirm.",
             "company": "VentureFirm",
-            "companyDescription": "Global venture capital firm.",
             "imageUrl": ""
         }
     ],
@@ -95,13 +93,31 @@ async function debugImport() {
         console.log('Importing attendees...')
         if (config.attendees && Array.isArray(config.attendees)) {
             for (const attendee of config.attendees) {
+                // Resolve or create company
+                let companyId: string | undefined
+                if (attendee.company) {
+                    let companyRecord = await prisma.company.findFirst({
+                        where: { name: { equals: attendee.company, mode: 'insensitive' } }
+                    })
+                    if (!companyRecord) {
+                        companyRecord = await prisma.company.create({
+                            data: { name: attendee.company }
+                        })
+                    }
+                    companyId = companyRecord.id
+                }
+
+                const { company: _companyName, ...attendeeData } = attendee
+                const dataToWrite: any = { ...attendeeData }
+                if (companyId) dataToWrite.companyId = companyId
+
                 const existing = await prisma.attendee.findUnique({ where: { email: attendee.email } })
                 if (!existing) {
-                    await prisma.attendee.create({ data: attendee })
+                    await prisma.attendee.create({ data: dataToWrite })
                 } else {
                     await prisma.attendee.update({
                         where: { email: attendee.email },
-                        data: attendee
+                        data: dataToWrite
                     })
                 }
             }

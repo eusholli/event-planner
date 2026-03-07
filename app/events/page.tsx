@@ -46,7 +46,7 @@ export default function EventsPage() {
         fetch('/api/events')
             .then(res => res.json())
             .then(data => {
-                setEvents(data)
+                setEvents(Array.isArray(data) ? data : [])
                 setLoading(false)
             })
             .catch(err => {

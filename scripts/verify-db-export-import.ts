@@ -56,7 +56,7 @@ async function main() {
                         name: 'Test Attendee 1',
                         email: 'test1@exportCheck.com',
                         title: 'Tester',
-                        company: 'Test Corp'
+                        company: { create: { name: 'Test Corp' } }
                     }
                 ]
             }

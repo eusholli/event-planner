@@ -23,7 +23,6 @@ const MAXIMAL_EVENT: any = {
     url: "https://example.com/maximal",
     budget: 50000,
     targetCustomers: "Enterprise, SMB",
-    expectedRoi: "High",
     requesterEmail: "tester@example.com",
     tags: ["Test", "Integrity", "Maximal"],
     meetingTypes: ["Sales", "Keynote"],
@@ -39,13 +38,14 @@ const MAXIMAL_ROOM: any = {
     eventId: TEST_EVENT_ID
 }
 
+const TEST_COMPANY_ID = "test-integrity-company-id-123"
+
 const MAXIMAL_ATTENDEE: any = {
     id: TEST_ATTENDEE_ID,
     name: "Dr. Test User",
     email: "test.user@example.com",
     title: "Chief Testing Officer",
-    company: "Test Co",
-    companyDescription: "A company that tests things.",
+    companyId: TEST_COMPANY_ID,
     bio: "Loves testing.",
     linkedin: "https://linkedin.com/in/testuser",
     imageUrl: "https://example.com/image.jpg",
@@ -84,17 +84,21 @@ async function runTest() {
         await prisma.attendee.deleteMany({ where: { events: { some: { id: TEST_EVENT_ID } } } })
         await prisma.room.deleteMany({ where: { eventId: TEST_EVENT_ID } })
         await prisma.event.deleteMany({ where: { id: TEST_EVENT_ID } })
+        await prisma.company.deleteMany({ where: { id: TEST_COMPANY_ID } })
 
         const { eventId: _r, ...roomData } = MAXIMAL_ROOM;
         const { eventId: _a, ...attendeeData } = MAXIMAL_ATTENDEE;
 
         console.log("1. Seeding Maximal Data...")
+        // Create company first
+        await prisma.company.create({
+            data: { id: TEST_COMPANY_ID, name: "Test Co", description: "A company that tests things." }
+        })
         await prisma.event.create({
             data: {
                 ...MAXIMAL_EVENT,
                 rooms: { create: roomData },
                 attendees: { create: attendeeData },
-                // Meeting is tricky due to connections
             }
         })
         // Connect meeting separately to ensure relations work
@@ -142,7 +146,7 @@ async function runTest() {
         assert.strictEqual(exported.meetings[0].status, "CONFIRMED");
         assert.strictEqual(exported.meetings[0].sequence, 123);
         assert.strictEqual(exported.meetings[0].purpose, MAXIMAL_MEETING.purpose);
-        assert.strictEqual(exported.attendees[0].companyDescription, MAXIMAL_ATTENDEE.companyDescription);
+        assert.strictEqual(exported.attendees[0].companyId, TEST_COMPANY_ID);
 
         console.log("   Export Content Verified.");
 
@@ -172,7 +176,7 @@ async function runTest() {
         // Attendee
         const dbAtt = dbEvent.attendees[0];
         assert.strictEqual(dbAtt.email, MAXIMAL_ATTENDEE.email);
-        assert.strictEqual(dbAtt.companyDescription, MAXIMAL_ATTENDEE.companyDescription, "Attendee CompanyDescription Mismatch");
+        assert.strictEqual(dbAtt.companyId, TEST_COMPANY_ID, "Attendee CompanyId Mismatch");
 
         // Meeting
         const dbMtg = dbEvent.meetings[0];
@@ -260,7 +264,6 @@ async function importEventWithMockAuth(eventId: string, data: any) {
     if (data.attendees) {
         for (const att of data.attendees) {
             const attUpdate: any = {}
-            if (att.companyDescription !== undefined) attUpdate.companyDescription = att.companyDescription
             // ... (rest of fields)
             await prisma.attendee.upsert({
                 where: { id: att.id },
