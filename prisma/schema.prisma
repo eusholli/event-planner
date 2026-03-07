@@ -115,39 +115,33 @@ model EventROITargets {
   event                   Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   // Financials
-  targetInvestment        Float?
   expectedPipeline        Float?
   winRate                 Float?
   expectedRevenue         Float?
 
   // Meeting KPIs
-  targetBoothMeetings     Int?
-  targetCLevelMeetingsMin Int?
-  targetCLevelMeetingsMax Int?
-  targetOtherMeetings     Int?
+  targetCustomerMeetings  Int?
 
   // Engagement
-  targetSocialReach       Int?
-  targetKeynotes          Int?
-  targetSeminars          Int?
+  targetTargetedReach     Int?
+  targetSpeaking          Int?
   targetMediaPR           Int?
-  targetBoothSessions     Int?
 
   // Target Companies
   targetCompanies         Company[] @relation("TargetCompanies")
 
   // Actuals (manually entered)
-  actualSocialReach       Int?
-  actualKeynotes          Int?
-  actualSeminars          Int?
+  actualTargetedReach     Int?
+  actualSpeaking          Int?
   actualMediaPR           Int?
-  actualBoothSessions     Int?
 
   // Approval
   status                  String   @default("DRAFT")
   approvedBy              String?
   approvedAt              DateTime?
   submittedAt             DateTime?
+  rejectedBy              String?
+  rejectedAt              DateTime?
 
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
