@@ -4,174 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Event Planner is a Next.js 16 application for managing multi-event conferences with attendees, meetings, and schedules. Built with Prisma (PostgreSQL), Clerk authentication, Vercel AI SDK 5.0, and Google Gemini 2.5 Pro.
+Event Planner is a Next.js 16 application for managing multi-event conferences with attendees, meetings, and schedules. Built with Prisma (PostgreSQL), Clerk authentication, Vercel AI SDK 5.0, and Google Gemini 2.5 Pro. Requires Node.js >=24.0.0.
 
 ## Development Commands
 
-### Running the Application
 ```bash
 npm run dev              # Start development server (localhost:3000)
-npm run build            # Build for production (includes DB check and migration)
-npm start                # Start production server
+npm run build            # Build for production (DB check + migrate + build)
 npm run lint             # Run ESLint
-```
-
-### Database Management
-```bash
 npx prisma studio        # Open Prisma Studio GUI
 npx prisma migrate dev   # Create and apply migration
-npx prisma generate      # Regenerate Prisma Client (auto-runs on postinstall)
-npm run db:main          # Switch to main database (.env.main)
-npm run db:multi         # Switch to multi-event database (.env.multi)
+npm run db:main          # Switch to main branch database (.env.main -> .env)
+npm run db:multi         # Switch to multi-event database (.env.multi -> .env)
 ```
 
-**Important**: The database switching mechanism (`npm run db:main/multi`) copies the specified `.env.*` file to `.env` and regenerates the Prisma client. This is used to toggle between different database environments during development.
+**Database switching**: `npm run db:main/multi` copies the specified `.env.*` file to `.env` and regenerates the Prisma client. Use `db:main` on the `main` branch and `db:multi` on the `multi-event` branch.
+
+## Branch & Database Strategy
+
+Two branches with divergent schemas use separate databases:
+- `main` branch → `npm run db:main` (V1, single event)
+- `multi-event` branch → `npm run db:multi` (V2, multi event)
+
+**Critical migration rule**: You may merge `main` into `multi-event`, but NEVER merge `multi-event` into `main`. When merging `main` into `multi-event`, delete any new migration folders that came from `main` (they're invalid for V2 schema) and re-run `npx prisma migrate dev --name <feature>` to generate a V2-compatible migration. See `DB_WORKFLOW.md` for details.
 
 ## Architecture
 
 ### Multi-Event System
 
-The application supports multiple independent events, each with isolated:
-- Attendees (many-to-many with Events)
-- Meetings (belongs to Event, cascade delete)
-- Rooms (belongs to Event, cascade delete)
+Events are accessed via `/events/[id]/*` routes where `[id]` can be UUID or slug. All event-scoped API routes resolve both to the canonical UUID:
 
-Events are accessed via `/events/[id]/*` routes where `[id]` can be either:
-- UUID (e.g., `clyq8x7890000...`)
-- Slug (e.g., `mwc-2025`)
-
-**Key Pattern**: All event-scoped API routes and pages resolve both UUID and slug to the canonical UUID for database operations. This dual-access pattern is critical for user-friendly URLs and event sharing.
-
-### Database Layer
-
-**Prisma Configuration** (`lib/prisma.ts`):
-- Uses `@prisma/adapter-pg` for connection pooling
-- Automatically detects local vs. remote databases
-- Removes `sslmode` parameter for Vercel Postgres compatibility
-- Singleton pattern with global caching in development
-
-**Key Models**:
-- `SystemSettings` - Global settings (Gemini API key, default types/tags)
-- `Event` - Top-level event container with slug-based routing
-- `Attendee` - System-level entities that can be associated with multiple events
-- `Meeting` - Event-scoped with MeetingStatus enum (PIPELINE/CONFIRMED/OCCURRED/CANCELED)
-- `Room` - Event-scoped venue spaces
-
-**Critical**: Attendees are system-level (unique email constraint) and shared across events via many-to-many relationship. When deleting an event, attendees are NOT deleted (only the relationship is removed).
-
-### Authentication & RBAC
-
-**Provider**: Clerk with conditional auth support
-- Wrapper at `components/auth/index.tsx` checks `NEXT_PUBLIC_DISABLE_CLERK_AUTH`
-- When auth is disabled, provides mock user with root role (useful for testing)
-
-**Roles** (defined in `lib/constants.ts`):
-- `root` - Full system access (settings, user management)
-- `admin` - Write access to events and data
-- `marketing` - Write access + event management + user management
-- `user` - Read-only access (default for new users)
-
-**Role Assignment**:
-- New users auto-assigned `user` role via `/api/user/init` endpoint
-- `RoleSynchronizer` component triggers initialization on first load
-- Roles stored in Clerk `publicMetadata.role`
-
-**Middleware Protection** (`middleware.ts`):
-- All `/events/*`, `/dashboard/*`, `/admin/*`, `/api/*` routes protected
-- `/settings` requires root role
-- `/admin/users` requires root or marketing role
-- Backup key bypass available for `/api/settings/export` (using `BACKUP_SECRET_KEY` header)
-
-**Permission Helpers** (`lib/roles.ts`):
-- `checkRole(role)` - Check if current user has specific role
-- `canWrite()` - True for root/admin/marketing
-- `canManageEvents()` - True for root/marketing
-
-### AI Chat System
-
-**Architecture** (`app/api/chat/route.ts`):
-- Uses Vercel AI SDK 5.0 `streamText` with Google Gemini 2.5 Pro
-- Event-scoped chat (each event has isolated conversation context)
-- Tool calling with multi-step execution (max 5 steps via `stopWhen: stepCountIs(5)`)
-- 300-second timeout for complex operations
-
-**AI Tools** (`lib/tools/`):
-- `getMeetings` - Search/list meetings with filtering
-- `getAttendees` - Search/list attendees
-- `getRooms` - Search/list rooms
-- `createMeeting`, `updateMeeting`, `deleteMeeting` - Meeting CRUD
-- `getNavigationLinks` - Generate UI navigation cards
-
-**Critical Pattern**: Tools are created per-request with `createTools(eventId, slug)` to scope operations to the current event. The system prompt explicitly warns the AI NOT to search using the event name itself, as tools are already scoped.
-
-**Tool Outputs**: The AI is instructed to process tool results silently and provide final answers directly (no status messages like "processing..."). Navigation links are rendered as special UI cards by the frontend.
-
-### API Route Structure
-
-**Pattern**: RESTful with Next.js App Router conventions
-- `/api/[resource]/route.ts` - Collection endpoints (GET, POST)
-- `/api/[resource]/[id]/route.ts` - Item endpoints (GET, PUT, DELETE)
-- `/api/[resource]/[id]/[action]/route.ts` - Action endpoints (POST)
-
-**Authorization Pattern**:
-```typescript
-import { canWrite } from '@/lib/roles'
-if (!await canWrite()) {
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-}
-```
-
-**Key Endpoints**:
-- `/api/events` - Event CRUD with slug generation
-- `/api/events/[id]/import` - Import event data (JSON/CSV)
-- `/api/events/[id]/export` - Export event data with backup key support
-- `/api/attendees/autocomplete` - AI-powered attendee info lookup (Google Gemini)
-- `/api/chat` - AI chat streaming with tool calling
-- `/api/admin/users` - User role management (root/marketing only)
-
-### Frontend Architecture
-
-**Pages**: Next.js App Router with nested event routes
-- `/events` - Event list and creation
-- `/events/[id]/dashboard` - Event overview with statistics
-- `/events/[id]/attendees` - Attendee management
-- `/events/[id]/calendar` - Drag-and-drop meeting scheduler (react-big-calendar)
-- `/events/[id]/chat` - AI assistant with persistent history
-- `/events/[id]/reports` - Analytics and PDF/CSV export
-- `/events/[id]/rooms` - Room management
-
-**Key Components**:
-- `Navigation.tsx` - Role-based nav with SignIn/UserButton
-- `RoleSynchronizer.tsx` - Auto role initialization for new users
-- Drag-and-drop scheduler uses `react-dnd` + `react-big-calendar`
-
-**State Management**: No global state library. Uses React Server Components with client components for interactivity. Event context passed via URL params.
-
-### PDF Generation
-
-**Libraries**: `jspdf` + `jspdf-autotable`
-- Briefing books generated server-side for Rooms and Attendees
-- Export endpoints: `/api/rooms/[id]/briefing`, `/api/attendees/[id]/briefing`
-- PDF includes meeting schedules, attendee details, company info
-
-### Data Management Features
-
-**Import/Export**:
-- System-level: `/api/settings/export` (all data), `/api/settings/import`
-- Event-level: `/api/events/[id]/export`, `/api/events/[id]/import`
-- Formats: JSON (full structure), CSV (meetings only)
-
-**Factory Reset**:
-- `/api/settings/delete-data` - Delete all data (requires confirmation)
-- `/api/events/[id]/reset` - Delete event-specific data
-- Auto-backup before destructive operations
-
-**Read-Only Mode**: Events with status `OCCURRED` are locked to prevent accidental changes (enforced in API and UI).
-
-## Important Patterns
-
-### Event Resolution
-Always resolve slug to UUID early in API routes:
 ```typescript
 const event = await prisma.event.findFirst({
   where: { OR: [{ id: eventId }, { slug: eventId }] }
@@ -179,25 +41,158 @@ const event = await prisma.event.findFirst({
 const resolvedEventId = event.id
 ```
 
-### Attendee Autocomplete
-The `/api/attendees/autocomplete` endpoint uses Google Gemini to fetch professional details (title, company, bio, LinkedIn) from the web. Results are returned as structured JSON for form population.
+### Database Layer (`lib/prisma.ts`)
 
-### Environment Variables
-- `DATABASE_URL` / `POSTGRES_PRISMA_URL` - Database connection
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` - Clerk auth
-- `NEXT_PUBLIC_DISABLE_CLERK_AUTH=true` - Disable auth for testing
-- `BACKUP_SECRET_KEY` - Bypass auth for export endpoint
-- Gemini API key stored in SystemSettings table (not env var)
+- Uses `@prisma/adapter-pg` for connection pooling (not default Prisma client)
+- Automatically handles local vs. remote SSL configuration
+- Singleton pattern with global caching in development
 
-### Testing
-Uses Playwright for E2E testing (configured but test suite not shown).
+**Key Models**:
+- `SystemSettings` - Global settings (Gemini API key, default types/tags)
+- `Event` - Top-level container with slug routing, `authorizedUserIds` for per-event access, ROI targets
+- `Attendee` - System-level with unique email; shared across events via many-to-many
+- `Meeting` - Event-scoped; `MeetingStatus` enum: `PIPELINE/CONFIRMED/OCCURRED/CANCELED`; has `sequence` field incremented on updates for calendar invite versioning
+- `Room` - Event-scoped
+- `Company` - System-level company records with `pipelineValue`
+
+**Cascade behavior**: Deleting an event cascades to meetings and rooms but NOT attendees (only the join record is removed).
+
+### Authentication & RBAC
+
+**Provider**: Clerk with conditional auth support via `components/auth/index.tsx`. Set `NEXT_PUBLIC_DISABLE_CLERK_AUTH=true` to disable (provides mock root user for testing).
+
+**Roles** (`lib/constants.ts`):
+- `root` - Full system access including settings and user management
+- `marketing` - Write access + event management + user management; global event access
+- `admin` - Write access to events and data; requires per-event authorization
+- `user` - Read-only; requires per-event authorization (default for new users)
+
+**Per-event access** (`lib/access.ts`): Admin and User roles need their userId listed in `event.authorizedUserIds`. Root and Marketing have implicit global access.
+
+**Permission helpers** (`lib/roles.ts`):
+- `canWrite()` - True for root/admin/marketing
+- `canManageEvents()` - True for root/marketing
+
+**Role initialization**: New Clerk users get `user` role via `/api/user/init`. The `RoleSynchronizer` component triggers this on first load.
+
+**Middleware** (`middleware.ts`): Protects `/events/*`, `/dashboard/*`, `/admin/*`, `/api/*`. `/settings` requires root. `/admin/users` requires root or marketing.
+
+### AI Chat System (`app/api/chat/route.ts`)
+
+- Vercel AI SDK 5.0 `streamText` with Google Gemini 2.5 Pro
+- Event-scoped; tools created per-request via `createTools(eventId, slug)` in `lib/tools/`
+- Multi-step tool execution (max 5 steps via `stopWhen: stepCountIs(5)`)
+- 300-second timeout
+
+**AI Tools** (`lib/tools/`): `getMeetings`, `getAttendees`, `getRooms`, `createMeeting`, `updateMeeting`, `deleteMeeting`, `getNavigationLinks`
+
+**Critical**: System prompt warns AI NOT to filter by event name (tools are already scoped). Navigation link results render as special UI cards in the frontend.
+
+### External Integrations
+
+**Cloudflare R2** (`lib/storage.ts`): Image storage using AWS S3-compatible API. Used for attendee/company photos.
+
+**Email + Calendar Invites** (`lib/email.ts`, `lib/calendar-sync.ts`): nodemailer sends meeting invite emails with ICS attachments generated via the `ics` package. Triggered via `/api/meetings/[id]/email` and `/api/meetings/[id]/invite`.
+
+**Mapbox** (`lib/geocoding.ts`): Geocoding for room/venue locations. Displayed via `react-leaflet`.
+
+**Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
+
+### API Routes
+
+**Pattern**: RESTful with Next.js App Router
+- `/api/[resource]/route.ts` - Collection (GET, POST)
+- `/api/[resource]/[id]/route.ts` - Item (GET, PUT, DELETE)
+
+**Authorization pattern**:
+```typescript
+import { canWrite } from '@/lib/roles'
+if (!await canWrite()) {
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+}
+```
+
+**Key endpoints not covered elsewhere**:
+- `/api/meetings/check-availability` - Room conflict detection
+- `/api/meetings/[id]/email` - Send meeting invite email
+- `/api/meetings/[id]/invite` - Generate ICS invite
+- `/api/events/[id]/roi` - ROI targets and actuals
+- `/api/companies` - Company CRUD
+- `/api/admin/system` - System admin operations (export/import/reset)
+- `/api/image-proxy` - Proxies external images to avoid CORS
+- `/api/attendees/autocomplete` - AI-powered attendee info lookup (actual Gemini call)
+- `/api/chat/status` - Chat system status
+
+**Backup**: `/api/settings/export` supports `BACKUP_SECRET_KEY` header to bypass auth.
+
+### Pages
+
+```
+/                           - Home
+/events                     - Event list and creation
+/events/[id]/dashboard      - Overview with statistics
+/events/[id]/attendees      - Attendee management
+/events/[id]/calendar       - Drag-and-drop scheduler (react-big-calendar + react-dnd)
+/events/[id]/chat           - AI assistant with persistent history
+/events/[id]/companies      - Company management
+/events/[id]/new-meeting    - Meeting creation form
+/events/[id]/reports        - Analytics, PDF/CSV export
+/events/[id]/roi            - ROI targets vs. actuals tracking
+/events/[id]/rooms          - Room management
+/events/[id]/settings       - Event-level settings
+/admin/users                - User role management
+/admin/system               - System administration
+/intelligence               - AI intelligence features
+/manual                     - User manual
+/settings                   - System settings (root only)
+```
+
+### PDF Generation
+
+`jspdf` + `jspdf-autotable` for briefing books. `lib/briefing-book.ts` and `lib/calendar-pdf.ts` handle generation. Export endpoints: `/api/rooms/[id]/briefing`, `/api/attendees/[id]/briefing`.
+
+Markdown-to-PDF conversion available via `lib/markdown-to-pdf.ts`.
+
+## Environment Variables
+
+```bash
+# Database
+DATABASE_URL / POSTGRES_PRISMA_URL
+
+# Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+NEXT_PUBLIC_DISABLE_CLERK_AUTH=true   # Disable auth for testing
+
+# Cloudflare R2 (image storage)
+R2_ACCOUNT_ID
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+R2_PUBLIC_URL
+
+# Email (nodemailer)
+SMTP_HOST
+SMTP_PORT
+SMTP_SECURE
+SMTP_USER
+SMTP_PASS
+SMTP_FROM
+
+# Other
+BACKUP_SECRET_KEY          # Bypass auth for export endpoint
+MAPBOX_ACCESS_TOKEN        # Geocoding/maps
+SENTRY_AUTH_TOKEN          # Error tracking
+```
+
+**Gemini API key** is stored in the `SystemSettings` DB table, not as an env var.
 
 ## Common Gotchas
 
-1. **Attendee Deletion**: Attendees are system-level. Deleting an event removes the relationship but not the attendee record itself.
-2. **Slug Uniqueness**: Event slugs must be unique. Slug generation uses name + random suffix if collision occurs.
-3. **Cascade Deletes**: Deleting an event cascades to meetings and rooms but NOT attendees.
-4. **AI Chat Scope**: Chat is event-scoped. Switching events starts a new conversation context.
-5. **Role Initialization**: New Clerk users don't have roles by default. The RoleSynchronizer component must run to assign the default `user` role.
-6. **Database Adapter**: The app uses `@prisma/adapter-pg` (not default client) for better connection pooling on Vercel.
-7. **Build Process**: `npm run build` runs DB check script before building to ensure database connectivity.
+1. **Attendee deletion**: Deleting an event removes the join record but not the attendee itself.
+2. **Slug uniqueness**: Slug generation adds a random suffix on collision.
+3. **Read-only mode**: Events with status `OCCURRED` are locked in API and UI.
+4. **Meeting sequence**: Increment `sequence` on every meeting update so calendar clients recognize the updated invite.
+5. **AI chat scope**: Switching events starts a new conversation context.
+6. **`lib/enrichment.ts`**: This is a mock service (returns dummy data). The real enrichment is done by the Gemini call in `/api/attendees/autocomplete`.
+7. **Role init**: New Clerk users have no role until `RoleSynchronizer` runs `/api/user/init`.
