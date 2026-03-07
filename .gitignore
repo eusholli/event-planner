@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Db import export files
 /db-json/
+
+# Docker local override (not for production)
+docker-compose.override.yml

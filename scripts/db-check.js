@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const connectionString = `${process.env.POSTGRES_PRISMA_URL}`;
 
-const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1') || process.env.DATABASE_SSL === 'false';
 
 let cleanedConnectionString = connectionString;
 if (!isLocal) {
