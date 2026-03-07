@@ -354,12 +354,18 @@ export async function POST(request: Request) {
                 if (evt.roiTargets) {
                     const roi = evt.roiTargets
 
+                    // Backwards-compat: map old field names to new
+                    const targetCustomerMeetings = roi.targetCustomerMeetings ?? roi.targetBoothMeetings ?? null
+                    const targetTargetedReach = roi.targetTargetedReach ?? roi.targetSocialReach ?? null
+                    const targetSpeaking = roi.targetSpeaking ?? roi.targetKeynotes ?? null
+                    const actualTargetedReach = roi.actualTargetedReach ?? roi.actualSocialReach ?? null
+                    const actualSpeaking = roi.actualSpeaking ?? roi.actualKeynotes ?? null
+
                     // Handle target companies - new format uses targetCompanyIds, old format uses targetCompanies as string[]
                     let targetCompanyConnect: any = undefined
                     if (roi.targetCompanyIds && Array.isArray(roi.targetCompanyIds)) {
                         targetCompanyConnect = roi.targetCompanyIds.map((id: string) => ({ id }))
                     } else if (roi.targetCompanies && Array.isArray(roi.targetCompanies)) {
-                        // Legacy: targetCompanies was string[] of company names
                         const companyIds: string[] = []
                         for (const name of roi.targetCompanies) {
                             if (typeof name === 'string') {
@@ -370,58 +376,32 @@ export async function POST(request: Request) {
                         targetCompanyConnect = companyIds.map(id => ({ id }))
                     }
 
+                    const roiData = {
+                        expectedPipeline: roi.expectedPipeline,
+                        winRate: roi.winRate,
+                        expectedRevenue: roi.expectedRevenue,
+                        targetCustomerMeetings,
+                        targetTargetedReach,
+                        targetSpeaking,
+                        targetMediaPR: roi.targetMediaPR,
+                        targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined,
+                        actualTargetedReach,
+                        actualSpeaking,
+                        actualMediaPR: roi.actualMediaPR,
+                        status: roi.status || 'DRAFT',
+                        approvedBy: roi.approvedBy,
+                        approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                        submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+                        rejectedBy: roi.rejectedBy ?? null,
+                        rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null,
+                    }
+
                     await prisma.eventROITargets.upsert({
                         where: { eventId },
-                        create: {
-                            eventId,
-                            targetInvestment: roi.targetInvestment,
-                            expectedPipeline: roi.expectedPipeline,
-                            winRate: roi.winRate,
-                            expectedRevenue: roi.expectedRevenue,
-                            targetBoothMeetings: roi.targetBoothMeetings,
-                            targetCLevelMeetingsMin: roi.targetCLevelMeetingsMin,
-                            targetCLevelMeetingsMax: roi.targetCLevelMeetingsMax,
-                            targetOtherMeetings: roi.targetOtherMeetings,
-                            targetSocialReach: roi.targetSocialReach,
-                            targetKeynotes: roi.targetKeynotes,
-                            targetSeminars: roi.targetSeminars,
-                            targetMediaPR: roi.targetMediaPR,
-                            targetBoothSessions: roi.targetBoothSessions,
-                            targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined,
-                            actualSocialReach: roi.actualSocialReach,
-                            actualKeynotes: roi.actualKeynotes,
-                            actualSeminars: roi.actualSeminars,
-                            actualMediaPR: roi.actualMediaPR,
-                            actualBoothSessions: roi.actualBoothSessions,
-                            status: roi.status || 'DRAFT',
-                            approvedBy: roi.approvedBy,
-                            approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
-                            submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
-                        },
+                        create: { eventId, ...roiData },
                         update: {
-                            targetInvestment: roi.targetInvestment,
-                            expectedPipeline: roi.expectedPipeline,
-                            winRate: roi.winRate,
-                            expectedRevenue: roi.expectedRevenue,
-                            targetBoothMeetings: roi.targetBoothMeetings,
-                            targetCLevelMeetingsMin: roi.targetCLevelMeetingsMin,
-                            targetCLevelMeetingsMax: roi.targetCLevelMeetingsMax,
-                            targetOtherMeetings: roi.targetOtherMeetings,
-                            targetSocialReach: roi.targetSocialReach,
-                            targetKeynotes: roi.targetKeynotes,
-                            targetSeminars: roi.targetSeminars,
-                            targetMediaPR: roi.targetMediaPR,
-                            targetBoothSessions: roi.targetBoothSessions,
+                            ...roiData,
                             targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined,
-                            actualSocialReach: roi.actualSocialReach,
-                            actualKeynotes: roi.actualKeynotes,
-                            actualSeminars: roi.actualSeminars,
-                            actualMediaPR: roi.actualMediaPR,
-                            actualBoothSessions: roi.actualBoothSessions,
-                            status: roi.status || 'DRAFT',
-                            approvedBy: roi.approvedBy,
-                            approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
-                            submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
                         },
                     }).catch(e => console.warn('ROI targets import skip', e))
                 }
