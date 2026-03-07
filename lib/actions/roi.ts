@@ -90,14 +90,16 @@ export async function submitROIForApproval(eventId: string) {
         data: {
             status: 'SUBMITTED',
             submittedAt: new Date(),
+            rejectedBy: null,
+            rejectedAt: null,
         },
         include: { targetCompanies: true }
     })
 }
 
 export async function approveROI(eventId: string, approverUserId: string) {
-    const { canManageEvents } = await import('@/lib/roles')
-    if (!await canManageEvents()) throw new Error('Forbidden')
+    const { isRootUser } = await import('@/lib/roles')
+    if (!await isRootUser()) throw new Error('Forbidden')
 
     return prisma.eventROITargets.update({
         where: { eventId },
@@ -120,6 +122,8 @@ export async function rejectROI(eventId: string, rejectorUserId: string) {
             status: 'DRAFT',
             rejectedBy: rejectorUserId,
             rejectedAt: new Date(),
+            approvedBy: null,
+            approvedAt: null,
         },
         include: { targetCompanies: true }
     })
