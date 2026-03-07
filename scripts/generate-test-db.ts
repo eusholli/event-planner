@@ -59,8 +59,8 @@ const events = [
             { id: newId(), name: "Breakout Room B", capacity: 50 }
         ],
         attendees: [
-            { id: newId(), name: "John Doe", email: "john@example.com", title: "VP Sales", company: "TechCorp", isExternal: true, type: "Partner" },
-            { id: newId(), name: "Jane Smith", email: "jane@internal.com", title: "Event Manager", company: "OurCompany", isExternal: false, type: "Staff" }
+            { id: newId(), name: "John Doe", email: "john@example.com", title: "VP Sales", company: { id: newId(), name: "TechCorp" }, isExternal: true, type: "Partner" },
+            { id: newId(), name: "Jane Smith", email: "jane@internal.com", title: "Event Manager", company: { id: newId(), name: "OurCompany" }, isExternal: false, type: "Staff" }
         ],
         // Meetings will be linked after ID generation
         meetings: [] as any[]
@@ -82,7 +82,7 @@ const events = [
             { id: newId(), name: "Boardroom", capacity: 20 }
         ],
         attendees: [
-            { id: newId(), name: "Alice Director", email: "alice@internal.com", title: "Director", company: "OurCompany", isExternal: false, type: "Staff" }
+            { id: newId(), name: "Alice Director", email: "alice@internal.com", title: "Director", company: { id: newId(), name: "OurCompany" }, isExternal: false, type: "Staff" }
         ],
         meetings: [] as any[]
     },

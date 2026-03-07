@@ -1,16 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChevronDown, ChevronUp, Plus } from 'lucide-react'
+
+interface Company {
+    id: string
+    name: string
+    description?: string | null
+    pipelineValue?: number | null
+}
 
 interface Attendee {
     id: string
     name: string
     title: string
     email: string
-    company: string
+    companyId: string
+    company: Company
     bio: string
-    companyDescription?: string
     linkedin?: string
     imageUrl?: string
     type?: string
@@ -26,13 +33,13 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
         name: '',
         title: '',
         email: '',
-        company: '',
+        companyId: '',
         bio: '',
-        companyDescription: '',
         linkedin: '',
         imageUrl: '',
         isExternal: false,
-        type: ''
+        type: '',
+        seniorityLevel: ''
     })
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
@@ -42,6 +49,18 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<Partial<Attendee> | null>(null)
     const [isExpanded, setIsExpanded] = useState(false)
+
+    // Company selector state
+    const [companies, setCompanies] = useState<Company[]>([])
+    const [companySearch, setCompanySearch] = useState('')
+    const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
+    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
+    const [showNewCompanyForm, setShowNewCompanyForm] = useState(false)
+    const [newCompanyName, setNewCompanyName] = useState('')
+    const [newCompanyDescription, setNewCompanyDescription] = useState('')
+    const [newCompanyPipeline, setNewCompanyPipeline] = useState('')
+    const [creatingCompany, setCreatingCompany] = useState(false)
+    const companyDropdownRef = useRef<HTMLDivElement>(null)
 
     const resizeImage = (file: File): Promise<File> => {
         return new Promise((resolve, reject) => {
@@ -94,6 +113,18 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
 
     useEffect(() => {
         checkSettings()
+        fetchCompanies()
+    }, [])
+
+    // Close company dropdown when clicking outside
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (companyDropdownRef.current && !companyDropdownRef.current.contains(e.target as Node)) {
+                setShowCompanyDropdown(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
     }, [])
 
     const [searchResults, setSearchResults] = useState<Attendee[]>([])
@@ -101,16 +132,26 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
     const [isLinking, setIsLinking] = useState(false)
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
 
+    const fetchCompanies = async () => {
+        try {
+            const res = await fetch('/api/companies')
+            if (res.ok) {
+                const data = await res.json()
+                setCompanies(data)
+            }
+        } catch (err) {
+            console.error('Failed to fetch companies', err)
+        }
+    }
+
     const checkSettings = async () => {
         try {
-            // Fetch global settings ONLY for API Key
             const settingsRes = await fetch('/api/settings')
             const settingsData = await settingsRes.json()
             setHasApiKey(!!settingsData.geminiApiKey)
 
             let types: string[] = []
 
-            // Fetch event settings for Attendee Types
             if (eventId) {
                 try {
                     const eventRes = await fetch(`/api/events/${eventId}`)
@@ -154,11 +195,8 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
         const val = e.target.value
         setFormData({ ...formData, name: val })
 
-        // Clear linking state if user modifies name manually (assuming they might want a new person)
         if (isLinking && val !== formData.name) {
             setIsLinking(false)
-            // Optional: Clear other fields if they were auto-filled? 
-            // For better UX, let's keep them but unlock them.
         }
 
         if (searchTimeout) clearTimeout(searchTimeout)
@@ -174,14 +212,16 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
             name: attendee.name,
             title: attendee.title,
             email: attendee.email,
-            company: attendee.company,
+            companyId: attendee.companyId,
             bio: attendee.bio || '',
-            companyDescription: attendee.companyDescription || '',
             linkedin: attendee.linkedin || '',
             imageUrl: attendee.imageUrl || '',
-            isExternal: false, // Default to internal/linked for existing? Or preserve? We don't have isExternal in search result type explicitly but interface has it.
-            type: attendee.type || ''
+            isExternal: false,
+            type: attendee.type || '',
+            seniorityLevel: ''
         })
+        setSelectedCompany(attendee.company)
+        setCompanySearch(attendee.company.name)
         setIsLinking(true)
         setShowResults(false)
         setSearchResults([])
@@ -189,7 +229,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
     }
 
     const handleAutoComplete = async () => {
-        if (!formData.name || !formData.company) return
+        if (!formData.name || !selectedCompany) return
         setAutoCompleting(true)
         try {
             const res = await fetch('/api/attendees/autocomplete', {
@@ -197,7 +237,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: formData.name,
-                    company: formData.company
+                    company: selectedCompany.name
                 }),
             })
 
@@ -221,28 +261,76 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
             ...prev,
             title: suggestions.title || prev.title,
             bio: suggestions.bio || prev.bio,
-            companyDescription: suggestions.companyDescription || prev.companyDescription,
             linkedin: suggestions.linkedin || prev.linkedin
         }))
         setSuggestions(null)
     }
+
+    const handleSelectCompany = (company: Company) => {
+        setSelectedCompany(company)
+        setFormData({ ...formData, companyId: company.id })
+        setCompanySearch(company.name)
+        setShowCompanyDropdown(false)
+    }
+
+    const handleCreateCompany = async () => {
+        if (!newCompanyName.trim()) return
+        setCreatingCompany(true)
+        try {
+            const res = await fetch('/api/companies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newCompanyName.trim(),
+                    description: newCompanyDescription.trim() || null,
+                    pipelineValue: newCompanyPipeline || null,
+                }),
+            })
+            if (res.ok) {
+                const company = await res.json()
+                setCompanies(prev => [...prev, company].sort((a, b) => a.name.localeCompare(b.name)))
+                handleSelectCompany(company)
+                setShowNewCompanyForm(false)
+                setNewCompanyName('')
+                setNewCompanyDescription('')
+                setNewCompanyPipeline('')
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Failed to create company')
+            }
+        } catch (err) {
+            console.error('Failed to create company', err)
+        } finally {
+            setCreatingCompany(false)
+        }
+    }
+
+    const filteredCompanies = companies.filter(c =>
+        c.name.toLowerCase().includes(companySearch.toLowerCase())
+    )
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         setError(null)
         try {
+            if (!formData.companyId) {
+                setError('Please select a company')
+                setLoading(false)
+                return
+            }
+
             const formDataToSend = new FormData()
             formDataToSend.append('name', formData.name)
             formDataToSend.append('title', formData.title)
             formDataToSend.append('email', formData.email)
-            formDataToSend.append('company', formData.company)
+            formDataToSend.append('companyId', formData.companyId)
             formDataToSend.append('bio', formData.bio)
-            formDataToSend.append('companyDescription', formData.companyDescription)
             formDataToSend.append('linkedin', formData.linkedin)
             formDataToSend.append('imageUrl', formData.imageUrl)
             formDataToSend.append('isExternal', String(formData.isExternal))
             formDataToSend.append('type', formData.type)
+            formDataToSend.append('seniorityLevel', formData.seniorityLevel)
             formDataToSend.append('eventId', eventId)
 
             if (selectedFile) {
@@ -255,8 +343,10 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
             })
             const data = await res.json()
             if (res.ok) {
-                setFormData({ name: '', title: '', email: '', company: '', bio: '', companyDescription: '', linkedin: '', imageUrl: '', isExternal: false, type: '' })
+                setFormData({ name: '', title: '', email: '', companyId: '', bio: '', linkedin: '', imageUrl: '', isExternal: false, type: '', seniorityLevel: '' })
                 setSelectedFile(null)
+                setSelectedCompany(null)
+                setCompanySearch('')
                 setIsLinking(false)
                 setIsExpanded(false)
                 if (onSuccess) {
@@ -380,12 +470,10 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                     if (searchResults.length > 0 && !isLinking) setShowResults(true)
                                 }}
                                 onBlur={() => {
-                                    // Delay hide to allow click
                                     setTimeout(() => setShowResults(false), 200)
                                 }}
                                 readOnly={isLinking}
                             />
-                            {/* Search Results Dropdown */}
                             {showResults && searchResults.length > 0 && (
                                 <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
                                     {searchResults.map((result) => (
@@ -395,7 +483,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                             onClick={() => selectExisting(result)}
                                         >
                                             <div className="font-medium text-zinc-900">{result.name}</div>
-                                            <div className="text-xs text-zinc-500">{result.company} • {result.email}</div>
+                                            <div className="text-xs text-zinc-500">{result.company?.name || 'Unknown'} • {result.email}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -413,18 +501,75 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             />
                         </div>
-                        <div>
-                            <label htmlFor="company" className="block text-sm font-medium text-zinc-700 mb-1.5">Company</label>
-                            <input
-                                type="text"
-                                id="company"
-                                required
-                                className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                value={formData.company}
-                                readOnly={isLinking}
-                                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                            />
+
+                        {/* Company Selector */}
+                        <div ref={companyDropdownRef} className="relative">
+                            <label htmlFor="company-search" className="block text-sm font-medium text-zinc-700 mb-1.5">Company</label>
+                            {isLinking ? (
+                                <input
+                                    type="text"
+                                    className="input-field bg-gray-100 cursor-not-allowed"
+                                    value={selectedCompany?.name || ''}
+                                    readOnly
+                                />
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        id="company-search"
+                                        className="input-field"
+                                        value={companySearch}
+                                        onChange={(e) => {
+                                            setCompanySearch(e.target.value)
+                                            setShowCompanyDropdown(true)
+                                            if (selectedCompany && e.target.value !== selectedCompany.name) {
+                                                setSelectedCompany(null)
+                                                setFormData({ ...formData, companyId: '' })
+                                            }
+                                        }}
+                                        onFocus={() => setShowCompanyDropdown(true)}
+                                        placeholder="Search or create company..."
+                                    />
+                                    {showCompanyDropdown && (
+                                        <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
+                                            {filteredCompanies.map((company) => (
+                                                <div
+                                                    key={company.id}
+                                                    className="px-4 py-2 hover:bg-indigo-50 cursor-pointer border-b border-zinc-50 last:border-none"
+                                                    onClick={() => handleSelectCompany(company)}
+                                                >
+                                                    <div className="font-medium text-zinc-900">{company.name}</div>
+                                                    {company.pipelineValue && (
+                                                        <div className="text-xs text-zinc-500">Pipeline: ${company.pipelineValue.toLocaleString()}</div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {filteredCompanies.length === 0 && companySearch.trim() && (
+                                                <div className="px-4 py-2 text-sm text-zinc-500 italic">No companies found</div>
+                                            )}
+                                            <div
+                                                className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-t border-zinc-200 flex items-center gap-2 text-emerald-700"
+                                                onClick={() => {
+                                                    setNewCompanyName(companySearch.trim())
+                                                    setShowNewCompanyForm(true)
+                                                    setShowCompanyDropdown(false)
+                                                }}
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                <span className="text-sm font-medium">Create &quot;{companySearch.trim() || 'new company'}&quot;</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            {selectedCompany && !isLinking && (
+                                <div className="mt-1 flex items-center gap-2">
+                                    <span className="text-xs text-emerald-600 font-medium">✓ {selectedCompany.name}</span>
+                                    <button type="button" onClick={() => { setSelectedCompany(null); setCompanySearch(''); setFormData({ ...formData, companyId: '' }) }} className="text-xs text-red-500 hover:underline">clear</button>
+                                </div>
+                            )}
                         </div>
+
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email</label>
                             <input
@@ -477,6 +622,25 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                             </div>
                         )}
 
+                        {!isLinking && (
+                            <div>
+                                <label htmlFor="seniorityLevel" className="block text-sm font-medium text-zinc-700 mb-1.5">Seniority Level</label>
+                                <select
+                                    id="seniorityLevel"
+                                    className="input-field"
+                                    value={formData.seniorityLevel}
+                                    onChange={(e) => setFormData({ ...formData, seniorityLevel: e.target.value })}
+                                >
+                                    <option value="">Select level...</option>
+                                    <option value="C-Level">C-Level</option>
+                                    <option value="VP">VP</option>
+                                    <option value="Director">Director</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="IC">IC (Individual Contributor)</option>
+                                </select>
+                            </div>
+                        )}
+
                         {attendeeTypes.length > 0 && (
                             <div>
                                 <label htmlFor="type" className="block text-sm font-medium text-zinc-700 mb-1.5">Attendee Type</label>
@@ -500,7 +664,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                     <button
                                         type="button"
                                         onClick={handleAutoComplete}
-                                        disabled={loading || !hasApiKey || !formData.name || !formData.company}
+                                        disabled={loading || !hasApiKey || !formData.name || !selectedCompany}
                                         className="w-full btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         {autoCompleting ? (
@@ -541,7 +705,6 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
             </div>
 
             {/* Suggestions Modal */}
-
             {suggestions && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
@@ -554,10 +717,6 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                             <div>
                                 <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Bio</span>
                                 <p className="text-zinc-600 text-sm">{suggestions.bio}</p>
-                            </div>
-                            <div>
-                                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Company Description</span>
-                                <p className="text-zinc-600 text-sm">{suggestions.companyDescription}</p>
                             </div>
                             {suggestions.linkedin && (
                                 <div>
@@ -578,6 +737,63 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                 className="flex-1 btn-primary"
                             >
                                 Accept & Fill
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* New Company Modal */}
+            {showNewCompanyForm && (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
+                        <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-4">Create New Company</h2>
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Company Name</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={newCompanyName}
+                                    onChange={e => setNewCompanyName(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Description</label>
+                                <textarea
+                                    className="input-field h-20 resize-none"
+                                    value={newCompanyDescription}
+                                    onChange={e => setNewCompanyDescription(e.target.value)}
+                                    placeholder="Brief description of the company..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Pipeline Value ($)</label>
+                                <input
+                                    type="number"
+                                    className="input-field"
+                                    value={newCompanyPipeline}
+                                    onChange={e => setNewCompanyPipeline(e.target.value)}
+                                    placeholder="Estimated deal value"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowNewCompanyForm(false); setNewCompanyName(''); setNewCompanyDescription(''); setNewCompanyPipeline('') }}
+                                className="flex-1 btn-secondary"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateCompany}
+                                disabled={creatingCompany || !newCompanyName.trim()}
+                                className="flex-1 btn-primary disabled:opacity-50"
+                            >
+                                {creatingCompany ? 'Creating...' : 'Create'}
                             </button>
                         </div>
                     </div>

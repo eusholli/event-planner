@@ -24,9 +24,10 @@ export async function GET(request: Request) {
                     OR: [
                         { name: { contains: query, mode: 'insensitive' } },
                         { email: { contains: query, mode: 'insensitive' } },
-                        { company: { contains: query, mode: 'insensitive' } }
+                        { company: { name: { contains: query, mode: 'insensitive' } } }
                     ]
                 },
+                include: { company: true },
                 take: 10,
                 orderBy: { name: 'asc' }
             })
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
                     }
                 }
             },
+            include: { company: true },
             orderBy: {
                 name: 'asc'
             }
@@ -73,11 +75,11 @@ export async function POST(request: Request) {
         const title = formData.get('title') as string
         const email = formData.get('email') as string
         let bio = formData.get('bio') as string
-        const company = formData.get('company') as string
-        const companyDescription = formData.get('companyDescription') as string
+        const companyId = formData.get('companyId') as string
         let linkedin = formData.get('linkedin') as string
         const isExternal = formData.get('isExternal') === 'true'
         const type = formData.get('type') as string
+        const seniorityLevel = formData.get('seniorityLevel') as string
         const rawEventId = formData.get('eventId') as string
         const eventId = await resolveEventId(rawEventId)
 
@@ -95,7 +97,8 @@ export async function POST(request: Request) {
 
         // Check for existing attendee
         const existingAttendee = await prisma.attendee.findUnique({
-            where: { email }
+            where: { email },
+            include: { company: true }
         })
 
         if (existingAttendee) {
@@ -122,6 +125,14 @@ export async function POST(request: Request) {
                 })
             }
 
+            // Update seniorityLevel if provided
+            if (seniorityLevel) {
+                await prisma.attendee.update({
+                    where: { id: existingAttendee.id },
+                    data: { seniorityLevel },
+                })
+            }
+
             return NextResponse.json(existingAttendee)
         }
 
@@ -131,8 +142,14 @@ export async function POST(request: Request) {
 
         let finalImageUrl = ''
 
-        if (!name || !title || !company || !email) {
+        if (!name || !title || !companyId || !email) {
             return NextResponse.json({ error: 'Name, Title, Company, and Email are required.' }, { status: 400 })
+        }
+
+        // Verify company exists
+        const companyRecord = await prisma.company.findUnique({ where: { id: companyId } })
+        if (!companyRecord) {
+            return NextResponse.json({ error: 'Company not found' }, { status: 400 })
         }
 
         try {
@@ -155,15 +172,16 @@ export async function POST(request: Request) {
         }
 
         // Auto-enrichment Logic
-        if (!linkedin && name && company) {
-            const foundUrl = await findLinkedInUrl(name, company)
+        const companyName = companyRecord.name
+        if (!linkedin && name && companyName) {
+            const foundUrl = await findLinkedInUrl(name, companyName)
             if (foundUrl) {
                 linkedin = foundUrl
             }
         }
 
-        if (!bio && linkedin && name && company) {
-            const generatedBio = await generateBio(name, company, linkedin)
+        if (!bio && linkedin && name && companyName) {
+            const generatedBio = await generateBio(name, companyName, linkedin)
             if (generatedBio) {
                 bio = generatedBio
             }
@@ -175,16 +193,17 @@ export async function POST(request: Request) {
                 title,
                 email,
                 bio,
-                company,
-                companyDescription,
+                companyId,
                 linkedin,
                 imageUrl: finalImageUrl || null,
                 isExternal,
                 type,
+                seniorityLevel: seniorityLevel || null,
                 events: {
                     connect: { id: eventId }
                 }
             },
+            include: { company: true }
         })
         return NextResponse.json(attendee)
     } catch (error) {

@@ -8,7 +8,7 @@ interface Meeting {
     startTime: string | null
     endTime: string | null
     resourceId: string
-    attendees: { id: string, name: string, company?: string, isExternal?: boolean, bio?: string, companyDescription?: string, imageUrl?: string }[]
+    attendees: { id: string, name: string, company?: { id: string; name: string }, isExternal?: boolean, bio?: string, imageUrl?: string }[]
     purpose: string
     status: string
     tags: string[]
@@ -365,12 +365,12 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
             doc.text(`${a.name}`, contentStartX, yPos + 4)
 
             let metaY = yPos + 9
-            if (a.company) {
+            if (a.company?.name) {
                 doc.setFontSize(9)
                 doc.setFont('MPLUS1p', 'normal')
                 // doc.setFont('helvetica', 'bold')
                 doc.setTextColor('#4b5563')
-                doc.text(a.company.toUpperCase(), contentStartX, metaY)
+                doc.text(a.company.name.toUpperCase(), contentStartX, metaY)
                 metaY += 5
             }
 
@@ -456,11 +456,11 @@ const renderMeetingDetails = async (doc: jsPDF, meeting: Meeting, roomName: stri
             const nameWidth = doc.getTextWidth(a.name)
             doc.text(a.name, contentStartX, yPos + 4)
 
-            if (a.company) {
+            if (a.company?.name) {
                 doc.setFontSize(9)
                 doc.setFont('MPLUS1p', 'normal')
                 doc.setTextColor('#6b7280')
-                doc.text(a.company, contentStartX + nameWidth + 5, yPos + 4)
+                doc.text(a.company.name, contentStartX + nameWidth + 5, yPos + 4)
             }
 
             const contentHeight = a.imageUrl ? Math.max(IMG_SIZE, 5) : 5
@@ -571,7 +571,7 @@ export const generateScheduleBriefing = async (title: string, subtitle: string, 
                     }
 
                     let text = `• ${p.name}`
-                    if (p.company) text += ` (${p.company})`
+                    if (p.company?.name) text += ` (${p.company.name})`
 
                     doc.setFont('MPLUS1p', 'normal')
                     doc.text(text, margin + 4, yPos)

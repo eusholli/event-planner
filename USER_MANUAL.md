@@ -6,15 +6,16 @@ Welcome to the Executive Meeting Coordinator! This guide covers every feature of
 1. [User Roles & Permissions](#user-roles--permissions)
 2. [Events Portfolio](#events-portfolio)
 3. [Event Dashboard](#event-dashboard)
-4. [Managing Attendees](#managing-attendees)
-5. [Rooms](#rooms)
-6. [Scheduling Meetings](#scheduling-meetings)
-7. [AI Chat Assistant](#ai-chat-assistant)
-8. [OpenClaw Insights](#openclaw-insights)
-9. [Reports](#reports)
-10. [Event Settings](#event-settings)
-11. [System Administration](#system-administration)
-12. [User Administration](#user-administration)
+4. [Event ROI Management](#event-roi-management)
+5. [Managing Attendees](#managing-attendees)
+6. [Rooms](#rooms)
+7. [Scheduling Meetings](#scheduling-meetings)
+8. [AI Chat Assistant](#ai-chat-assistant)
+9. [OpenClaw Insights](#openclaw-insights)
+10. [Reports](#reports)
+11. [Event Settings](#event-settings)
+12. [System Administration](#system-administration)
+13. [User Administration](#user-administration)
 
 ---
 
@@ -80,12 +81,123 @@ The **Dashboard** (`/events/[id]/dashboard`) is your event command center.
 
 ---
 
+## Event ROI Management
+
+*Access: Root and Marketing users can set and approve targets. All authorized users can view the Performance Tracker.*
+
+The **ROI Dashboard** (`/events/[id]/roi`) lets you set pre-event investment targets, track post-event results, and measure the return on your event investment — all in one place.
+
+Navigate to the **ROI** tab in the event navigation bar.
+
+### How It Works
+
+The ROI workflow follows three stages:
+
+1. **Before the event** — Set financial targets, meeting KPIs, engagement goals, and a list of target companies you want to meet. Submit targets for management approval.
+2. **During the event** — The system automatically tracks actuals as you log meetings and attendees. Pipeline value, C-level meetings, and target company hits update in real time.
+3. **After the event** — Enter manual engagement metrics (social reach, keynotes, etc.) and review the full Target vs. Actual comparison.
+
+### Tab 1: Targets & Approval
+
+Use this tab to define what success looks like for the event.
+
+#### Financial Targets
+| Field | Description |
+| :--- | :--- |
+| **Target Investment** | Total budget allocated to this event (e.g., $37,000). |
+| **Expected Pipeline** | Total deal value you expect to generate from companies met. |
+| **Win Rate** | Expected conversion rate (enter as decimal, e.g., 0.15 for 15%). |
+| **Expected Revenue** | Auto-calculated: Pipeline × Win Rate. |
+
+#### Meeting KPI Targets
+| Field | Description |
+| :--- | :--- |
+| **Booth Meetings** | Target number of meetings at your booth. |
+| **C-Level Meetings (Min/Max)** | Target range for meetings with C-level executives. |
+| **Other Meetings** | Target for non-booth, non-C-level meetings. |
+
+#### Engagement Targets
+Set numeric targets for: **Social Reach**, **Keynotes**, **Seminars**, **Media/PR**, and **Booth Sessions**.
+
+#### Target Companies
+Type company names and press Enter (or click **Add**) to build a target list. These are companies you want to ensure you meet with at the event. The Performance Tracker will show which ones you actually met.
+
+#### Approval Workflow
+Targets go through a three-step approval process:
+1. **Draft** → Edit freely. Click **Save Targets** to save your work.
+2. **Submitted** → Click **Submit for Approval** to lock targets and request sign-off.
+3. **Approved** → A Root or Marketing user clicks **Approve** to finalize.
+
+### Tab 2: Performance Tracker
+
+This tab provides a live, visual comparison of your targets versus actuals.
+
+#### What Is Automatically Calculated
+The following metrics are computed in real time from your meeting and attendee data — no manual entry required:
+
+| Metric | How It's Calculated |
+| :--- | :--- |
+| **Actual Pipeline** | Sum of pipeline values across unique companies from confirmed/occurred meetings. If multiple attendees from the same company have different values, the highest is used. |
+| **Actual Revenue** | Actual Pipeline × Win Rate. |
+| **Booth Meetings** | Count of meetings with type "Booth". |
+| **C-Level Meetings** | Count of meetings that include at least one attendee with seniority level "C-Level". |
+| **Other Meetings** | Total meetings minus Booth and C-Level meetings. |
+| **Target Companies Hit** | Companies from your target list that appear in at least one confirmed/occurred meeting. |
+| **Investment** | Pulled from the event's budget field (set in Event Settings). |
+| **ROI Ratio** | Pipeline ÷ Investment, shown as a percentage. |
+
+#### Visual Elements
+- **Progress Rings**: Large donut charts for Pipeline and Revenue show percentage completion with color coding.
+- **Progress Bars**: Horizontal bars for meeting KPIs.
+- **Company Checklist**: Each target company shown with a ✅ (met) or ✖ (not met) indicator and overall hit rate.
+- **Color Coding**: 🟢 Green (≥100%), 🟡 Amber (≥50%), 🔴 Rose (<50%).
+
+### Tab 3: Post-Event Actuals
+
+Engagement metrics like social reach, keynotes, and media coverage can't be derived from meeting data. Enter them here after the event:
+
+- **Social Reach**: Total social media impressions/reach.
+- **Keynotes**: Number of keynote presentations delivered.
+- **Seminars**: Number of seminars or panels participated in.
+- **Media / PR**: Number of media mentions or PR activities.
+- **Booth Sessions**: Number of booth demonstration sessions conducted.
+
+Click **Save Actuals** to persist these values. They immediately appear in the Performance Tracker.
+
+### Pipeline Value — How It Works
+
+Pipeline value is tracked at the **company level**, not per individual meeting. This keeps things manageable:
+
+1. When adding or editing an attendee, set their **Pipeline Value ($)** — this represents the estimated deal size for their company.
+2. When calculating the event's actual pipeline, the system:
+   - Looks at all confirmed/occurred meetings.
+   - Groups attendees by company.
+   - Takes the **highest** pipeline value per company (to avoid double-counting).
+   - Sums across all unique companies.
+
+> **Tip**: You only need to set the pipeline value on one attendee per company. If the same company appears in multiple meetings, it's counted once.
+
+### Seniority Level — C-Level Tracking
+
+When adding attendees, you can set their **Seniority Level** (C-Level, VP, Director, Manager, or IC). The ROI system uses this to automatically count C-Level meetings — any meeting with at least one C-Level attendee counts.
+
+### Import & Export
+
+ROI targets are included in both event-level and system-level exports/imports:
+- **Event Export/Import**: The `roiTargets` object is embedded in the JSON, preserving all targets, actuals, and approval status.
+- **System Backup/Restore**: ROI targets for each event are included in the system backup and restored alongside event data.
+
+---
+
 ## Managing Attendees
 
 Navigate to **Attendees** (`/events/[id]/attendees`) to manage your guest list.
 
 ### Adding Attendees
-Fill in the form with name, email, company, title, and optionally bio, LinkedIn URL, attendee type, and profile image.
+Fill in the form with name, email, company, title, and optionally bio, LinkedIn URL, attendee type, seniority level, pipeline value, and profile image.
+
+- **Seniority Level**: Select from C-Level, VP, Director, Manager, or IC. Used by the ROI system to track C-Level meetings.
+- **Pipeline Value ($)**: Enter the estimated deal value for this attendee's company. Used to calculate event ROI pipeline.
 
 ### AI Auto Complete
 1. Enter a **Name** and **Company** in the form.
@@ -208,7 +320,7 @@ Navigate to **Settings** within an event (`/events/[id]/settings`) to configure:
 ### Event Details
 - **Name**, **Slug**, **Start/End Dates**, **Timezone**, **Region**.
 - **Address** and **Booth Location** (prefixed to room locations in calendar invites).
-- **URL**, **Description**, **Budget**, **Target Customers**, **Expected ROI**.
+- **URL**, **Description**, **Budget**, **Target Customers**.
 - **Status**: Change event status (Pipeline/Committed/Occurred/Canceled).
 - **Password**: Set a password to restrict access.
 

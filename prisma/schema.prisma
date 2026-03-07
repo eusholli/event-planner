@@ -31,32 +31,42 @@ model Event {
   region          String?
   budget          Float?
   targetCustomers String?
-  expectedRoi     String?
   status          String     @default("PIPELINE")
   slug            String     @unique
   attendees       Attendee[]
   meetings        Meeting[]
   rooms           Room[]
+  roiTargets      EventROITargets?
   password        String?
   description     String?
   latitude        Float?
   longitude       Float?
 }
 
+model Company {
+  id              String            @id @default(cuid())
+  name            String            @unique
+  description     String?
+  pipelineValue   Float?
+  attendees       Attendee[]
+  targetedByROI   EventROITargets[] @relation("TargetCompanies")
+}
+
 model Attendee {
-  id                 String    @id @default(cuid())
-  name               String
-  email              String    @unique
-  bio                String?
-  company            String
-  companyDescription String?
-  linkedin           String?
-  imageUrl           String?
-  title              String
-  isExternal         Boolean   @default(false)
-  type               String?
-  events             Event[]
-  meetings           Meeting[] @relation("AttendeeMeetings")
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  bio            String?
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id])
+  linkedin       String?
+  imageUrl       String?
+  title          String
+  isExternal     Boolean   @default(false)
+  type           String?
+  seniorityLevel String?
+  events         Event[]
+  meetings       Meeting[] @relation("AttendeeMeetings")
 }
 
 model Room {
@@ -97,4 +107,48 @@ enum MeetingStatus {
   CONFIRMED
   OCCURRED
   CANCELED
+}
+
+model EventROITargets {
+  id                      String    @id @default(cuid())
+  eventId                 String    @unique
+  event                   Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Financials
+  targetInvestment        Float?
+  expectedPipeline        Float?
+  winRate                 Float?
+  expectedRevenue         Float?
+
+  // Meeting KPIs
+  targetBoothMeetings     Int?
+  targetCLevelMeetingsMin Int?
+  targetCLevelMeetingsMax Int?
+  targetOtherMeetings     Int?
+
+  // Engagement
+  targetSocialReach       Int?
+  targetKeynotes          Int?
+  targetSeminars          Int?
+  targetMediaPR           Int?
+  targetBoothSessions     Int?
+
+  // Target Companies
+  targetCompanies         Company[] @relation("TargetCompanies")
+
+  // Actuals (manually entered)
+  actualSocialReach       Int?
+  actualKeynotes          Int?
+  actualSeminars          Int?
+  actualMediaPR           Int?
+  actualBoothSessions     Int?
+
+  // Approval
+  status                  String   @default("DRAFT")
+  approvedBy              String?
+  approvedAt              DateTime?
+  submittedAt             DateTime?
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }

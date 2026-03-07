@@ -5,6 +5,22 @@ import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
+// Helper: Resolve a company by name or ID, creating if needed
+async function resolveCompany(companyName: string, description?: string, pipelineValue?: number | null): Promise<string> {
+    const existing = await prisma.company.findUnique({ where: { name: companyName } })
+    if (existing) {
+        return existing.id
+    }
+    const created = await prisma.company.create({
+        data: {
+            name: companyName,
+            description: description || null,
+            pipelineValue: pipelineValue || null,
+        }
+    })
+    return created.id
+}
+
 export async function POST(request: Request) {
     try {
         if (!await isRootUser()) {
@@ -14,14 +30,10 @@ export async function POST(request: Request) {
         const json = await request.json()
         const { systemSettings, events } = json
 
-        // Transaction? Might be too big for one transaction if large dataset.
-        // We'll do it sequentially.
-
         // 1. Restore System Settings
         if (systemSettings) {
             const existing = await prisma.systemSettings.findFirst()
 
-            // Prepare update data - undefined values are ignored by Prisma updates
             const updateData: any = {}
             if (systemSettings.geminiApiKey !== undefined) updateData.geminiApiKey = systemSettings.geminiApiKey
             if (systemSettings.defaultTags !== undefined) updateData.defaultTags = systemSettings.defaultTags
@@ -34,14 +46,9 @@ export async function POST(request: Request) {
                     data: updateData
                 })
             } else {
-                // For create, we might want defaults if missing, but let's use what we have.
-                // If they are missing from import, schema defaults will handle them if we don't pass them?
-                // Actually prisma create needs explicit types if they are required, but these have defaults.
-                // However, Prisma client types might make them optional.
-                // Let's safe-guard:
                 await prisma.systemSettings.create({
                     data: {
-                        geminiApiKey: systemSettings.geminiApiKey, // can be null
+                        geminiApiKey: systemSettings.geminiApiKey,
                         defaultTags: systemSettings.defaultTags || [],
                         defaultMeetingTypes: systemSettings.defaultMeetingTypes || [],
                         defaultAttendeeTypes: systemSettings.defaultAttendeeTypes || []
@@ -50,9 +57,41 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Restore Global Attendees (Phase 1)
+        // 2. Restore Companies (new format)
+        if (json.companies && Array.isArray(json.companies)) {
+            for (const comp of json.companies) {
+                await prisma.company.upsert({
+                    where: { id: comp.id },
+                    create: {
+                        id: comp.id,
+                        name: comp.name,
+                        description: comp.description,
+                        pipelineValue: comp.pipelineValue,
+                    },
+                    update: {
+                        name: comp.name,
+                        description: comp.description,
+                        pipelineValue: comp.pipelineValue,
+                    }
+                }).catch(e => console.warn('Company import skip', e))
+            }
+        }
+
+        // 3. Restore Global Attendees
         if (json.attendees && Array.isArray(json.attendees)) {
             for (const att of json.attendees) {
+                let companyId = att.companyId
+
+                // Backwards compatibility: If old format with company string
+                if (!companyId && att.company && typeof att.company === 'string') {
+                    companyId = await resolveCompany(att.company, att.companyDescription, att.pipelineValue)
+                }
+
+                if (!companyId) {
+                    console.warn('Attendee import skip - no companyId:', att.name)
+                    continue
+                }
+
                 await prisma.attendee.upsert({
                     where: { id: att.id },
                     create: {
@@ -60,31 +99,31 @@ export async function POST(request: Request) {
                         name: att.name,
                         email: att.email,
                         title: att.title,
-                        company: att.company,
-                        companyDescription: att.companyDescription,
+                        companyId,
                         bio: att.bio,
                         linkedin: att.linkedin,
                         imageUrl: att.imageUrl,
                         isExternal: att.isExternal,
-                        type: att.type
+                        type: att.type,
+                        seniorityLevel: att.seniorityLevel
                     },
                     update: {
                         name: att.name,
                         email: att.email,
                         title: att.title,
-                        company: att.company,
-                        companyDescription: att.companyDescription,
+                        companyId,
                         bio: att.bio,
                         linkedin: att.linkedin,
                         imageUrl: att.imageUrl,
                         isExternal: att.isExternal,
-                        type: att.type
+                        type: att.type,
+                        seniorityLevel: att.seniorityLevel
                     }
                 }).catch(e => console.warn('Global Attendee import skip', e))
             }
         }
 
-        // 3. Restore Events and their scoped data
+        // 4. Restore Events and their scoped data
         if (events && Array.isArray(events)) {
             for (const evt of events) {
                 // Upsert Event
@@ -97,7 +136,6 @@ export async function POST(request: Request) {
                 if (evt.url !== undefined) eventUpdate.url = evt.url
                 if (evt.budget !== undefined) eventUpdate.budget = evt.budget
                 if (evt.targetCustomers !== undefined) eventUpdate.targetCustomers = evt.targetCustomers
-                if (evt.expectedRoi !== undefined) eventUpdate.expectedRoi = evt.expectedRoi
                 if (evt.requesterEmail !== undefined) eventUpdate.requesterEmail = evt.requesterEmail
                 if (evt.tags !== undefined) eventUpdate.tags = evt.tags
                 if (evt.meetingTypes !== undefined) eventUpdate.meetingTypes = evt.meetingTypes
@@ -138,9 +176,8 @@ export async function POST(request: Request) {
                 const event = await prisma.event.upsert({
                     where: { id: evt.id || 'new_impossible_id' },
                     create: {
-                        id: evt.id, // Try to preserve ID
+                        id: evt.id,
                         name: evt.name,
-                        // Fallback implementation for legacy imports without slugs
                         slug: evt.slug || (evt.name || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + (evt.id ? evt.id.slice(-5) : Math.random().toString(36).substring(2, 7)),
                         startDate: evt.startDate,
                         endDate: evt.endDate,
@@ -149,7 +186,6 @@ export async function POST(request: Request) {
                         url: evt.url,
                         budget: evt.budget,
                         targetCustomers: evt.targetCustomers,
-                        expectedRoi: evt.expectedRoi,
                         requesterEmail: evt.requesterEmail,
                         tags: evt.tags || [],
                         meetingTypes: evt.meetingTypes || [],
@@ -158,7 +194,6 @@ export async function POST(request: Request) {
                         latitude,
                         longitude,
                         timezone: evt.timezone,
-
                         password: evt.password,
                         description: evt.description,
                         authorizedUserIds: evt.authorizedUserIds || [],
@@ -196,17 +231,29 @@ export async function POST(request: Request) {
                 // Restore Legacy Embedded Attendees (Backwards Compatibility)
                 if (!json.attendees && evt.attendees) {
                     for (const att of evt.attendees) {
+                        let companyId = att.companyId
+
+                        // Legacy: company was a string
+                        if (!companyId && att.company && typeof att.company === 'string') {
+                            companyId = await resolveCompany(att.company, att.companyDescription, att.pipelineValue)
+                        }
+
+                        if (!companyId) {
+                            console.warn('Legacy attendee import skip - no companyId:', att.name)
+                            continue
+                        }
+
                         const attUpdate: any = {}
                         if (att.name !== undefined) attUpdate.name = att.name
                         if (att.email !== undefined) attUpdate.email = att.email
                         if (att.title !== undefined) attUpdate.title = att.title
-                        if (att.company !== undefined) attUpdate.company = att.company
-                        if (att.companyDescription !== undefined) attUpdate.companyDescription = att.companyDescription
+                        attUpdate.companyId = companyId
                         if (att.bio !== undefined) attUpdate.bio = att.bio
                         if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
                         if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
                         if (att.isExternal !== undefined) attUpdate.isExternal = att.isExternal
                         if (att.type !== undefined) attUpdate.type = att.type
+                        if (att.seniorityLevel !== undefined) attUpdate.seniorityLevel = att.seniorityLevel
 
                         await prisma.attendee.upsert({
                             where: { id: att.id },
@@ -215,13 +262,13 @@ export async function POST(request: Request) {
                                 name: att.name,
                                 email: att.email,
                                 title: att.title,
-                                company: att.company,
-                                companyDescription: att.companyDescription,
+                                companyId,
                                 bio: att.bio,
                                 linkedin: att.linkedin,
                                 imageUrl: att.imageUrl,
                                 isExternal: att.isExternal,
                                 type: att.type,
+                                seniorityLevel: att.seniorityLevel,
                                 events: {
                                     connect: { id: eventId }
                                 }
@@ -236,10 +283,9 @@ export async function POST(request: Request) {
                     }
                 }
 
-                // Meetings restoration is complex due to Many-to-Many via implicit or explicit tables.
+                // Meetings restoration
                 if (evt.meetings) {
                     for (const mtg of evt.meetings) {
-                        // Prepare attendee connections
                         let attendeeConnects: any = undefined
                         if (mtg.attendees !== undefined) {
                             attendeeConnects = mtg.attendees?.map((a: any) => {
@@ -258,7 +304,6 @@ export async function POST(request: Request) {
                         if (attendeeConnects !== undefined) {
                             mtgUpdate.attendees = { set: attendeeConnects }
                         }
-                        // Add missing fields for update
                         if (mtg.sequence !== undefined) mtgUpdate.sequence = mtg.sequence
                         if (mtg.status !== undefined) mtgUpdate.status = mtg.status
                         if (mtg.tags !== undefined) mtgUpdate.tags = mtg.tags
@@ -288,7 +333,6 @@ export async function POST(request: Request) {
                                 attendees: {
                                     connect: createConnects
                                 },
-                                // Add missing fields for create
                                 sequence: mtg.sequence || 0,
                                 status: mtg.status || 'PIPELINE',
                                 tags: mtg.tags || [],
@@ -304,6 +348,82 @@ export async function POST(request: Request) {
                             update: mtgUpdate
                         }).catch(e => console.warn('Meeting skip', e))
                     }
+                }
+
+                // Restore ROI Targets
+                if (evt.roiTargets) {
+                    const roi = evt.roiTargets
+
+                    // Handle target companies - new format uses targetCompanyIds, old format uses targetCompanies as string[]
+                    let targetCompanyConnect: any = undefined
+                    if (roi.targetCompanyIds && Array.isArray(roi.targetCompanyIds)) {
+                        targetCompanyConnect = roi.targetCompanyIds.map((id: string) => ({ id }))
+                    } else if (roi.targetCompanies && Array.isArray(roi.targetCompanies)) {
+                        // Legacy: targetCompanies was string[] of company names
+                        const companyIds: string[] = []
+                        for (const name of roi.targetCompanies) {
+                            if (typeof name === 'string') {
+                                const companyId = await resolveCompany(name)
+                                companyIds.push(companyId)
+                            }
+                        }
+                        targetCompanyConnect = companyIds.map(id => ({ id }))
+                    }
+
+                    await prisma.eventROITargets.upsert({
+                        where: { eventId },
+                        create: {
+                            eventId,
+                            targetInvestment: roi.targetInvestment,
+                            expectedPipeline: roi.expectedPipeline,
+                            winRate: roi.winRate,
+                            expectedRevenue: roi.expectedRevenue,
+                            targetBoothMeetings: roi.targetBoothMeetings,
+                            targetCLevelMeetingsMin: roi.targetCLevelMeetingsMin,
+                            targetCLevelMeetingsMax: roi.targetCLevelMeetingsMax,
+                            targetOtherMeetings: roi.targetOtherMeetings,
+                            targetSocialReach: roi.targetSocialReach,
+                            targetKeynotes: roi.targetKeynotes,
+                            targetSeminars: roi.targetSeminars,
+                            targetMediaPR: roi.targetMediaPR,
+                            targetBoothSessions: roi.targetBoothSessions,
+                            targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined,
+                            actualSocialReach: roi.actualSocialReach,
+                            actualKeynotes: roi.actualKeynotes,
+                            actualSeminars: roi.actualSeminars,
+                            actualMediaPR: roi.actualMediaPR,
+                            actualBoothSessions: roi.actualBoothSessions,
+                            status: roi.status || 'DRAFT',
+                            approvedBy: roi.approvedBy,
+                            approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                            submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+                        },
+                        update: {
+                            targetInvestment: roi.targetInvestment,
+                            expectedPipeline: roi.expectedPipeline,
+                            winRate: roi.winRate,
+                            expectedRevenue: roi.expectedRevenue,
+                            targetBoothMeetings: roi.targetBoothMeetings,
+                            targetCLevelMeetingsMin: roi.targetCLevelMeetingsMin,
+                            targetCLevelMeetingsMax: roi.targetCLevelMeetingsMax,
+                            targetOtherMeetings: roi.targetOtherMeetings,
+                            targetSocialReach: roi.targetSocialReach,
+                            targetKeynotes: roi.targetKeynotes,
+                            targetSeminars: roi.targetSeminars,
+                            targetMediaPR: roi.targetMediaPR,
+                            targetBoothSessions: roi.targetBoothSessions,
+                            targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined,
+                            actualSocialReach: roi.actualSocialReach,
+                            actualKeynotes: roi.actualKeynotes,
+                            actualSeminars: roi.actualSeminars,
+                            actualMediaPR: roi.actualMediaPR,
+                            actualBoothSessions: roi.actualBoothSessions,
+                            status: roi.status || 'DRAFT',
+                            approvedBy: roi.approvedBy,
+                            approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                            submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+                        },
+                    }).catch(e => console.warn('ROI targets import skip', e))
                 }
             }
         }

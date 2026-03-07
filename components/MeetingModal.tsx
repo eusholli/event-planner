@@ -14,11 +14,10 @@ interface Attendee {
     id: string
     name: string
     email: string
-    company: string
+    company: { id: string; name: string }
     title?: string
     isExternal?: boolean
     bio?: string
-    companyDescription?: string
 }
 
 export interface Meeting {
@@ -706,7 +705,7 @@ export default function MeetingModal({
                                 External Attendees
                             </label>
                             <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
-                                {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
+                                {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || (a.company?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
                                     <label key={attendee.id} className={`flex items-center space-x-3 p-1 rounded-lg transition-colors ${readOnly ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-100 cursor-pointer'}`}>
                                         <input
                                             type="checkbox"
@@ -731,7 +730,7 @@ export default function MeetingModal({
                                         <span className="text-sm text-zinc-700">{attendee.name}</span>
                                     </label>
                                 ))}
-                                {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                {allAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || (a.company?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
                                     <p className="text-xs text-zinc-400 italic px-2">No external attendees found.</p>
                                 )}
                             </div>
@@ -758,7 +757,7 @@ export default function MeetingModal({
                                 Internal Attendees{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
                             </label>
                             <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
-                                {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
+                                {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || (a.company?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
                                     <label key={attendee.id} className={`flex items-center space-x-3 p-1 rounded-lg transition-colors ${readOnly ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-100 cursor-pointer'}`}>
                                         <input
                                             type="checkbox"
@@ -783,7 +782,7 @@ export default function MeetingModal({
                                         <span className="text-sm text-zinc-700">{attendee.name}</span>
                                     </label>
                                 ))}
-                                {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.company.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                                {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || (a.company?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
                                     <p className="text-xs text-zinc-400 italic px-2">No internal attendees found.</p>
                                 )}
                             </div>

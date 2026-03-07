@@ -21,6 +21,7 @@ export default function Navigation() {
     // Event Links (Scoped)
     const eventLinks = eventId ? [
         { href: `/events/${eventId}/dashboard`, label: 'Dashboard' },
+        { href: `/events/${eventId}/roi`, label: 'ROI' },
 
         { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin, Roles.Marketing, Roles.User] },
         { href: `/events/${eventId}/attendees`, label: 'Attendees' },

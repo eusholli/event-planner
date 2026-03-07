@@ -21,10 +21,9 @@ interface Attendee {
     id: string
     name: string
     email: string
-    company: string
+    company: { id: string; name: string }
     isExternal?: boolean
     bio?: string
-    companyDescription?: string
 }
 
 import MeetingModal, { Meeting } from '@/components/MeetingModal'

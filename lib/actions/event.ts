@@ -56,7 +56,7 @@ export async function generateEventDetails(url: string, currentData?: any) {
         - description (string: Brief summary of the event)
         - budget (number: Estimated typical budget for attending/sponsoring if inferable, else 0)
         - targetCustomers (string: Summary of who attends/targets)
-        - expectedRoi (string: Summary of potential ROI value)
+
         - tags (string[]: List of relevant keywords/tags)
         - meetingTypes (string[]: Suggested meeting types e.g. "Networking", "Sales", "Keynote")
         - attendeeTypes (string[]: Suggested attendee types to target e.g. "CTO", "Buyer", "Developer")
@@ -100,24 +100,56 @@ export async function generateEventDetails(url: string, currentData?: any) {
     }
 }
 
+// Helper: Resolve a company by name, creating if needed
+async function resolveCompany(companyName: string, description?: string, pipelineValue?: number | null): Promise<string> {
+    const existing = await prisma.company.findUnique({ where: { name: companyName } })
+    if (existing) {
+        return existing.id
+    }
+    const created = await prisma.company.create({
+        data: {
+            name: companyName,
+            description: description || null,
+            pipelineValue: pipelineValue || null,
+        }
+    })
+    return created.id
+}
+
 // Data Management Actions
 export async function exportEventData(eventId: string) {
-    // Only Root or Admin (with event access)
-    // We fetch EVERYTHING scoped to this event
     const event = await prisma.event.findUnique({
         where: { id: eventId },
         include: {
-            attendees: { include: { meetings: true } },
+            attendees: { include: { meetings: true, company: true } },
             rooms: true,
-            meetings: { include: { attendees: true, room: true } }
+            meetings: { include: { attendees: true, room: true } },
+            roiTargets: { include: { targetCompanies: true } }
         }
     })
 
     if (!event) throw new Error('Event not found')
 
-    // Normalize data to reduce size and duplication (Version 2.1)
+    // Collect unique companies from this event's attendees
+    const companyMap = new Map<string, any>()
+    event.attendees.forEach(att => {
+        if (!companyMap.has(att.company.id)) {
+            companyMap.set(att.company.id, att.company)
+        }
+    })
+
+    // Also include target companies from ROI
+    if (event.roiTargets?.targetCompanies) {
+        event.roiTargets.targetCompanies.forEach(comp => {
+            if (!companyMap.has(comp.id)) {
+                companyMap.set(comp.id, comp)
+            }
+        })
+    }
+
+    // Normalize attendees (strip meetings and company object, keep companyId)
     const normalizedAttendees = event.attendees.map(attendee => {
-        const { meetings, ...rest } = attendee
+        const { meetings, company, ...rest } = attendee
         return rest
     })
 
@@ -129,19 +161,30 @@ export async function exportEventData(eventId: string) {
         }
     })
 
-    // Return normalized structure
+    // Normalize ROI targets
+    const roiTargets = event.roiTargets ? (() => {
+        const { eventId: _eid, targetCompanies, ...rest } = event.roiTargets
+        return {
+            ...rest,
+            targetCompanyIds: targetCompanies.map(c => c.id)
+        }
+    })() : null
+
     return {
         event: {
             ...event,
             meetings: undefined,
             attendees: undefined,
-            rooms: undefined
+            rooms: undefined,
+            roiTargets: undefined
         },
+        companies: Array.from(companyMap.values()),
         attendees: normalizedAttendees,
         rooms: event.rooms,
         meetings: normalizedMeetings,
+        roiTargets,
         exportedAt: new Date().toISOString(),
-        version: '2.1'
+        version: '4.0'
     }
 }
 
@@ -181,10 +224,29 @@ export async function importEventData(eventId: string, data: any) {
         throw new Error(`Invalid Event ID. Data belongs to event ${data.event.id} but you are importing into ${eventId}.`)
     }
 
+    // 1.5 Import Companies first (if present)
+    if (data.companies && Array.isArray(data.companies)) {
+        for (const comp of data.companies) {
+            await prisma.company.upsert({
+                where: { id: comp.id },
+                create: {
+                    id: comp.id,
+                    name: comp.name,
+                    description: comp.description,
+                    pipelineValue: comp.pipelineValue,
+                },
+                update: {
+                    name: comp.name,
+                    description: comp.description,
+                    pipelineValue: comp.pipelineValue,
+                }
+            }).catch(e => console.warn('Company import skip', e))
+        }
+    }
+
     // 2. Event Update (Merge)
     if (data.event) {
         const eventUpdate: any = {}
-        // Only update fields present in JSON
         if (data.event.name !== undefined) eventUpdate.name = data.event.name
         if (data.event.startDate !== undefined) eventUpdate.startDate = data.event.startDate
         if (data.event.endDate !== undefined) eventUpdate.endDate = data.event.endDate
@@ -193,14 +255,12 @@ export async function importEventData(eventId: string, data: any) {
         if (data.event.url !== undefined) eventUpdate.url = data.event.url
         if (data.event.budget !== undefined) eventUpdate.budget = data.event.budget
         if (data.event.targetCustomers !== undefined) eventUpdate.targetCustomers = data.event.targetCustomers
-        if (data.event.expectedRoi !== undefined) eventUpdate.expectedRoi = data.event.expectedRoi
         if (data.event.requesterEmail !== undefined) eventUpdate.requesterEmail = data.event.requesterEmail
         if (data.event.tags !== undefined) eventUpdate.tags = data.event.tags
         if (data.event.meetingTypes !== undefined) eventUpdate.meetingTypes = data.event.meetingTypes
         if (data.event.attendeeTypes !== undefined) eventUpdate.attendeeTypes = data.event.attendeeTypes
         if (data.event.address !== undefined) eventUpdate.address = data.event.address
         if (data.event.timezone !== undefined) eventUpdate.timezone = data.event.timezone
-        if (data.event.slug !== undefined) eventUpdate.slug = data.event.slug
         if (data.event.slug !== undefined) eventUpdate.slug = data.event.slug
         if (data.event.password !== undefined) eventUpdate.password = data.event.password
         if (data.event.description !== undefined) eventUpdate.description = data.event.description
@@ -220,7 +280,6 @@ export async function importEventData(eventId: string, data: any) {
             }
         }
 
-        // Allow direct import of coords if provided
         if (data.event.latitude !== undefined) eventUpdate.latitude = data.event.latitude
         if (data.event.longitude !== undefined) eventUpdate.longitude = data.event.longitude
 
@@ -253,17 +312,29 @@ export async function importEventData(eventId: string, data: any) {
     // 4. Import Attendees
     if (data.attendees && Array.isArray(data.attendees)) {
         for (const att of data.attendees) {
+            let companyId = att.companyId
+
+            // Backwards compatibility: If old format with company string
+            if (!companyId && att.company && typeof att.company === 'string') {
+                companyId = await resolveCompany(att.company, att.companyDescription, att.pipelineValue)
+            }
+
+            if (!companyId) {
+                console.warn('Attendee import skip - no companyId:', att.name)
+                continue
+            }
+
             const attUpdate: any = {}
             if (att.name !== undefined) attUpdate.name = att.name
             if (att.email !== undefined) attUpdate.email = att.email
             if (att.title !== undefined) attUpdate.title = att.title
-            if (att.company !== undefined) attUpdate.company = att.company
-            if (att.companyDescription !== undefined) attUpdate.companyDescription = att.companyDescription
+            attUpdate.companyId = companyId
             if (att.bio !== undefined) attUpdate.bio = att.bio
             if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
             if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
             if (att.isExternal !== undefined) attUpdate.isExternal = att.isExternal
             if (att.type !== undefined) attUpdate.type = att.type
+            if (att.seniorityLevel !== undefined) attUpdate.seniorityLevel = att.seniorityLevel
 
             await prisma.attendee.upsert({
                 where: { id: att.id },
@@ -272,13 +343,13 @@ export async function importEventData(eventId: string, data: any) {
                     name: att.name,
                     email: att.email,
                     title: att.title,
-                    company: att.company,
-                    companyDescription: att.companyDescription,
+                    companyId,
                     bio: att.bio,
                     linkedin: att.linkedin,
                     imageUrl: att.imageUrl,
                     isExternal: att.isExternal,
                     type: att.type,
+                    seniorityLevel: att.seniorityLevel,
                     events: {
                         connect: { id: eventId }
                     }
@@ -296,7 +367,6 @@ export async function importEventData(eventId: string, data: any) {
     // 5. Import Meetings
     if (data.meetings && Array.isArray(data.meetings)) {
         for (const mtg of data.meetings) {
-            // Prepare attendee connections
             let attendeeConnects: any = undefined
             if (mtg.attendees !== undefined) {
                 attendeeConnects = mtg.attendees?.map((a: any) => {
@@ -359,6 +429,82 @@ export async function importEventData(eventId: string, data: any) {
                 update: mtgUpdate
             }).catch(e => console.warn('Meeting import skip', e))
         }
+    }
+
+    // 6. Import ROI Targets
+    if (data.roiTargets) {
+        const roi = data.roiTargets
+
+        // Handle target companies
+        let targetCompanyConnect: any = undefined
+        if (roi.targetCompanyIds && Array.isArray(roi.targetCompanyIds)) {
+            targetCompanyConnect = roi.targetCompanyIds.map((id: string) => ({ id }))
+        } else if (roi.targetCompanies && Array.isArray(roi.targetCompanies)) {
+            // Legacy: targetCompanies was string[] of company names
+            const companyIds: string[] = []
+            for (const name of roi.targetCompanies) {
+                if (typeof name === 'string') {
+                    const companyId = await resolveCompany(name)
+                    companyIds.push(companyId)
+                }
+            }
+            targetCompanyConnect = companyIds.map(id => ({ id }))
+        }
+
+        await prisma.eventROITargets.upsert({
+            where: { eventId },
+            create: {
+                eventId,
+                targetInvestment: roi.targetInvestment,
+                expectedPipeline: roi.expectedPipeline,
+                winRate: roi.winRate,
+                expectedRevenue: roi.expectedRevenue,
+                targetBoothMeetings: roi.targetBoothMeetings,
+                targetCLevelMeetingsMin: roi.targetCLevelMeetingsMin,
+                targetCLevelMeetingsMax: roi.targetCLevelMeetingsMax,
+                targetOtherMeetings: roi.targetOtherMeetings,
+                targetSocialReach: roi.targetSocialReach,
+                targetKeynotes: roi.targetKeynotes,
+                targetSeminars: roi.targetSeminars,
+                targetMediaPR: roi.targetMediaPR,
+                targetBoothSessions: roi.targetBoothSessions,
+                targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined,
+                actualSocialReach: roi.actualSocialReach,
+                actualKeynotes: roi.actualKeynotes,
+                actualSeminars: roi.actualSeminars,
+                actualMediaPR: roi.actualMediaPR,
+                actualBoothSessions: roi.actualBoothSessions,
+                status: roi.status || 'DRAFT',
+                approvedBy: roi.approvedBy,
+                approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+            },
+            update: {
+                targetInvestment: roi.targetInvestment,
+                expectedPipeline: roi.expectedPipeline,
+                winRate: roi.winRate,
+                expectedRevenue: roi.expectedRevenue,
+                targetBoothMeetings: roi.targetBoothMeetings,
+                targetCLevelMeetingsMin: roi.targetCLevelMeetingsMin,
+                targetCLevelMeetingsMax: roi.targetCLevelMeetingsMax,
+                targetOtherMeetings: roi.targetOtherMeetings,
+                targetSocialReach: roi.targetSocialReach,
+                targetKeynotes: roi.targetKeynotes,
+                targetSeminars: roi.targetSeminars,
+                targetMediaPR: roi.targetMediaPR,
+                targetBoothSessions: roi.targetBoothSessions,
+                targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined,
+                actualSocialReach: roi.actualSocialReach,
+                actualKeynotes: roi.actualKeynotes,
+                actualSeminars: roi.actualSeminars,
+                actualMediaPR: roi.actualMediaPR,
+                actualBoothSessions: roi.actualBoothSessions,
+                status: roi.status || 'DRAFT',
+                approvedBy: roi.approvedBy,
+                approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+            },
+        }).catch(e => console.warn('ROI targets import skip', e))
     }
 
     return { success: true }

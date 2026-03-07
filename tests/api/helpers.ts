@@ -12,8 +12,7 @@ export async function createTestEvent(request: APIRequestContext) {
             region: 'NA',
             status: 'PIPELINE',
             budget: 10000,
-            targetCustomers: 'Tech Enthusiasts',
-            expectedRoi: 'High'
+            targetCustomers: 'Tech Enthusiasts'
         }
     });
 
