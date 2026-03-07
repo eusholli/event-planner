@@ -1,14 +1,12 @@
 'use client'
 
-import { Save, Send, CheckCircle, X, Plus, TrendingUp, Target, Mic } from 'lucide-react'
+import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { useUser } from '@/components/auth'
-import { canManageEvents as canManageEventsCheck } from '@/lib/role-utils'
 import MetricCard from '@/components/roi/MetricCard'
 import ProgressBar from '@/components/roi/ProgressBar'
 import CompanyChecklist from '@/components/roi/CompanyChecklist'
-import ProgressRing from '@/components/roi/ProgressRing'
 
 interface Company {
     id: string
@@ -19,48 +17,37 @@ interface Company {
 // Types
 interface ROITargets {
     id?: string
-    targetInvestment?: number | null
     budget?: number | null
     requesterEmail?: string | null
     expectedPipeline: number | null
     winRate: number | null
     expectedRevenue: number | null
-    targetBoothMeetings: number | null
-    targetCLevelMeetingsMin: number | null
-    targetCLevelMeetingsMax: number | null
-    targetOtherMeetings: number | null
-    targetSocialReach: number | null
-    targetKeynotes: number | null
-    targetSeminars: number | null
+    targetCustomerMeetings: number | null
+    targetTargetedReach: number | null
+    targetSpeaking: number | null
     targetMediaPR: number | null
-    targetBoothSessions: number | null
     targetCompanies: Company[]
-    actualSocialReach: number | null
-    actualKeynotes: number | null
-    actualSeminars: number | null
+    actualTargetedReach: number | null
+    actualSpeaking: number | null
     actualMediaPR: number | null
-    actualBoothSessions: number | null
     status: string
     approvedBy?: string | null
     approvedAt?: string | null
     submittedAt?: string | null
+    rejectedBy?: string | null
+    rejectedAt?: string | null
 }
 
 interface ROIActuals {
     actualInvestment: number
     actualPipeline: number
     actualRevenue: number
-    actualBoothMeetings: number
-    actualCLevelMeetings: number
-    actualOtherMeetings: number
-    actualTotalMeetings: number
+    actualCustomerMeetings: number
     targetCompaniesHit: { id: string; name: string }[]
     targetCompaniesHitCount: number
-    actualSocialReach: number
-    actualKeynotes: number
-    actualSeminars: number
+    actualTargetedReach: number
+    actualSpeaking: number
     actualMediaPR: number
-    actualBoothSessions: number
 }
 
 const emptyTargets: ROITargets = {
@@ -69,21 +56,14 @@ const emptyTargets: ROITargets = {
     expectedPipeline: null,
     winRate: null,
     expectedRevenue: null,
-    targetBoothMeetings: null,
-    targetCLevelMeetingsMin: null,
-    targetCLevelMeetingsMax: null,
-    targetOtherMeetings: null,
-    targetSocialReach: null,
-    targetKeynotes: null,
-    targetSeminars: null,
+    targetCustomerMeetings: null,
+    targetTargetedReach: null,
+    targetSpeaking: null,
     targetMediaPR: null,
-    targetBoothSessions: null,
     targetCompanies: [],
-    actualSocialReach: null,
-    actualKeynotes: null,
-    actualSeminars: null,
+    actualTargetedReach: null,
+    actualSpeaking: null,
     actualMediaPR: null,
-    actualBoothSessions: null,
     status: 'DRAFT',
 }
 
@@ -106,7 +86,8 @@ export default function ROIPage() {
     const companyDropdownRef = useRef<HTMLDivElement>(null)
 
     const role = user?.publicMetadata?.role as string
-    const canApprove = canManageEventsCheck(role)
+    const canEdit = role === 'root' || role === 'marketing'
+    const canApproveOrReject = role === 'root'
 
     // Fetch data
     useEffect(() => {
@@ -155,7 +136,7 @@ export default function ROIPage() {
         setSaving(true)
         setMessage('')
         try {
-            const { id: _id, status: _status, approvedBy: _ab, approvedAt: _aa, submittedAt: _sa, targetCompanies, ...rest } = targets
+            const { id: _id, status: _status, approvedBy: _ab, approvedAt: _aa, submittedAt: _sa, rejectedBy: _rb, rejectedAt: _rat, targetCompanies, ...rest } = targets
             const saveData = {
                 ...rest,
                 targetCompanyIds: targetCompanies.map(c => c.id)
@@ -208,6 +189,22 @@ export default function ROIPage() {
         }
     }
 
+    const handleReject = async () => {
+        try {
+            const res = await fetch(`/api/events/${eventId}/roi`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reject' }),
+            })
+            if (!res.ok) throw new Error('Failed to reject')
+            const result = await res.json()
+            setTargets(result)
+            setMessage('ROI targets rejected and returned for changes')
+        } catch (err: any) {
+            setMessage(err.message)
+        }
+    }
+
     const handleSaveActuals = async () => {
         setSaving(true)
         setMessage('')
@@ -216,16 +213,13 @@ export default function ROIPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    actualSocialReach: targets.actualSocialReach,
-                    actualKeynotes: targets.actualKeynotes,
-                    actualSeminars: targets.actualSeminars,
+                    actualTargetedReach: targets.actualTargetedReach,
+                    actualSpeaking: targets.actualSpeaking,
                     actualMediaPR: targets.actualMediaPR,
-                    actualBoothSessions: targets.actualBoothSessions,
                 }),
             })
             if (!res.ok) throw new Error('Failed to save')
             setMessage('Actuals saved successfully')
-            // Refresh actuals
             const roiRes = await fetch(`/api/events/${eventId}/roi`)
             const data = await roiRes.json()
             if (data.actuals) setActuals(data.actuals)
@@ -253,6 +247,16 @@ export default function ROIPage() {
             !targets.targetCompanies.some(tc => tc.id === c.id)
     )
 
+    const allFieldsFilled =
+        !!targets.budget &&
+        !!targets.requesterEmail &&
+        !!targets.expectedPipeline &&
+        !!targets.winRate &&
+        targets.targetCustomerMeetings !== null && targets.targetCustomerMeetings !== undefined &&
+        targets.targetTargetedReach !== null && targets.targetTargetedReach !== undefined &&
+        targets.targetSpeaking !== null && targets.targetSpeaking !== undefined &&
+        targets.targetMediaPR !== null && targets.targetMediaPR !== undefined
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
@@ -265,9 +269,14 @@ export default function ROIPage() {
         DRAFT: { color: 'bg-amber-100 text-amber-800 border-amber-200', label: 'Draft' },
         SUBMITTED: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Submitted for Approval' },
         APPROVED: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Approved' },
+        REJECTED: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Rejected — Changes Required' },
     }
 
-    const statusStyle = statusConfig[targets.status as keyof typeof statusConfig] || statusConfig.DRAFT
+    // Show REJECTED label if in DRAFT but has rejectedAt
+    const displayStatus = targets.status === 'DRAFT' && targets.rejectedAt ? 'REJECTED' : targets.status
+    const statusStyle = statusConfig[displayStatus as keyof typeof statusConfig] || statusConfig.DRAFT
+
+    const isLocked = targets.status === 'APPROVED'
 
     const tabs = [
         { id: 'targets' as const, label: 'Targets & Approval', icon: Target },
@@ -333,30 +342,30 @@ export default function ROIPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Requester Email</label>
-                                <input type="email" value={targets.requesterEmail || ''} onChange={e => setTargets(prev => ({ ...prev, requesterEmail: e.target.value }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" placeholder="email@example.com" />
+                                <input type="email" value={targets.requesterEmail || ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, requesterEmail: e.target.value }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="email@example.com" />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Target Budget ($)</label>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Budget ($)</label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
-                                    <input type="number" value={targets.budget ?? ''} onChange={e => setTargets(prev => ({ ...prev, budget: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" placeholder="37,000" />
+                                    <input type="number" value={targets.budget ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, budget: e.target.value ? parseFloat(e.target.value) : null }))}
+                                        className={`w-full pl-7 pr-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="37,000" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Expected Pipeline</label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
-                                    <input type="number" value={targets.expectedPipeline ?? ''} onChange={e => setTargets(prev => ({ ...prev, expectedPipeline: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" placeholder="2,304,000" />
+                                    <input type="number" value={targets.expectedPipeline ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, expectedPipeline: e.target.value ? parseFloat(e.target.value) : null }))}
+                                        className={`w-full pl-7 pr-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="2,304,000" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Win Rate (%)</label>
                                 <div className="relative">
-                                    <input type="number" step="0.01" min="0" max="1" value={targets.winRate ?? ''} onChange={e => setTargets(prev => ({ ...prev, winRate: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" placeholder="0.15" />
+                                    <input type="number" step="0.01" min="0" max="1" value={targets.winRate ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, winRate: e.target.value ? parseFloat(e.target.value) : null }))}
+                                        className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="0.15" />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">{targets.winRate ? `${(targets.winRate * 100).toFixed(0)}%` : ''}</span>
                                 </div>
                             </div>
@@ -372,67 +381,32 @@ export default function ROIPage() {
                         </div>
                     </section>
 
-                    {/* Meeting KPIs */}
+                    {/* Event Targets */}
                     <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-violet-500 rounded-full" />
-                            Meeting KPI Targets
+                            Event Targets
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Booth Meetings</label>
-                                <input type="number" value={targets.targetBoothMeetings ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetBoothMeetings: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm" placeholder="20" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Customer Meetings</label>
+                                <input type="number" value={targets.targetCustomerMeetings ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetCustomerMeetings: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="20" />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">C-Level Meetings (Min)</label>
-                                <input type="number" value={targets.targetCLevelMeetingsMin ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetCLevelMeetingsMin: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm" placeholder="5" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Targeted Reach</label>
+                                <input type="number" value={targets.targetTargetedReach ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetTargetedReach: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="50,000" />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">C-Level Meetings (Max)</label>
-                                <input type="number" value={targets.targetCLevelMeetingsMax ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetCLevelMeetingsMax: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm" placeholder="10" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Other Meetings</label>
-                                <input type="number" value={targets.targetOtherMeetings ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetOtherMeetings: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm" placeholder="15" />
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Engagement */}
-                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                            <span className="w-1 h-5 bg-rose-500 rounded-full" />
-                            Engagement Targets
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Social Reach</label>
-                                <input type="number" value={targets.targetSocialReach ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetSocialReach: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="50,000" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Keynotes</label>
-                                <input type="number" value={targets.targetKeynotes ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetKeynotes: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="2" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Seminars</label>
-                                <input type="number" value={targets.targetSeminars ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetSeminars: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="3" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Speaking</label>
+                                <input type="number" value={targets.targetSpeaking ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetSpeaking: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="5" />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Media / PR</label>
-                                <input type="number" value={targets.targetMediaPR ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="5" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Booth Sessions</label>
-                                <input type="number" value={targets.targetBoothSessions ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetBoothSessions: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="10" />
+                                <input type="number" value={targets.targetMediaPR ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="5" />
                             </div>
                         </div>
                     </section>
@@ -443,40 +417,44 @@ export default function ROIPage() {
                             <span className="w-1 h-5 bg-teal-500 rounded-full" />
                             Target Companies
                         </h3>
-                        <div ref={companyDropdownRef} className="relative mb-4">
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={companyInput}
-                                    onChange={e => { setCompanyInput(e.target.value); setShowCompanyDropdown(true) }}
-                                    onFocus={() => setShowCompanyDropdown(true)}
-                                    placeholder="Search companies to add..."
-                                    className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm"
-                                />
-                            </div>
-                            {showCompanyDropdown && filteredAvailableCompanies.length > 0 && (
-                                <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
-                                    {filteredAvailableCompanies.map(company => (
-                                        <div
-                                            key={company.id}
-                                            className="px-4 py-2 hover:bg-teal-50 cursor-pointer border-b border-zinc-50 last:border-none"
-                                            onClick={() => addCompany(company)}
-                                        >
-                                            <div className="font-medium text-zinc-900">{company.name}</div>
-                                            {company.pipelineValue && <div className="text-xs text-zinc-500">Pipeline: ${company.pipelineValue.toLocaleString()}</div>}
-                                        </div>
-                                    ))}
+                        {!(isLocked || !canEdit) && (
+                            <div ref={companyDropdownRef} className="relative mb-4">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={companyInput}
+                                        onChange={e => { setCompanyInput(e.target.value); setShowCompanyDropdown(true) }}
+                                        onFocus={() => setShowCompanyDropdown(true)}
+                                        placeholder="Search companies to add..."
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm"
+                                    />
                                 </div>
-                            )}
-                        </div>
+                                {showCompanyDropdown && filteredAvailableCompanies.length > 0 && (
+                                    <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
+                                        {filteredAvailableCompanies.map(company => (
+                                            <div
+                                                key={company.id}
+                                                className="px-4 py-2 hover:bg-teal-50 cursor-pointer border-b border-zinc-50 last:border-none"
+                                                onClick={() => addCompany(company)}
+                                            >
+                                                <div className="font-medium text-zinc-900">{company.name}</div>
+                                                {company.pipelineValue && <div className="text-xs text-zinc-500">Pipeline: ${company.pipelineValue.toLocaleString()}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <div className="flex flex-wrap gap-2">
                             {targets.targetCompanies.map(company => (
                                 <span key={company.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 rounded-lg text-sm font-medium border border-teal-200">
                                     {company.name}
                                     {company.pipelineValue && <span className="text-xs text-teal-500">(${company.pipelineValue.toLocaleString()})</span>}
-                                    <button onClick={() => removeCompany(company.id)} className="hover:text-teal-900">
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
+                                    {!(isLocked || !canEdit) && (
+                                        <button onClick={() => removeCompany(company.id)} className="hover:text-teal-900">
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
                                 </span>
                             ))}
                             {targets.targetCompanies.length === 0 && (
@@ -487,24 +465,39 @@ export default function ROIPage() {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3 pt-2">
-                        <button onClick={handleSaveTargets} disabled={saving}
-                            className="bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm">
-                            <Save className="w-4 h-4" />
-                            Save Targets
-                        </button>
-                        {targets.id && targets.status === 'DRAFT' && (
+                        {canEdit && !isLocked && (
+                            <button onClick={handleSaveTargets} disabled={saving || !allFieldsFilled}
+                                className="bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm">
+                                <Save className="w-4 h-4" />
+                                Save Targets
+                            </button>
+                        )}
+                        {targets.id && targets.status === 'DRAFT' && canEdit && (
                             <button onClick={handleSubmit}
                                 className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
                                 <Send className="w-4 h-4" />
                                 Submit for Approval
                             </button>
                         )}
-                        {targets.id && targets.status === 'SUBMITTED' && canApprove && (
-                            <button onClick={handleApprove}
-                                className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm">
+                        {targets.id && targets.status === 'SUBMITTED' && canApproveOrReject && (
+                            <>
+                                <button onClick={handleApprove}
+                                    className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Approve
+                                </button>
+                                <button onClick={handleReject}
+                                    className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm">
+                                    <X className="w-4 h-4" />
+                                    Reject
+                                </button>
+                            </>
+                        )}
+                        {isLocked && (
+                            <p className="text-sm text-emerald-700 font-medium flex items-center gap-2">
                                 <CheckCircle className="w-4 h-4" />
-                                Approve
-                            </button>
+                                Targets approved and locked
+                            </p>
                         )}
                     </div>
                 </div>
@@ -542,13 +535,7 @@ export default function ROIPage() {
                             Meeting KPIs
                         </h3>
                         <div className="space-y-5">
-                            <ProgressBar label="Booth Meetings" value={actuals.actualBoothMeetings} max={targets.targetBoothMeetings || 0} />
-                            <ProgressBar label="C-Level Meetings" value={actuals.actualCLevelMeetings} max={targets.targetCLevelMeetingsMax || targets.targetCLevelMeetingsMin || 0} />
-                            <ProgressBar label="Other Meetings" value={actuals.actualOtherMeetings} max={targets.targetOtherMeetings || 0} />
-                            <div className="pt-3 border-t border-zinc-100 flex justify-between items-center">
-                                <span className="text-sm font-semibold text-zinc-700">Total Meetings</span>
-                                <span className="text-2xl font-bold text-zinc-900">{actuals.actualTotalMeetings}</span>
-                            </div>
+                            <ProgressBar label="Customer Meetings" value={actuals.actualCustomerMeetings} max={targets.targetCustomerMeetings || 0} />
                         </div>
                     </section>
 
@@ -558,12 +545,10 @@ export default function ROIPage() {
                             <span className="w-1 h-5 bg-rose-500 rounded-full" />
                             Engagement
                         </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <MetricCard label="Social Reach" target={targets.targetSocialReach || 0} actual={actuals.actualSocialReach} />
-                            <MetricCard label="Keynotes" target={targets.targetKeynotes || 0} actual={actuals.actualKeynotes} />
-                            <MetricCard label="Seminars" target={targets.targetSeminars || 0} actual={actuals.actualSeminars} />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <MetricCard label="Targeted Reach" target={targets.targetTargetedReach || 0} actual={actuals.actualTargetedReach} />
+                            <MetricCard label="Speaking" target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
                             <MetricCard label="Media / PR" target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
-                            <MetricCard label="Booth Sessions" target={targets.targetBoothSessions || 0} actual={actuals.actualBoothSessions} />
                         </div>
                     </section>
 
@@ -588,33 +573,23 @@ export default function ROIPage() {
                     <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
                         <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
                             <span className="w-1 h-5 bg-rose-500 rounded-full" />
-                            Speaking & Social Actuals
+                            Engagement Actuals
                         </h3>
                         <p className="text-sm text-zinc-500 mb-6">Enter the actual metrics that can&apos;t be auto-calculated from meeting data.</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Social Reach</label>
-                                <input type="number" value={targets.actualSocialReach ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualSocialReach: e.target.value ? parseInt(e.target.value) : null }))}
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Targeted Reach</label>
+                                <input type="number" value={targets.actualTargetedReach ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualTargetedReach: e.target.value ? parseInt(e.target.value) : null }))}
                                     className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Keynotes</label>
-                                <input type="number" value={targets.actualKeynotes ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualKeynotes: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Seminars</label>
-                                <input type="number" value={targets.actualSeminars ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualSeminars: e.target.value ? parseInt(e.target.value) : null }))}
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Speaking</label>
+                                <input type="number" value={targets.actualSpeaking ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualSpeaking: e.target.value ? parseInt(e.target.value) : null }))}
                                     className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Media / PR</label>
                                 <input type="number" value={targets.actualMediaPR ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Booth Sessions</label>
-                                <input type="number" value={targets.actualBoothSessions ?? ''} onChange={e => setTargets(prev => ({ ...prev, actualBoothSessions: e.target.value ? parseInt(e.target.value) : null }))}
                                     className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm" placeholder="0" />
                             </div>
                         </div>
