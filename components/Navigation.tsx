@@ -16,7 +16,10 @@ export default function Navigation() {
     const eventId = eventIdMatch ? eventIdMatch[1] : null
 
     // Core Links (Global)
-    const portfolioLink = { href: '/events', label: 'Events' }
+    const coreLinks = [
+        { href: '/events', label: 'Events' },
+        { href: '/intelligence', label: 'OpenClaw Insights' }
+    ]
 
     // Event Links (Scoped)
     const eventLinks = eventId ? [
@@ -28,7 +31,6 @@ export default function Navigation() {
         { href: `/events/${eventId}/attendees`, label: 'Attendees' },
         { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
         { href: `/events/${eventId}/calendar`, label: 'Calendar' },
-        { href: `/events/${eventId}/intelligence`, label: 'OpenClaw Insights' },
         { href: `/events/${eventId}/reports`, label: 'Reports' },
 
     ] : []
@@ -44,10 +46,10 @@ export default function Navigation() {
 
     if (eventId) {
         // We are in an event
-        linksToShow = [portfolioLink, ...eventLinks]
+        linksToShow = [...coreLinks, ...eventLinks]
     } else {
         // Global View
-        linksToShow = [portfolioLink, ...adminLinks]
+        linksToShow = [...coreLinks, ...adminLinks]
     }
 
     const links = linksToShow.filter(link => {
