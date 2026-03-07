@@ -19,7 +19,9 @@ interface Company {
 // Types
 interface ROITargets {
     id?: string
-    targetInvestment: number | null
+    targetInvestment?: number | null
+    budget?: number | null
+    requesterEmail?: string | null
     expectedPipeline: number | null
     winRate: number | null
     expectedRevenue: number | null
@@ -62,7 +64,8 @@ interface ROIActuals {
 }
 
 const emptyTargets: ROITargets = {
-    targetInvestment: null,
+    budget: null,
+    requesterEmail: '',
     expectedPipeline: null,
     winRate: null,
     expectedRevenue: null,
@@ -268,8 +271,8 @@ export default function ROIPage() {
 
     const tabs = [
         { id: 'targets' as const, label: 'Targets & Approval', icon: Target },
+        { id: 'actuals' as const, label: 'Event Execution', icon: Mic },
         { id: 'performance' as const, label: 'Performance Tracker', icon: TrendingUp },
-        { id: 'actuals' as const, label: 'Post-Event Actuals', icon: Mic },
     ]
 
     return (
@@ -327,12 +330,17 @@ export default function ROIPage() {
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                             Financial Targets
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Target Investment</label>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Requester Email</label>
+                                <input type="email" value={targets.requesterEmail || ''} onChange={e => setTargets(prev => ({ ...prev, requesterEmail: e.target.value }))}
+                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" placeholder="email@example.com" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Target Budget ($)</label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
-                                    <input type="number" value={targets.targetInvestment ?? ''} onChange={e => setTargets(prev => ({ ...prev, targetInvestment: e.target.value ? parseFloat(e.target.value) : null }))}
+                                    <input type="number" value={targets.budget ?? ''} onChange={e => setTargets(prev => ({ ...prev, budget: e.target.value ? parseFloat(e.target.value) : null }))}
                                         className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" placeholder="37,000" />
                                 </div>
                             </div>

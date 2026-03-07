@@ -494,50 +494,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
 
                 <hr className="border-neutral-200" />
 
-                {/* Section 2: Strategy */}
-                <section className="space-y-4">
-                    <h2 className="text-lg font-semibold text-neutral-900">Strategy & Budget</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="requesterEmail" className="block text-sm font-medium text-neutral-700">Requester Email</label>
-                            <input
-                                id="requesterEmail"
-                                type="email"
-                                disabled={isLocked}
-                                value={event.requesterEmail || ''}
-                                onChange={e => setEvent({ ...event, requesterEmail: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="budget" className="block text-sm font-medium text-neutral-700">Target Budget ($)</label>
-                            <input
-                                id="budget"
-                                type="number"
-                                disabled={isLocked}
-                                value={event.budget || ''}
-                                onChange={e => setEvent({ ...event, budget: parseFloat(e.target.value) })}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
-                            />
-                        </div>
-
-                        <div className="col-span-2">
-                            <label htmlFor="targetCustomers" className="block text-sm font-medium text-neutral-700">Target Customers</label>
-                            <textarea
-                                id="targetCustomers"
-                                disabled={isLocked}
-                                value={event.targetCustomers || ''}
-                                onChange={e => setEvent({ ...event, targetCustomers: e.target.value })}
-                                rows={2}
-                                className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                <hr className="border-neutral-200" />
-
                 {/* Section 3: Lists (Dictionaries) */}
                 <section className="space-y-4">
                     <h2 className="text-lg font-semibold text-neutral-900">Classification Lists</h2>

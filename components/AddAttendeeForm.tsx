@@ -532,6 +532,17 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                     />
                                     {showCompanyDropdown && (
                                         <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
+                                            <div
+                                                className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-zinc-200 flex items-center gap-2 text-emerald-700"
+                                                onClick={() => {
+                                                    setNewCompanyName(companySearch.trim())
+                                                    setShowNewCompanyForm(true)
+                                                    setShowCompanyDropdown(false)
+                                                }}
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                <span className="text-sm font-medium">Create &quot;{companySearch.trim() || 'new company'}&quot;</span>
+                                            </div>
                                             {filteredCompanies.map((company) => (
                                                 <div
                                                     key={company.id}
@@ -547,17 +558,6 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                             {filteredCompanies.length === 0 && companySearch.trim() && (
                                                 <div className="px-4 py-2 text-sm text-zinc-500 italic">No companies found</div>
                                             )}
-                                            <div
-                                                className="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-t border-zinc-200 flex items-center gap-2 text-emerald-700"
-                                                onClick={() => {
-                                                    setNewCompanyName(companySearch.trim())
-                                                    setShowNewCompanyForm(true)
-                                                    setShowCompanyDropdown(false)
-                                                }}
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                                <span className="text-sm font-medium">Create &quot;{companySearch.trim() || 'new company'}&quot;</span>
-                                            </div>
                                         </div>
                                     )}
                                 </>

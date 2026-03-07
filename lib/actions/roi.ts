@@ -25,6 +25,8 @@ export interface ROITargetsInput {
     actualSeminars?: number | null
     actualMediaPR?: number | null
     actualBoothSessions?: number | null
+    budget?: number | null
+    requesterEmail?: string | null
 }
 
 export interface ROIActuals {
@@ -55,7 +57,17 @@ export async function saveROITargets(eventId: string, data: ROITargetsInput) {
     const { canWrite } = await import('@/lib/roles')
     if (!await canWrite()) throw new Error('Forbidden')
 
-    const { targetCompanyIds, ...rest } = data
+    const { targetCompanyIds, budget, requesterEmail, ...rest } = data
+
+    if (budget !== undefined || requesterEmail !== undefined) {
+        await prisma.event.update({
+            where: { id: eventId },
+            data: {
+                ...(budget !== undefined && { budget }),
+                ...(requesterEmail !== undefined && { requesterEmail })
+            }
+        })
+    }
 
     const upsertData: any = { ...rest }
 
@@ -112,10 +124,21 @@ export async function approveROI(eventId: string, approverUserId: string) {
 }
 
 export async function getROITargets(eventId: string) {
-    return prisma.eventROITargets.findUnique({
+    const targets = await prisma.eventROITargets.findUnique({
         where: { eventId },
-        include: { targetCompanies: true }
+        include: { targetCompanies: true, event: { select: { budget: true, requesterEmail: true } } }
     })
+
+    if (targets) {
+        return {
+            ...targets,
+            targetInvestment: undefined, // ensure it's removed from UI
+            budget: targets.event?.budget,
+            requesterEmail: targets.event?.requesterEmail,
+        }
+    }
+
+    return targets
 }
 
 export async function getROIActuals(eventId: string): Promise<ROIActuals> {
