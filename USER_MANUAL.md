@@ -280,7 +280,7 @@ The built-in **AI Chat** (`/events/[id]/chat`) is powered by Google Gemini via t
 
 ## OpenClaw Insights
 
-**OpenClaw Insights** (`/events/[id]/intelligence`) provides market intelligence through a dedicated AI agent powered by OpenClaw.
+**OpenClaw Insights** (`/intelligence`) provides system-level market intelligence through a dedicated AI agent powered by OpenClaw.
 
 ### How It Works
 - Connects via WebSocket to the `ws-proxy` service, which communicates with your configured OpenClaw instance.
