@@ -65,6 +65,10 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        if (!await canWrite()) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
         const rawId = (await params).id
         const id = await resolveEventId(rawId)
         if (!id) {

@@ -82,8 +82,8 @@ export async function saveROITargets(eventId: string, data: ROITargetsInput) {
 }
 
 export async function submitROIForApproval(eventId: string) {
-    const { canWrite } = await import('@/lib/roles')
-    if (!await canWrite()) throw new Error('Forbidden')
+    const { canManageEvents } = await import('@/lib/roles')
+    if (!await canManageEvents()) throw new Error('Forbidden')
 
     return prisma.eventROITargets.update({
         where: { eventId },
