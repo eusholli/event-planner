@@ -16,6 +16,8 @@ services:
       retries: 10
     networks:
       - event-planner-net
+    ports:
+      - "127.0.0.1:5432:5432"
 
   event-planner-migrate:
     container_name: event-planner-migrate
