@@ -3,6 +3,8 @@ import { importEventData } from '@/lib/actions/event'
 import { canWrite } from '@/lib/roles'
 import { resolveEventId } from '@/lib/events'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> }

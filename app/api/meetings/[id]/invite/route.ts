@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generateInviteContent } from '@/lib/calendar-sync'
 
+export const dynamic = 'force-dynamic'
+
 // Handle POST request for generating invite with unsaved changes
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {

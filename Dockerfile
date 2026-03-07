@@ -2,7 +2,7 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --frozen-lockfile
+RUN npm ci --ignore-scripts
 
 # ── Stage 2: Build Next.js ──────────────────────────────────────────────────
 FROM node:24-alpine AS builder

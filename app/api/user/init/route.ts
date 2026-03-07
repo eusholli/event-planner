@@ -2,6 +2,8 @@ import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Roles } from '@/lib/constants'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST() {
     const { userId, sessionClaims } = await auth()
 

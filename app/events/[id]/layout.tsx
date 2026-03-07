@@ -6,6 +6,8 @@ import { PasswordGate } from '@/components/events/PasswordGate'
 import { redirect, notFound } from 'next/navigation'
 import { Roles } from '@/lib/constants'
 
+export const dynamic = 'force-dynamic'
+
 export default async function EventLayout({
     children,
     params,

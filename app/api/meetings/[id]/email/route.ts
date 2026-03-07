@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma'
 import { generateInviteContent } from '@/lib/calendar-sync'
 import { sendEmail } from '@/lib/email'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> } // Correct type for Next.js 15+ dynamic routes

@@ -24,7 +24,7 @@ const isReportRoute = createRouteMatcher([
     '/reports(.*)'
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+export const proxy = clerkMiddleware(async (auth, req) => {
     if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
         return;
     }

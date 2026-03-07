@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { checkRole } from '@/lib/roles'
 import { Roles } from '@/lib/constants'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
     // Check permissions
     const isRoot = await checkRole(Roles.Root)
