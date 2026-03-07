@@ -6,8 +6,9 @@ import {
     getROIActuals,
     submitROIForApproval,
     approveROI,
+    rejectROI,
 } from '@/lib/actions/roi'
-import { canWrite, canManageEvents } from '@/lib/roles'
+import { canWrite, canManageEvents, isRootUser } from '@/lib/roles'
 import { auth } from '@clerk/nextjs/server'
 
 export const dynamic = 'force-dynamic'
@@ -74,7 +75,7 @@ export async function POST(
         const { action } = json
 
         if (action === 'submit') {
-            if (!await canWrite()) {
+            if (!await canManageEvents()) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
             const result = await submitROIForApproval(id)
@@ -82,11 +83,20 @@ export async function POST(
         }
 
         if (action === 'approve') {
-            if (!await canManageEvents()) {
+            if (!await isRootUser()) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
             const { userId } = await auth()
             const result = await approveROI(id, userId || 'system')
+            return NextResponse.json(result)
+        }
+
+        if (action === 'reject') {
+            if (!await isRootUser()) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
+            const { userId } = await auth()
+            const result = await rejectROI(id, userId || 'system')
             return NextResponse.json(result)
         }
 
