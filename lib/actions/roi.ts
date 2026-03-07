@@ -6,25 +6,17 @@ import prisma from '@/lib/prisma'
 // Types
 // ---------------------------
 export interface ROITargetsInput {
-    targetInvestment?: number | null
     expectedPipeline?: number | null
     winRate?: number | null
     expectedRevenue?: number | null
-    targetBoothMeetings?: number | null
-    targetCLevelMeetingsMin?: number | null
-    targetCLevelMeetingsMax?: number | null
-    targetOtherMeetings?: number | null
-    targetSocialReach?: number | null
-    targetKeynotes?: number | null
-    targetSeminars?: number | null
+    targetCustomerMeetings?: number | null
+    targetTargetedReach?: number | null
+    targetSpeaking?: number | null
     targetMediaPR?: number | null
-    targetBoothSessions?: number | null
     targetCompanyIds?: string[]
-    actualSocialReach?: number | null
-    actualKeynotes?: number | null
-    actualSeminars?: number | null
+    actualTargetedReach?: number | null
+    actualSpeaking?: number | null
     actualMediaPR?: number | null
-    actualBoothSessions?: number | null
     budget?: number | null
     requesterEmail?: string | null
 }
@@ -33,17 +25,12 @@ export interface ROIActuals {
     actualInvestment: number
     actualPipeline: number
     actualRevenue: number
-    actualBoothMeetings: number
-    actualCLevelMeetings: number
-    actualOtherMeetings: number
-    actualTotalMeetings: number
+    actualCustomerMeetings: number
     targetCompaniesHit: { id: string; name: string }[]
     targetCompaniesHitCount: number
-    actualSocialReach: number
-    actualKeynotes: number
-    actualSeminars: number
+    actualTargetedReach: number
+    actualSpeaking: number
     actualMediaPR: number
-    actualBoothSessions: number
 }
 
 // Senior levels that qualify for "hitting" a target company
@@ -123,6 +110,21 @@ export async function approveROI(eventId: string, approverUserId: string) {
     })
 }
 
+export async function rejectROI(eventId: string, rejectorUserId: string) {
+    const { isRootUser } = await import('@/lib/roles')
+    if (!await isRootUser()) throw new Error('Forbidden')
+
+    return prisma.eventROITargets.update({
+        where: { eventId },
+        data: {
+            status: 'DRAFT',
+            rejectedBy: rejectorUserId,
+            rejectedAt: new Date(),
+        },
+        include: { targetCompanies: true }
+    })
+}
+
 export async function getROITargets(eventId: string) {
     const targets = await prisma.eventROITargets.findUnique({
         where: { eventId },
@@ -132,7 +134,6 @@ export async function getROITargets(eventId: string) {
     if (targets) {
         return {
             ...targets,
-            targetInvestment: undefined, // ensure it's removed from UI
             budget: targets.event?.budget,
             requesterEmail: targets.event?.requesterEmail,
         }
@@ -165,12 +166,6 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
     }
     const actualPipeline = [...companyValues.values()].reduce((sum, val) => sum + val, 0)
 
-    const actualBoothMeetings = meetings.filter(m => m.meetingType === 'Booth').length
-
-    const actualCLevelMeetings = meetings.filter(m =>
-        m.attendees.some(a => a.seniorityLevel === 'C-Level')
-    ).length
-
     // Target companies hit: A company is "hit" if any meeting attendee from that company
     // has a senior level (C-Level, VP, or Director)
     const targetCompanyIds = roiTargets?.targetCompanies?.map(c => c.id) || []
@@ -186,20 +181,17 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         .filter(c => seniorAttendeeCompanyIds.has(c.id))
         .map(c => ({ id: c.id, name: c.name }))
 
+    const actualCustomerMeetings = meetings.length  // all confirmed/occurred meetings
+
     return {
         actualInvestment: event?.budget || 0,
         actualPipeline,
         actualRevenue: actualPipeline * (roiTargets?.winRate || 0),
-        actualBoothMeetings,
-        actualCLevelMeetings,
-        actualOtherMeetings: meetings.length - actualBoothMeetings - actualCLevelMeetings,
-        actualTotalMeetings: meetings.length,
+        actualCustomerMeetings,
         targetCompaniesHit,
         targetCompaniesHitCount: targetCompaniesHit.length,
-        actualSocialReach: roiTargets?.actualSocialReach || 0,
-        actualKeynotes: roiTargets?.actualKeynotes || 0,
-        actualSeminars: roiTargets?.actualSeminars || 0,
+        actualTargetedReach: roiTargets?.actualTargetedReach || 0,
+        actualSpeaking: roiTargets?.actualSpeaking || 0,
         actualMediaPR: roiTargets?.actualMediaPR || 0,
-        actualBoothSessions: roiTargets?.actualBoothSessions || 0,
     }
 }
