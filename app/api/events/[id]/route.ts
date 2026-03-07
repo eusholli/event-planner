@@ -137,15 +137,17 @@ export async function PATCH(
                     error: 'Committed events must have Start Date, End Date, and Address'
                 }, { status: 400 })
             }
-            // Check ROI approval
-            const roiRecord = await prisma.eventROITargets.findUnique({
-                where: { eventId: id },
-                select: { status: true }
-            })
-            if (!roiRecord || roiRecord.status !== 'APPROVED') {
-                return NextResponse.json({
-                    error: 'Event cannot be set to Committed until the ROI Dashboard has been approved.'
-                }, { status: 400 })
+            // Only enforce ROI gate when actively transitioning to COMMITTED
+            if (json.status === 'COMMITTED' && currentEvent.status !== 'COMMITTED') {
+                const roiRecord = await prisma.eventROITargets.findUnique({
+                    where: { eventId: id },
+                    select: { status: true }
+                })
+                if (!roiRecord || roiRecord.status !== 'APPROVED') {
+                    return NextResponse.json({
+                        error: 'Event cannot be set to Committed until the ROI Dashboard has been approved.'
+                    }, { status: 400 })
+                }
             }
         }
 
