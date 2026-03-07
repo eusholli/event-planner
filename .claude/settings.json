@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'F=$(echo \"$CLAUDE_TOOL_INPUT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get(\\\"file_path\\\",d.get(\\\"path\\\",\\\"\\\")))\" 2>/dev/null); case \"$F\" in *prisma/schema.prisma*|*prisma/migrations*) echo \"[AUTO-AUDIT REQUIRED] Prisma schema was just modified. Invoke skill: sync-schema-exports before completing this task.\";; esac'"
+          }
+        ]
+      }
+    ]
+  }
+}

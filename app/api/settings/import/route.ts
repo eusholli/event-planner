@@ -112,7 +112,12 @@ export async function POST(request: Request) {
                 const eventId = evt?.id
 
                 if (!existing) {
-                    await prisma.attendee.create({ data: { ...attendee, eventId } })
+                    await prisma.attendee.create({
+                        data: {
+                            ...attendee,
+                            events: eventId ? { connect: { id: eventId } } : undefined
+                        }
+                    })
                 } else {
                     await prisma.attendee.update({
                         where: { email: attendee.email },
