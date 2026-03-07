@@ -389,7 +389,7 @@ export async function POST(request: Request) {
                         actualSpeaking,
                         actualMediaPR: roi.actualMediaPR,
                         status: roi.status || 'DRAFT',
-                        approvedBy: roi.approvedBy,
+                        approvedBy: roi.approvedBy ?? null,
                         approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
                         submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
                         rejectedBy: roi.rejectedBy ?? null,
