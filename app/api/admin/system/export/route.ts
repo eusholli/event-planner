@@ -74,7 +74,7 @@ export async function GET() {
             attendees: Array.from(attendeeMap.values()), // Global Unique List
             events: normalizedEvents,
             exportedAt: new Date().toISOString(),
-            version: '4.0-company-model'
+            version: '5.0-simplified-roi'
         }
 
         return NextResponse.json(exportData)
