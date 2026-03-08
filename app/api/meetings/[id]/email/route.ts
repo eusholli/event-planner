@@ -2,21 +2,15 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generateInviteContent } from '@/lib/calendar-sync'
 import { sendEmail } from '@/lib/email'
+import { withAuth } from '@/lib/with-auth'
+import { hasEventAccess } from '@/lib/access'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> } // Correct type for Next.js 15+ dynamic routes
-) {
-    const { checkRole, Roles } = await import('@/lib/roles')
-    const isRoot = await checkRole(Roles.Root)
-    const isAdmin = await checkRole(Roles.Admin)
-
-    if (!isRoot && !isAdmin && !await checkRole(Roles.Marketing)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
+export const POST = withAuth(async (
+    request,
+    { params, authCtx }
+) => {
     try {
         const { id } = await params
         const { recipientEmail, recipientEmails, onsiteName, onsitePhone, customBody, customSubject } = await request.json()
@@ -43,6 +37,17 @@ export async function POST(
 
         if (!meeting) {
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        }
+
+        // Event access check
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { id: true, authorizedUserIds: true, status: true }
+            })
+            if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
         }
 
         // Generate Invite Content
@@ -81,4 +86,4 @@ export async function POST(
         console.error('Error in send email API:', error)
         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
     }
-}
+}, { requireRole: 'write' }) as any

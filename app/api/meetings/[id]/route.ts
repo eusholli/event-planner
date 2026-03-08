@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth, isOwnerOrCanWrite } from '@/lib/with-auth'
+import { hasEventAccess } from '@/lib/access'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (request, { params, authCtx }) => {
     const id = (await params).id
     try {
         const meeting = await prisma.meeting.findUnique({
@@ -21,18 +20,23 @@ export async function GET(
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
         }
 
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { id: true, authorizedUserIds: true, status: true }
+            })
+            if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
+        }
+
         return NextResponse.json(meeting)
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch meeting' }, { status: 500 })
     }
-}
+}, { requireAuth: true }) as any
 
-export async function PUT(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { canWrite } = await import('@/lib/roles')
-    const hasWriteAccess = await canWrite()
+export const PUT = withAuth(async (request, { params, authCtx }) => {
     const id = (await params).id
     try {
         const meeting = await prisma.meeting.findUnique({
@@ -43,16 +47,22 @@ export async function PUT(
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
         }
 
-        // Check ownership if no write access
-        if (!hasWriteAccess) {
-            const { currentUser } = await import('@clerk/nextjs/server')
-            const user = await currentUser()
-            const userEmail = user?.emailAddresses[0]?.emailAddress
-
-            if (meeting.createdBy !== userEmail) {
+        // Event access check
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { id: true, authorizedUserIds: true, status: true }
+            })
+            if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
         }
+
+        // Ownership/write check (user role can only edit meetings they created)
+        if (!await isOwnerOrCanWrite(authCtx, meeting.createdBy)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
         const body = await request.json()
 
         // LOCK CHECK
@@ -258,14 +268,9 @@ export async function PUT(
         console.error('Update meeting error:', error)
         return NextResponse.json({ error: 'Failed to update meeting', details: error.message }, { status: 500 })
     }
-}
+}, { requireAuth: true }) as any
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { canWrite } = await import('@/lib/roles')
-    const hasWriteAccess = await canWrite()
+export const DELETE = withAuth(async (request, { params, authCtx }) => {
     const id = (await params).id
     try {
         const meeting = await prisma.meeting.findUnique({
@@ -277,18 +282,20 @@ export async function DELETE(
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
         }
 
-        if (!hasWriteAccess) {
-            const { currentUser } = await import('@clerk/nextjs/server')
-            const user = await currentUser()
-            const userEmail = user?.emailAddresses[0]?.emailAddress
-
-            if (meeting.createdBy !== userEmail) {
+        // Event access check
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { id: true, authorizedUserIds: true, status: true }
+            })
+            if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
         }
 
-        if (!meeting) {
-            return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        // Ownership/write check (user role can only delete meetings they created)
+        if (!await isOwnerOrCanWrite(authCtx, meeting.createdBy)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
         // LOCK CHECK
@@ -317,4 +324,4 @@ export async function DELETE(
     } catch (error) {
         return NextResponse.json({ error: 'Failed to delete meeting' }, { status: 500 })
     }
-}
+}, { requireAuth: true }) as any

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request) => {
     try {
         const body = await request.json()
         const { date, startTime, endTime, roomId, attendeeIds, excludeMeetingId } = body
@@ -153,4 +154,4 @@ export async function POST(request: Request) {
         console.error('Check availability error:', error)
         return NextResponse.json({ error: 'Failed to check availability' }, { status: 500 })
     }
-}
+}, { requireAuth: true }) as any

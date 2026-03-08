@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generateInviteContent } from '@/lib/calendar-sync'
+import { withAuth } from '@/lib/with-auth'
+import { hasEventAccess } from '@/lib/access'
 
 export const dynamic = 'force-dynamic'
 
 // Handle POST request for generating invite with unsaved changes
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAuth(async (request, { params, authCtx }) => {
     try {
         const { searchParams } = new URL(request.url)
         const onsiteName = searchParams.get('onsiteName')
@@ -29,10 +31,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const eventId = meetingOverride.eventId
 
         if (eventId) {
+            // Event access check
             const event = await prisma.event.findUnique({
                 where: { id: eventId },
-                select: { boothLocation: true }
+                select: { id: true, authorizedUserIds: true, status: true, boothLocation: true }
             })
+            if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
             boothLocation = event?.boothLocation || undefined
         } else {
             // Fallback: try to fetch meeting from DB to get eventId
@@ -44,8 +50,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             if (existing?.eventId) {
                 const event = await prisma.event.findUnique({
                     where: { id: existing.eventId },
-                    select: { boothLocation: true }
+                    select: { id: true, authorizedUserIds: true, status: true, boothLocation: true }
                 })
+                if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
+                    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+                }
                 boothLocation = event?.boothLocation || undefined
             }
         }
@@ -59,20 +68,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+}, { requireAuth: true }) as any
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { checkRole, Roles } = await import('@/lib/roles')
-    const isRoot = await checkRole(Roles.Root)
-    const isAdmin = await checkRole(Roles.Admin)
-
-    if (!isRoot && !isAdmin && !await checkRole(Roles.Marketing)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
+export const GET = withAuth(async (
+    request,
+    { params, authCtx }
+) => {
     const id = (await params).id
     try {
         const meeting = await prisma.meeting.findUnique({
@@ -85,6 +86,17 @@ export async function GET(
 
         if (!meeting) {
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        }
+
+        // Event access check
+        if (meeting.eventId) {
+            const event = await prisma.event.findUnique({
+                where: { id: meeting.eventId },
+                select: { id: true, authorizedUserIds: true, status: true }
+            })
+            if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
         }
 
         // Validate "Ready" state
@@ -115,4 +127,4 @@ export async function GET(
         console.error('Failed to generate invite:', error)
         return NextResponse.json({ error: 'Failed to generate invite', details: error.message }, { status: 500 })
     }
-}
+}, { requireRole: 'write' }) as any

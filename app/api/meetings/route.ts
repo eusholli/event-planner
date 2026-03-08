@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { resolveEventId } from '@/lib/events'
 import { currentUser } from '@clerk/nextjs/server'
+import { withAuth } from '@/lib/with-auth'
+import { hasEventAccess } from '@/lib/access'
 
 export const dynamic = 'force-dynamic'
 
-
-
-export async function GET(request: Request) {
+export const GET = withAuth(async (request, { authCtx }) => {
     try {
         const { searchParams } = new URL(request.url)
         const rawEventId = searchParams.get('eventId')
@@ -99,14 +99,10 @@ export async function GET(request: Request) {
         console.error('Failed to fetch meetings:', error)
         return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 })
     }
-}
+}, { requireEventAccess: true, eventIdSource: 'query', eventIdQueryParam: 'eventId' }) as any
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request, { authCtx }) => {
     try {
-        const { canCreate } = await import('@/lib/roles')
-        if (!await canCreate()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
         const body = await request.json()
         const {
             title,
@@ -131,6 +127,15 @@ export async function POST(request: Request) {
 
         if (!eventId) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
+        }
+
+        // Add event access check after resolving eventId from body
+        const event = await prisma.event.findFirst({
+            where: { OR: [{ id: eventId }, { slug: eventId }] },
+            select: { id: true, authorizedUserIds: true, status: true }
+        })
+        if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
         // LOCK CHECK
@@ -304,4 +309,4 @@ export async function POST(request: Request) {
         console.error('Create meeting error:', error)
         return NextResponse.json({ error: 'Failed to create meeting', details: error.message }, { status: 500 })
     }
-}
+}, { requireRole: 'create' }) as any
