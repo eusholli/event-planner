@@ -42,16 +42,10 @@ type RouteHandler = (
 ) => Promise<Response>
 
 function getRole(sessionClaims: Record<string, unknown> | null): string {
-    if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
-        return Roles.Root
-    }
     return (sessionClaims?.metadata as Record<string, unknown>)?.role as string ?? ''
 }
 
 function getUserId(clerkUserId: string | null): string {
-    if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
-        return 'mock-root-user'
-    }
     return clerkUserId ?? ''
 }
 
@@ -101,34 +95,37 @@ export function withAuth(handler: RouteHandler, options: AuthOptions = {}): Rout
         let event: AuthContext['event'] | undefined
 
         if (requireEventAccess) {
-            let rawEventId: string | null = null
+            // Skip event access check in mock/disabled auth mode — mock user is root with global access
+            if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+                let rawEventId: string | null = null
 
-            if (eventIdSource === 'param') {
-                const resolvedParams = await ctx.params
-                rawEventId = resolvedParams[eventIdParam] ?? null
-            } else {
-                rawEventId = new URL(req.url).searchParams.get(eventIdQueryParam)
+                if (eventIdSource === 'param') {
+                    const resolvedParams = await ctx.params
+                    rawEventId = resolvedParams[eventIdParam] ?? null
+                } else {
+                    rawEventId = new URL(req.url).searchParams.get(eventIdQueryParam)
+                }
+
+                if (!rawEventId) {
+                    return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
+                }
+
+                // Resolve slug or UUID
+                const resolvedEvent = await prisma.event.findFirst({
+                    where: { OR: [{ id: rawEventId }, { slug: rawEventId }] },
+                    select: { id: true, authorizedUserIds: true, status: true, slug: true, name: true },
+                })
+
+                if (!resolvedEvent) {
+                    return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+                }
+
+                if (!hasEventAccess(resolvedEvent, userId, role)) {
+                    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+                }
+
+                event = resolvedEvent
             }
-
-            if (!rawEventId) {
-                return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
-            }
-
-            // Resolve slug or UUID
-            const resolvedEvent = await prisma.event.findFirst({
-                where: { OR: [{ id: rawEventId }, { slug: rawEventId }] },
-                select: { id: true, authorizedUserIds: true, status: true, slug: true, name: true },
-            })
-
-            if (!resolvedEvent) {
-                return NextResponse.json({ error: 'Event not found' }, { status: 404 })
-            }
-
-            if (!hasEventAccess(resolvedEvent, userId, role)) {
-                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-            }
-
-            event = resolvedEvent
         }
 
         // ── 4. Inject auth context and call handler ──────────────────────────
