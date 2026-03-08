@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { withAuth, AuthContext } from '@/lib/with-auth'
+import { withAuth } from '@/lib/with-auth'
 import { resolveEventId } from '@/lib/events'
 import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
 const GETHandler = withAuth(async (request, ctx) => {
-    const authCtx = ctx.authCtx as AuthContext
     try {
         const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)

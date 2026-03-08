@@ -10,7 +10,6 @@ import {
 } from '@/lib/actions/roi'
 import { canManageEvents, isRootUser } from '@/lib/roles'
 import { withAuth, AuthContext } from '@/lib/with-auth'
-import { auth } from '@clerk/nextjs/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,8 +74,7 @@ const POSTHandler = withAuth(async (request, ctx) => {
             if (!await isRootUser()) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
-            const { userId } = await auth()
-            const result = await approveROI(id, userId || 'system')
+            const result = await approveROI(id, authCtx.userId || 'system')
             return NextResponse.json(result)
         }
 
@@ -84,8 +82,7 @@ const POSTHandler = withAuth(async (request, ctx) => {
             if (!await isRootUser()) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
-            const { userId } = await auth()
-            const result = await rejectROI(id, userId || 'system')
+            const result = await rejectROI(id, authCtx.userId || 'system')
             return NextResponse.json(result)
         }
 
