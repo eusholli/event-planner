@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { isRootUser } from '@/lib/roles'
+import { withAuth, type AuthContext } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST() {
+async function handlePOST(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
-        if (!await isRootUser()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         // Transactional delete of all data
         // Order matters for relational integrity if cascades aren't perfect, but Prisma usually handles it.
         // We delete EVENTS, which should cascade to everything else (Attendees, Rooms, Meetings) because of relation onDelete: Cascade.
@@ -41,3 +37,5 @@ export async function POST() {
         return NextResponse.json({ error: 'Failed to reset system' }, { status: 500 })
     }
 }
+
+export const POST = withAuth(handlePOST, { requireRole: 'root' }) as any

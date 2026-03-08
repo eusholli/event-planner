@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, type AuthContext } from '@/lib/with-auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
-    const searchParams = request.nextUrl.searchParams;
+async function handleGET(request: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
+    const searchParams = new URL(request.url).searchParams;
     const url = searchParams.get('url');
 
     if (!url) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
         // Validate URL - basic check to prevent open proxy abuse
         // We can tighten this to only allow our R2 domain if needed, e.g.
         // if (!url.startsWith(process.env.R2_PUBLIC_URL)) ...
-        // For now, we allow http/https to support external images if needed, 
+        // For now, we allow http/https to support external images if needed,
         // but ideally we should restrict.
         const targetUrl = new URL(url);
         if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') {
@@ -43,3 +44,5 @@ export async function GET(request: NextRequest) {
         return new NextResponse('Failed to fetch image', { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGET, { requireAuth: true }) as any;

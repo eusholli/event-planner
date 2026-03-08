@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { isRootUser } from '@/lib/roles'
+import { withAuth, type AuthContext } from '@/lib/with-auth'
 import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
@@ -21,12 +21,8 @@ async function resolveCompany(companyName: string, description?: string, pipelin
     return created.id
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
-        if (!await isRootUser()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const json = await request.json()
         const { systemSettings, events } = json
 
@@ -414,3 +410,5 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to import system' }, { status: 500 })
     }
 }
+
+export const POST = withAuth(handlePOST, { requireRole: 'root' }) as any

@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { isRootUser } from '@/lib/roles'
+import { withAuth, type AuthContext } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+async function handleGET(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
-        if (!await isRootUser()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         // Fetch all companies
         const companies = await prisma.company.findMany({
             orderBy: { name: 'asc' }
@@ -83,3 +79,5 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to export system' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(handleGET, { requireRole: 'root' }) as any

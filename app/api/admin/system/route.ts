@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { isRootUser } from '@/lib/roles'
+import { withAuth, type AuthContext } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+async function handleGET(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
-        // Only Root handles system settings?
-        // Or maybe just return it safely? 
-        // Let's protect it.
-        const allow = await isRootUser()
-        if (!allow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
         const settings = await prisma.systemSettings.findFirst()
         return NextResponse.json(settings || {}) // Return empty object if not init (though migration did init)
     } catch (error) {
@@ -19,11 +13,8 @@ export async function GET() {
     }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
-        const allow = await isRootUser()
-        if (!allow) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
         const json = await request.json()
         const { geminiApiKey, defaultTags, defaultMeetingTypes, defaultAttendeeTypes } = json
 
@@ -55,3 +46,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(handleGET, { requireRole: 'root' }) as any
+export const POST = withAuth(handlePOST, { requireRole: 'root' }) as any

@@ -1,19 +1,11 @@
 import { clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { checkRole } from '@/lib/roles'
 import { Roles } from '@/lib/constants'
+import { withAuth, type AuthContext } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: Request) {
-    // Check permissions
-    const isRoot = await checkRole(Roles.Root)
-    const isMarketing = await checkRole(Roles.Marketing)
-
-    if (!isRoot && !isMarketing) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
+async function handleGET(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
         const { searchParams } = new URL(req.url)
         const page = parseInt(searchParams.get('page') || '1', 10)
@@ -57,15 +49,7 @@ export async function GET(req: Request) {
     }
 }
 
-export async function POST(req: Request) {
-    // Check if user is root or marketing
-    const isRoot = await checkRole(Roles.Root)
-    const isMarketing = await checkRole(Roles.Marketing)
-
-    if (!isRoot && !isMarketing) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
+async function handlePOST(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
         const { userId, role } = await req.json()
 
@@ -93,15 +77,7 @@ export async function POST(req: Request) {
     }
 }
 
-export async function DELETE(req: Request) {
-    // Check if user is root or marketing
-    const isRoot = await checkRole(Roles.Root)
-    const isMarketing = await checkRole(Roles.Marketing)
-
-    if (!isRoot && !isMarketing) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
+async function handleDELETE(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
         const { userId } = await req.json()
 
@@ -118,3 +94,7 @@ export async function DELETE(req: Request) {
         return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(handleGET, { requireRole: 'manageEvents' }) as any
+export const POST = withAuth(handlePOST, { requireRole: 'manageEvents' }) as any
+export const DELETE = withAuth(handleDELETE, { requireRole: 'manageEvents' }) as any

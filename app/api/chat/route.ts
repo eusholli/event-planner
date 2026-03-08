@@ -2,12 +2,14 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, convertToCoreMessages, stepCountIs } from 'ai';
 import prisma from '@/lib/prisma';
 import * as tools from '@/lib/tools';
+import { withAuth, type AuthContext } from '@/lib/with-auth';
+import { hasEventAccess } from '@/lib/access';
 
 // Allow streaming responses up to 300 seconds
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
         const { messages, eventId: bodyEventId } = await req.json();
         const url = new URL(req.url);
@@ -24,11 +26,18 @@ export async function POST(req: Request) {
                     { slug: eventId }
                 ]
             },
-            select: { id: true, name: true, slug: true }
+            select: { id: true, name: true, slug: true, authorizedUserIds: true, status: true }
         });
 
         if (!event) {
             return new Response('Event not found', { status: 404 });
+        }
+
+        // Check event-level access
+        if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+            if (!hasEventAccess(event, ctx.authCtx.userId, ctx.authCtx.role)) {
+                return new Response('Forbidden', { status: 403 });
+            }
         }
 
         // Use the resolved UUID for tools and prompts
@@ -81,8 +90,8 @@ INTELLIGENT SEARCH & RESOLUTION:
 - **Ambiguity**: Only ask the user for clarification if a search returns multiple viable candidates (e.g., multiple "Johns" or "Project X" meetings).
 - **Navigation Tools & Hybrid Support**:
     - **Proactive Links**: You are encouraged to provide UI navigation links (via \`getNavigationLinks\`) as a helpful convenience, even when offering to perform the action yourself.
-    - **Hybrid Approach**: 
-        - If the user intent is to **Create/Update** but details are missing (e.g. "I want to create a meeting"), you should: 
+    - **Hybrid Approach**:
+        - If the user intent is to **Create/Update** but details are missing (e.g. "I want to create a meeting"), you should:
             1. Offer to help and ask for the missing details.
             2. *AND* proactively provide the link by calling the getNavigationLinks tool. Call this tool unconditionally for any "create" or "update" intent, even if details are missing.
         - If the user provides FULL details: Perform the action directly using the appropriate tool. You do not need to provide a "how-to" link in this case, but you should link to the *result* if possible (e.g. "Meeting created! View it here: [link]").
@@ -110,3 +119,5 @@ INTELLIGENT SEARCH & RESOLUTION:
         return new Response(`Chat API Error: ${error.message || error}`, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePOST, { requireAuth: true }) as any;
