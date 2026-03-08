@@ -183,6 +183,99 @@ def replace_mwc_data(data, mwc_src):
 
     return data
 
+def tavily_search(query, api_key):
+    """Call Tavily Search API and return best content snippet (max 300 chars)."""
+    import requests
+    resp = requests.post(
+        "https://api.tavily.com/search",
+        json={"query": query, "search_depth": "advanced", "max_results": 3},
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    results = resp.json().get("results", [])
+    if not results:
+        return ""
+    # Use the highest-scored result
+    best = max(results, key=lambda r: r.get("score", 0))
+    content = best.get("content", "").strip()
+    return content[:300] if content else ""
+
+def load_cache(cache_file):
+    if os.path.exists(cache_file):
+        with open(cache_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache, cache_file):
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump(cache, f, indent=2, ensure_ascii=False)
+
+def enrich_with_tavily(data, cache_file, search_fn=None, api_key=None, delay=1.0):
+    """Enrich event descriptions, company descriptions, and external attendee bios."""
+    if search_fn is None:
+        search_fn = tavily_search
+    if api_key is None:
+        api_key = os.environ.get("TAVILY_API_KEY", "")
+
+    cache = load_cache(cache_file)
+
+    # Build company id -> name map for attendee queries
+    company_names = {c["id"]: c["name"] for c in data.get("companies", [])}
+    # Support test helper key
+    if "_company_names" in data:
+        company_names.update(data["_company_names"])
+
+    total = (len(data.get("events", [])) +
+             len(data.get("companies", [])) +
+             sum(1 for a in data.get("attendees", [])
+                 if a.get("isExternal") and a.get("title")))
+    done = 0
+
+    def fetch(cache_key, query):
+        nonlocal done
+        if cache_key in cache:
+            done += 1
+            return cache[cache_key]
+        result = search_fn(query, api_key)
+        cache[cache_key] = result
+        save_cache(cache, cache_file)
+        done += 1
+        if delay > 0:
+            time.sleep(delay)
+        return result
+
+    # Events
+    for event in data.get("events", []):
+        year = event.get("startDate", "")[:4] or "2026"
+        query = f'"{event["name"]}" conference {year} overview agenda description'
+        val = fetch(f"event:{event['id']}", query)
+        if val:
+            event["description"] = val
+        print(f"\r  Enriching... {done}/{total}", end="", flush=True)
+
+    # Companies
+    for company in data.get("companies", []):
+        query = f'"{company["name"]}" company telecom technology overview'
+        val = fetch(f"company:{company['id']}", query)
+        if val:
+            company["description"] = val
+        print(f"\r  Enriching... {done}/{total}", end="", flush=True)
+
+    # External attendees with title
+    for att in data.get("attendees", []):
+        if not att.get("isExternal") or not att.get("title"):
+            continue
+        co_name = company_names.get(att.get("companyId", ""), "")
+        query = f'"{att["name"]}" "{co_name}" "{att["title"]}"'
+        val = fetch(f"attendee:{att['id']}", query)
+        if val and len(val) >= 100:
+            att["bio"] = val
+        print(f"\r  Enriching... {done}/{total}", end="", flush=True)
+
+    print(f"\n  Enrichment complete: {done} items processed")
+    return data
+
 if __name__ == "__main__":
     master = load_json(MASTER_FILE)
     mwc_src = load_json(MWC_FILE)

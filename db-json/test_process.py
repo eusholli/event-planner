@@ -186,3 +186,69 @@ def test_replace_mwc_meeting_attendees_resolved_to_uuids():
     attendee_ids = {a["id"] for a in result["attendees"]}
     for att_id in meeting["attendees"]:
         assert att_id in attendee_ids
+
+def test_enrich_uses_cache(tmp_path):
+    cache_file = str(tmp_path / "cache.json")
+    # Pre-populate cache
+    cache = {"event:e1": "Cached description"}
+    with open(cache_file, "w") as f:
+        json.dump(cache, f)
+
+    data = {
+        "events": [{"id": "e1", "name": "Test Conf", "description": ""}],
+        "companies": [],
+        "attendees": [],
+    }
+
+    call_count = {"n": 0}
+    def fake_search(query, api_key):
+        call_count["n"] += 1
+        return "Fresh result"
+
+    result = p.enrich_with_tavily(data, cache_file, search_fn=fake_search, api_key="test", delay=0)
+    assert call_count["n"] == 0  # cache hit, no API call
+    assert result["events"][0]["description"] == "Cached description"
+
+def test_enrich_calls_api_on_cache_miss(tmp_path):
+    cache_file = str(tmp_path / "cache.json")
+
+    data = {
+        "events": [{"id": "e1", "name": "Test Conf", "description": ""}],
+        "companies": [],
+        "attendees": [],
+    }
+
+    def fake_search(query, api_key):
+        return "Fresh description from Tavily"
+
+    result = p.enrich_with_tavily(data, cache_file, search_fn=fake_search, api_key="test", delay=0)
+    assert result["events"][0]["description"] == "Fresh description from Tavily"
+    # Cache should be saved
+    with open(cache_file) as f:
+        cache = json.load(f)
+    assert "event:e1" in cache
+
+def test_enrich_skips_internal_attendees(tmp_path):
+    cache_file = str(tmp_path / "cache.json")
+    data = {
+        "events": [],
+        "companies": [],
+        "attendees": [
+            {"id": "a1", "name": "Internal", "title": "Dev", "bio": "",
+             "isExternal": False, "companyId": "c1"},
+            {"id": "a2", "name": "External", "title": "CTO", "bio": "",
+             "isExternal": True, "companyId": "c1"},
+        ],
+    }
+    # Add a fake company lookup helper
+    data["_company_names"] = {"c1": "ExtCo"}
+
+    calls = []
+    def fake_search(query, api_key):
+        calls.append(query)
+        return "Result"
+
+    p.enrich_with_tavily(data, cache_file, search_fn=fake_search, api_key="test", delay=0)
+    # Only external attendee should be searched
+    assert any("External" in q for q in calls)
+    assert not any("Internal" in q for q in calls)
