@@ -8,17 +8,15 @@ import {
     approveROI,
     rejectROI,
 } from '@/lib/actions/roi'
-import { canWrite, canManageEvents, isRootUser } from '@/lib/roles'
+import { canManageEvents, isRootUser } from '@/lib/roles'
+import { withAuth, AuthContext } from '@/lib/with-auth'
 import { auth } from '@clerk/nextjs/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const GETHandler = withAuth(async (request, ctx) => {
     try {
-        const rawId = (await params).id
+        const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -34,18 +32,11 @@ export async function GET(
         console.error('Error fetching ROI data:', error)
         return NextResponse.json({ error: 'Failed to fetch ROI data' }, { status: 500 })
     }
-}
+}, { requireEventAccess: true })
 
-export async function PUT(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const PUTHandler = withAuth(async (request, ctx) => {
     try {
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        const rawId = (await params).id
+        const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -58,18 +49,12 @@ export async function PUT(
         console.error('Error saving ROI targets:', error)
         return NextResponse.json({ error: error.message || 'Failed to save ROI targets' }, { status: 500 })
     }
-}
+}, { requireRole: 'write', requireEventAccess: true })
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const POSTHandler = withAuth(async (request, ctx) => {
+    const authCtx = ctx.authCtx as AuthContext
     try {
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        const rawId = (await params).id
+        const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -109,4 +94,8 @@ export async function POST(
         console.error('Error processing ROI action:', error)
         return NextResponse.json({ error: error.message || 'Failed to process ROI action' }, { status: 500 })
     }
-}
+}, { requireRole: 'write', requireEventAccess: true })
+
+export const GET = GETHandler as any
+export const PUT = PUTHandler as any
+export const POST = POSTHandler as any

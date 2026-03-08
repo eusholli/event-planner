@@ -1,32 +1,21 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { auth } from '@clerk/nextjs/server'
-import { isRootUser, canManageEvents } from '@/lib/roles'
-
+import { withAuth, AuthContext } from '@/lib/with-auth'
 import { Roles } from '@/lib/constants'
 import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+const GETHandler = withAuth(async (request, ctx) => {
+    const authCtx = ctx.authCtx as AuthContext
     try {
-        const { sessionClaims, userId } = await auth()
-        // If auth disabled, assume root
-        const role = process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true'
-            ? Roles.Root
-            : sessionClaims?.metadata?.role as string
+        const { userId, role } = authCtx
 
         const isGlobalAccess = role === Roles.Root || role === Roles.Marketing
 
         const where: any = {}
 
         if (!isGlobalAccess) {
-            // If local auth is mocked or no user, this might be tricky with "has"
-            // But assuming Clerk is active or Root bypass matches above.
-            if (!userId && process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-            }
-
             // If not global access (Admin or User), they must be in the authorized list
             if (userId) {
                 where.authorizedUserIds = { has: userId }
@@ -44,16 +33,10 @@ export async function GET() {
         console.error('Error fetching events:', error)
         return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 })
     }
-}
+}, { requireAuth: true })
 
-export async function POST(request: Request) {
+const POSTHandler = withAuth(async (request, ctx) => {
     try {
-        // Only Root/Marketing can create events
-        if (!await canManageEvents()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-
         const json = await request.json()
 
         let slug = json.slug
@@ -122,4 +105,7 @@ export async function POST(request: Request) {
         console.error('Error creating event:', error)
         return NextResponse.json({ error: 'Failed to create event' }, { status: 500 })
     }
-}
+}, { requireRole: 'manageEvents' })
+
+export const GET = GETHandler as any
+export const POST = POSTHandler as any

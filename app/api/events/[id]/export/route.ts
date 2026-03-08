@@ -1,20 +1,13 @@
 import { NextResponse } from 'next/server'
 import { exportEventData } from '@/lib/actions/event'
-import { canWrite } from '@/lib/roles'
+import { withAuth } from '@/lib/with-auth'
 import { resolveEventId } from '@/lib/events'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const GETHandler = withAuth(async (request, ctx) => {
     try {
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        const resolvedParams = await params
+        const resolvedParams = await ctx.params
         const id = await resolveEventId(resolvedParams.id)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -40,4 +33,6 @@ export async function GET(
             { status: 500 }
         )
     }
-}
+}, { requireRole: 'write', requireEventAccess: true })
+
+export const GET = GETHandler as any

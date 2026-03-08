@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { canManageEvents, isRootUser } from '@/lib/roles'
+import { withAuth, AuthContext } from '@/lib/with-auth'
 import { resolveEventId } from '@/lib/events'
-import { auth } from '@clerk/nextjs/server'
-import { hasEventAccess } from '@/lib/access'
-import { Roles } from '@/lib/constants'
 import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const GETHandler = withAuth(async (request, ctx) => {
+    const authCtx = ctx.authCtx as AuthContext
     try {
-        const rawId = (await params).id
+        const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -28,16 +23,6 @@ export async function GET(
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
         }
 
-        const { sessionClaims, userId } = await auth()
-        // If auth disabled, assume root
-        const role = process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true'
-            ? Roles.Root
-            : sessionClaims?.metadata?.role as string
-
-        if (!hasEventAccess(event as any, userId || '', role)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const response = {
             ...event,
             startDate: event.startDate ? event.startDate.toISOString().split('T')[0] : null,
@@ -49,18 +34,11 @@ export async function GET(
         console.error('Error fetching event:', error)
         return NextResponse.json({ error: 'Failed to fetch event' }, { status: 500 })
     }
-}
+}, { requireEventAccess: true })
 
-export async function PATCH(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const PATCHHandler = withAuth(async (request, ctx) => {
     try {
-        if (!await canManageEvents()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        const rawId = (await params).id
+        const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -129,7 +107,6 @@ export async function PATCH(
         const finalStartDate = json.startDate !== undefined ? json.startDate : currentEvent.startDate
         const finalEndDate = json.endDate !== undefined ? json.endDate : currentEvent.endDate
         const finalAddress = json.address !== undefined ? json.address : currentEvent.address
-        const finalBoothLocation = json.boothLocation !== undefined ? json.boothLocation : currentEvent.boothLocation
 
         if (finalStatus === 'COMMITTED') {
             if (!finalStartDate || !finalEndDate || !finalAddress || finalAddress.trim() === '') {
@@ -154,9 +131,6 @@ export async function PATCH(
         if (json.address) {
             const geo = await geocodeAddress(json.address)
             if (geo) {
-                // We can't easily add properties to `data` in one go if we want to be clean, 
-                // but let's just add them to the data object we pass to update.
-                // Ideally we check if address actually changed, but geocoding again is safer/easier.
                 (json as any).latitude = geo.latitude;
                 (json as any).longitude = geo.longitude;
             }
@@ -170,10 +144,10 @@ export async function PATCH(
                 startDate: json.startDate ? new Date(json.startDate) : json.startDate,
                 endDate: json.endDate ? new Date(json.endDate) : json.endDate,
                 status: json.status,
-                address: json.address, // Added missing address field
+                address: json.address,
                 region: json.region,
                 url: json.url,
-                budget: json.budget !== undefined && json.budget !== null ? parseFloat(json.budget) : undefined, // Fix 0 being treated as false
+                budget: json.budget !== undefined && json.budget !== null ? parseFloat(json.budget) : undefined,
                 targetCustomers: json.targetCustomers,
                 requesterEmail: json.requesterEmail,
                 tags: json.tags,
@@ -200,19 +174,11 @@ export async function PATCH(
         console.error('Error updating event:', error)
         return NextResponse.json({ error: 'Failed to update event' }, { status: 500 })
     }
-}
+}, { requireRole: 'manageEvents' })
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const DELETEHandler = withAuth(async (request, ctx) => {
     try {
-        // Only Root/Marketing can delete events
-        if (!await canManageEvents()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        const id = (await params).id
+        const id = (await ctx.params).id
 
         // Check if event exists
         const existing = await prisma.event.findUnique({ where: { id } })
@@ -237,4 +203,8 @@ export async function DELETE(
         console.error('Error deleting event:', error)
         return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 })
     }
-}
+}, { requireRole: 'manageEvents' })
+
+export const GET = GETHandler as any
+export const PATCH = PATCHHandler as any
+export const DELETE = DELETEHandler as any

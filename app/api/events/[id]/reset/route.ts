@@ -1,20 +1,13 @@
 import { NextResponse } from 'next/server'
 import { resetEventData } from '@/lib/actions/event'
-import { canWrite } from '@/lib/roles'
+import { withAuth } from '@/lib/with-auth'
 import { resolveEventId } from '@/lib/events'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+const POSTHandler = withAuth(async (request, ctx) => {
     try {
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        const rawId = (await params).id
+        const rawId = (await ctx.params).id
         const id = await resolveEventId(rawId)
         if (!id) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -35,4 +28,6 @@ export async function POST(
         console.error('Reset failed:', error)
         return NextResponse.json({ error: error.message || 'Failed to reset event' }, { status: 500 })
     }
-}
+}, { requireRole: 'write', requireEventAccess: true })
+
+export const POST = POSTHandler as any
