@@ -34,6 +34,27 @@ def prune_old_events(data, cutoff_iso):
     print(f"Pruned {len(deleted_ids)} events. Remaining: {len(keep)}")
     return data, deleted_ids
 
+def cleanup_orphans(data):
+    """Remove attendees not linked to any event, and companies with no attendees."""
+    # Collect all attendee IDs referenced by remaining events
+    referenced_attendee_ids = set()
+    for event in data["events"]:
+        referenced_attendee_ids.update(event.get("attendeeIds", []))
+
+    before_a = len(data["attendees"])
+    data["attendees"] = [a for a in data["attendees"] if a["id"] in referenced_attendee_ids]
+    removed_a = before_a - len(data["attendees"])
+
+    # Collect company IDs still referenced by surviving attendees
+    referenced_company_ids = {a["companyId"] for a in data["attendees"] if a.get("companyId")}
+
+    before_c = len(data["companies"])
+    data["companies"] = [c for c in data["companies"] if c["id"] in referenced_company_ids]
+    removed_c = before_c - len(data["companies"])
+
+    print(f"Cleanup: removed {removed_a} orphan attendees, {removed_c} orphan companies")
+    return data
+
 if __name__ == "__main__":
     master = load_json(MASTER_FILE)
     mwc_src = load_json(MWC_FILE)

@@ -38,3 +38,40 @@ def test_prune_old_events():
     assert "Border Event" in event_names  # >= cutoff is kept
     assert "e1" in deleted_ids
     assert "e2" not in deleted_ids
+
+def test_cleanup_orphans_removes_unlinked_attendees():
+    data = {
+        "events": [
+            {"id": "e2", "attendeeIds": ["a2"]},
+        ],
+        "attendees": [
+            {"id": "a1", "companyId": "c1"},  # only was in e1 (deleted)
+            {"id": "a2", "companyId": "c2"},  # still in e2
+        ],
+        "companies": [
+            {"id": "c1", "name": "Orphan Co"},
+            {"id": "c2", "name": "Live Co"},
+        ]
+    }
+    result = p.cleanup_orphans(data)
+    attendee_ids = [a["id"] for a in result["attendees"]]
+    company_ids = [c["id"] for c in result["companies"]]
+    assert "a1" not in attendee_ids
+    assert "a2" in attendee_ids
+    assert "c1" not in company_ids  # orphaned company removed
+    assert "c2" in company_ids
+
+def test_cleanup_orphans_keeps_shared_attendees():
+    data = {
+        "events": [
+            {"id": "e2", "attendeeIds": ["a1", "a2"]},
+        ],
+        "attendees": [
+            {"id": "a1", "companyId": "c1"},
+            {"id": "a2", "companyId": "c1"},
+        ],
+        "companies": [{"id": "c1", "name": "Shared Co"}]
+    }
+    result = p.cleanup_orphans(data)
+    assert len(result["attendees"]) == 2
+    assert len(result["companies"]) == 1
