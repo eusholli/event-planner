@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { geocodeAddress } from '@/lib/geocoding'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
+const postHandler = withAuth(async (request) => {
     try {
         const formData = await request.formData()
         const file = formData.get('file') as File
@@ -197,4 +198,7 @@ export async function POST(request: Request) {
         console.error('Import error:', error)
         return NextResponse.json({ error: 'Failed to import data' }, { status: 500 })
     }
-}
+}, { requireRole: 'root' })
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const POST = postHandler as any

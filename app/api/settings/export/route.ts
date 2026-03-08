@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+async function exportData(): Promise<Response> {
     try {
         const settings = await prisma.systemSettings.findFirst()
         const events = await prisma.event.findMany()
@@ -27,7 +28,7 @@ export async function GET() {
         // Group ROI targets by eventId
         const roiByEvent = new Map(roiTargets.map(r => [r.eventId, r]))
 
-        const exportData = {
+        const exportDataObj = {
             system: settings ? cleanData(settings) : null,
             events: events.map(e => {
                 const roi = roiByEvent.get(e.id)
@@ -54,7 +55,7 @@ export async function GET() {
         const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
         const filename = `system-backup-${date}.json`
 
-        return new NextResponse(JSON.stringify(exportData, null, 2), {
+        return new NextResponse(JSON.stringify(exportDataObj, null, 2), {
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Disposition': `attachment; filename="${filename}"`
@@ -64,4 +65,19 @@ export async function GET() {
         console.error('Export error:', error)
         return NextResponse.json({ error: 'Failed to export data' }, { status: 500 })
     }
+}
+
+const getHandler = withAuth(async () => {
+    return exportData()
+}, { requireRole: 'root' })
+
+export async function GET(request: Request, ctx: { params: Promise<Record<string, string>> }) {
+    // Check backup key header first (automation bypass)
+    const backupKey = request.headers.get('x-backup-key') ?? request.headers.get('authorization')?.replace('Bearer ', '')
+    if (backupKey && process.env.BACKUP_SECRET_KEY && backupKey === process.env.BACKUP_SECRET_KEY) {
+        return exportData()
+    }
+    // Otherwise enforce root role
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return getHandler(request, ctx as any)
 }

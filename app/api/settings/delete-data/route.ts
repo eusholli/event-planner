@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function DELETE() {
+const deleteHandler = withAuth(async () => {
     try {
         // Delete in order of dependencies
         await prisma.meeting.deleteMany()
@@ -15,4 +16,7 @@ export async function DELETE() {
         console.error('Delete error:', error)
         return NextResponse.json({ error: 'Failed to delete data' }, { status: 500 })
     }
-}
+}, { requireRole: 'root' })
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const DELETE = deleteHandler as any

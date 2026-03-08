@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { canWrite } from '@/lib/roles'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+const getHandler = withAuth(async () => {
     try {
         let settings = await prisma.systemSettings.findFirst()
 
@@ -35,14 +35,13 @@ export async function GET() {
         console.error('Error fetching settings:', error)
         return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
     }
-}
+}, { requireRole: 'root' })
 
-export async function POST(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const GET = getHandler as any
+
+const postHandler = withAuth(async (request) => {
     try {
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const json = await request.json()
 
         let settings = await prisma.systemSettings.findFirst()
@@ -79,4 +78,7 @@ export async function POST(request: Request) {
         console.error('Error updating settings:', error)
         return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
     }
-}
+}, { requireRole: 'root' })
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const POST = postHandler as any
