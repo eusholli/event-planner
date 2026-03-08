@@ -1,5 +1,8 @@
 'use client'
 
+import React from 'react'
+import Tooltip from './Tooltip'
+
 interface ProgressRingProps {
     value: number
     max: number
@@ -8,6 +11,7 @@ interface ProgressRingProps {
     label?: string
     formatValue?: (value: number) => string
     formatMax?: (max: number) => string
+    tooltip?: React.ReactNode
 }
 
 export default function ProgressRing({
@@ -18,6 +22,7 @@ export default function ProgressRing({
     label,
     formatValue,
     formatMax,
+    tooltip,
 }: ProgressRingProps) {
     const radius = (size - strokeWidth) / 2
     const circumference = radius * 2 * Math.PI
@@ -67,7 +72,9 @@ export default function ProgressRing({
                 </div>
             </div>
             {label && (
-                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider text-center">{label}</span>
+                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider text-center">
+                    {tooltip ? <Tooltip content={tooltip}>{label}</Tooltip> : label}
+                </span>
             )}
             <div className="text-center">
                 <span className="text-sm font-semibold text-zinc-900">{displayValue}</span>

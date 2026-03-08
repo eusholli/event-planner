@@ -123,7 +123,7 @@ model EventROITargets {
   targetCustomerMeetings  Int?
 
   // Engagement
-  targetTargetedReach     Int?
+  targetErta              Float?
   targetSpeaking          Int?
   targetMediaPR           Int?
 
@@ -131,7 +131,7 @@ model EventROITargets {
   targetCompanies         Company[] @relation("TargetCompanies")
 
   // Actuals (manually entered)
-  actualTargetedReach     Int?
+  actualErta              Float?
   actualSpeaking          Int?
   actualMediaPR           Int?
 

@@ -7,6 +7,8 @@ import { useUser } from '@/components/auth'
 import MetricCard from '@/components/roi/MetricCard'
 import ProgressBar from '@/components/roi/ProgressBar'
 import CompanyChecklist from '@/components/roi/CompanyChecklist'
+import Tooltip from '@/components/roi/Tooltip'
+import FormattedInput from '@/components/roi/FormattedInput'
 
 interface Company {
     id: string
@@ -23,11 +25,11 @@ interface ROITargets {
     winRate: number | null
     expectedRevenue: number | null
     targetCustomerMeetings: number | null
-    targetTargetedReach: number | null
+    targetErta: number | null
     targetSpeaking: number | null
     targetMediaPR: number | null
     targetCompanies: Company[]
-    actualTargetedReach: number | null
+    actualErta: number | null
     actualSpeaking: number | null
     actualMediaPR: number | null
     status: string
@@ -45,7 +47,7 @@ interface ROIActuals {
     actualCustomerMeetings: number
     targetCompaniesHit: { id: string; name: string }[]
     targetCompaniesHitCount: number
-    actualTargetedReach: number
+    actualErta: number
     actualSpeaking: number
     actualMediaPR: number
 }
@@ -57,11 +59,11 @@ const emptyTargets: ROITargets = {
     winRate: null,
     expectedRevenue: null,
     targetCustomerMeetings: null,
-    targetTargetedReach: null,
+    targetErta: null,
     targetSpeaking: null,
     targetMediaPR: null,
     targetCompanies: [],
-    actualTargetedReach: null,
+    actualErta: null,
     actualSpeaking: null,
     actualMediaPR: null,
     status: 'DRAFT',
@@ -213,7 +215,7 @@ export default function ROIPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    actualTargetedReach: targets.actualTargetedReach,
+                    actualErta: targets.actualErta,
                     actualSpeaking: targets.actualSpeaking,
                     actualMediaPR: targets.actualMediaPR,
                 }),
@@ -253,7 +255,7 @@ export default function ROIPage() {
         !!targets.expectedPipeline &&
         !!targets.winRate &&
         targets.targetCustomerMeetings !== null && targets.targetCustomerMeetings !== undefined &&
-        targets.targetTargetedReach !== null && targets.targetTargetedReach !== undefined &&
+        targets.targetErta !== null && targets.targetErta !== undefined &&
         targets.targetSpeaking !== null && targets.targetSpeaking !== undefined &&
         targets.targetMediaPR !== null && targets.targetMediaPR !== undefined
 
@@ -341,41 +343,53 @@ export default function ROIPage() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Requester Email</label>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The email address of the person who submitted the event request.">Requester Email</Tooltip></label>
                                 <input type="email" value={targets.requesterEmail || ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, requesterEmail: e.target.value }))}
                                     className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="email@example.com" />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Budget ($)</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
-                                    <input type="number" value={targets.budget ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, budget: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className={`w-full pl-7 pr-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="37,000" />
-                                </div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The total approved budget for this event.">Budget ($)</Tooltip></label>
+                                <FormattedInput
+                                    prefix="$"
+                                    value={targets.budget}
+                                    onChange={val => setTargets(prev => ({ ...prev, budget: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="37,000"
+                                    focusRingColor="indigo"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Expected Pipeline</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
-                                    <input type="number" value={targets.expectedPipeline ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, expectedPipeline: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className={`w-full pl-7 pr-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="2,304,000" />
-                                </div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The estimated total value of potential sales opportunities expected to be generated from this event.">Expected Pipeline</Tooltip></label>
+                                <FormattedInput
+                                    prefix="$"
+                                    value={targets.expectedPipeline}
+                                    onChange={val => setTargets(prev => ({ ...prev, expectedPipeline: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="2,304,000"
+                                    focusRingColor="indigo"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Win Rate (%)</label>
-                                <div className="relative">
-                                    <input type="number" step="0.01" min="0" max="1" value={targets.winRate ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, winRate: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} placeholder="0.15" />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">{targets.winRate ? `${(targets.winRate * 100).toFixed(0)}%` : ''}</span>
-                                </div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The estimated percentage of expected pipeline that will convert into closed-won revenue.">Win Rate (%)</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.winRate}
+                                    onChange={val => setTargets(prev => ({ ...prev, winRate: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="0.15"
+                                    isFloat={true}
+                                    suffix={targets.winRate ? `${(targets.winRate * 100).toFixed(0)}%` : ''}
+                                    focusRingColor="indigo"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Expected Revenue</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">$</span>
-                                    <input type="number" value={targets.expectedRevenue ?? ''} readOnly
-                                        className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-zinc-100 bg-zinc-50 text-sm text-zinc-600" placeholder="Auto-calculated" />
-                                </div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The estimated closed-won revenue, calculated as Expected Pipeline × Win Rate.">Expected Revenue</Tooltip></label>
+                                <FormattedInput
+                                    prefix="$"
+                                    value={targets.expectedRevenue}
+                                    readOnly={true}
+                                    placeholder="Auto-calculated"
+                                    focusRingColor="indigo"
+                                />
                                 <p className="text-xs text-zinc-400 mt-1">Pipeline × Win Rate</p>
                             </div>
                         </div>
@@ -389,24 +403,45 @@ export default function ROIPage() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Customer Meetings</label>
-                                <input type="number" value={targets.targetCustomerMeetings ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetCustomerMeetings: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="20" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The target number of meetings to be held with customers or prospects during the event.">Customer Meetings</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.targetCustomerMeetings}
+                                    onChange={val => setTargets(prev => ({ ...prev, targetCustomerMeetings: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="20"
+                                    focusRingColor="violet"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Targeted Reach</label>
-                                <input type="number" value={targets.targetTargetedReach ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetTargetedReach: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="50,000" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="ERTA = (Engagements from employees at targeted companies / Total employees from targeted companies reached) × 100">ERTA</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.targetErta}
+                                    onChange={val => setTargets(prev => ({ ...prev, targetErta: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="15"
+                                    suffix="%"
+                                    focusRingColor="violet"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Speaking</label>
-                                <input type="number" value={targets.targetSpeaking ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetSpeaking: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="5" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The target number of speaking sessions, panels, or presentations secured at the event.">Speaking</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.targetSpeaking}
+                                    onChange={val => setTargets(prev => ({ ...prev, targetSpeaking: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="5"
+                                    focusRingColor="violet"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Media / PR</label>
-                                <input type="number" value={targets.targetMediaPR ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, targetMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${(isLocked || !canEdit) ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500'}`} placeholder="5" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The target number of media interviews, press mentions, or PR activities.">Media / PR</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.targetMediaPR}
+                                    onChange={val => setTargets(prev => ({ ...prev, targetMediaPR: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="5"
+                                    focusRingColor="violet"
+                                />
                             </div>
                         </div>
                     </section>
@@ -513,10 +548,10 @@ export default function ROIPage() {
                             Financial Performance
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <MetricCard label="Pipeline" target={targets.expectedPipeline || 0} actual={actuals.actualPipeline} variant="ring" formatValue={currency} size="lg" />
-                            <MetricCard label="Revenue" target={targets.expectedRevenue || 0} actual={actuals.actualRevenue} variant="ring" formatValue={currency} size="lg" />
+                            <MetricCard label="Pipeline" tooltip="The actual sales pipeline generated from the event so far." target={targets.expectedPipeline || 0} actual={actuals.actualPipeline} variant="ring" formatValue={currency} size="lg" />
+                            <MetricCard label="Revenue" tooltip="The actual closed-won revenue generated from the event so far." target={targets.expectedRevenue || 0} actual={actuals.actualRevenue} variant="ring" formatValue={currency} size="lg" />
                             <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center">
-                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">ROI Ratio</h4>
+                                <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3"><Tooltip content="The ratio of actual Pipeline generated divided by the actual Investment (Budget) spent.">ROI Ratio</Tooltip></h4>
                                 <div className="text-4xl font-bold text-zinc-900">
                                     {actuals.actualInvestment > 0 ? `${((actuals.actualPipeline / actuals.actualInvestment) * 100).toFixed(0)}%` : '—'}
                                 </div>
@@ -535,7 +570,7 @@ export default function ROIPage() {
                             Meeting KPIs
                         </h3>
                         <div className="space-y-5">
-                            <ProgressBar label="Customer Meetings" value={actuals.actualCustomerMeetings} max={targets.targetCustomerMeetings || 0} />
+                            <ProgressBar label="Customer Meetings" tooltip="The actual vs target number of meetings held with customers or prospects during the event." value={actuals.actualCustomerMeetings} max={targets.targetCustomerMeetings || 0} />
                         </div>
                     </section>
 
@@ -546,9 +581,9 @@ export default function ROIPage() {
                             Engagement
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <MetricCard label="Targeted Reach" target={targets.targetTargetedReach || 0} actual={actuals.actualTargetedReach} />
-                            <MetricCard label="Speaking" target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
-                            <MetricCard label="Media / PR" target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
+                            <MetricCard label="ERTA" tooltip="ERTA = (Engagements from employees at targeted companies / Total employees from targeted companies reached) × 100" target={targets.targetErta || 0} actual={actuals.actualErta} formatValue={(v) => `${v.toLocaleString()}%`} />
+                            <MetricCard label="Speaking" tooltip="The actual vs target number of speaking sessions, panels, or presentations secured at the event." target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
+                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
                         </div>
                     </section>
 
@@ -578,19 +613,35 @@ export default function ROIPage() {
                         <p className="text-sm text-zinc-500 mb-6">Enter the actual metrics that can&apos;t be auto-calculated from meeting data.</p>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Targeted Reach</label>
-                                <input type="number" value={targets.actualTargetedReach ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, actualTargetedReach: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${isLocked || !canEdit ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`} placeholder="0" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="ERTA = (Engagements from employees at targeted companies / Total employees from targeted companies reached) × 100">ERTA</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.actualErta}
+                                    onChange={val => setTargets(prev => ({ ...prev, actualErta: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="0"
+                                    suffix="%"
+                                    focusRingColor="rose"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Speaking</label>
-                                <input type="number" value={targets.actualSpeaking ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, actualSpeaking: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${isLocked || !canEdit ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`} placeholder="0" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The actual number of speaking sessions, panels, or presentations secured at the event.">Speaking</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.actualSpeaking}
+                                    onChange={val => setTargets(prev => ({ ...prev, actualSpeaking: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="0"
+                                    focusRingColor="rose"
+                                />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Media / PR</label>
-                                <input type="number" value={targets.actualMediaPR ?? ''} readOnly={isLocked || !canEdit} onChange={e => setTargets(prev => ({ ...prev, actualMediaPR: e.target.value ? parseInt(e.target.value) : null }))}
-                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm ${isLocked || !canEdit ? 'bg-zinc-50 border-zinc-100 text-zinc-600' : 'border-zinc-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`} placeholder="0" />
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The actual number of media interviews, press mentions, or PR activities.">Media / PR</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.actualMediaPR}
+                                    onChange={val => setTargets(prev => ({ ...prev, actualMediaPR: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="0"
+                                    focusRingColor="rose"
+                                />
                             </div>
                         </div>
                     </section>

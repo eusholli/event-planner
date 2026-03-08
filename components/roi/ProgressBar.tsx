@@ -1,11 +1,15 @@
 'use client'
 
+import React from 'react'
+import Tooltip from './Tooltip'
+
 interface ProgressBarProps {
     value: number
     max: number
     label: string
     showValues?: boolean
     formatValue?: (v: number) => string
+    tooltip?: React.ReactNode
 }
 
 export default function ProgressBar({
@@ -14,6 +18,7 @@ export default function ProgressBar({
     label,
     showValues = true,
     formatValue,
+    tooltip,
 }: ProgressBarProps) {
     const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
 
@@ -28,7 +33,9 @@ export default function ProgressBar({
     return (
         <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-zinc-700">{label}</span>
+                <span className="text-sm font-medium text-zinc-700">
+                    {tooltip ? <Tooltip content={tooltip}>{label}</Tooltip> : label}
+                </span>
                 {showValues && (
                     <span className="text-xs text-zinc-500">
                         {display(value)} / {display(max)}

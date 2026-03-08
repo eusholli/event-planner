@@ -10,11 +10,11 @@ export interface ROITargetsInput {
     winRate?: number | null
     expectedRevenue?: number | null
     targetCustomerMeetings?: number | null
-    targetTargetedReach?: number | null
+    targetErta?: number | null
     targetSpeaking?: number | null
     targetMediaPR?: number | null
     targetCompanyIds?: string[]
-    actualTargetedReach?: number | null
+    actualErta?: number | null
     actualSpeaking?: number | null
     actualMediaPR?: number | null
     budget?: number | null
@@ -28,7 +28,7 @@ export interface ROIActuals {
     actualCustomerMeetings: number
     targetCompaniesHit: { id: string; name: string }[]
     targetCompaniesHitCount: number
-    actualTargetedReach: number
+    actualErta: number
     actualSpeaking: number
     actualMediaPR: number
 }
@@ -44,7 +44,7 @@ export async function saveROITargets(eventId: string, data: ROITargetsInput) {
     const { canWrite } = await import('@/lib/roles')
     if (!await canWrite()) throw new Error('Forbidden')
 
-    const { targetCompanyIds, budget, requesterEmail, ...rest } = data
+    const { targetCompanyIds, budget, requesterEmail, event, eventId: _eid, ...rest } = data as any
 
     if (budget !== undefined || requesterEmail !== undefined) {
         await prisma.event.update({
@@ -61,17 +61,17 @@ export async function saveROITargets(eventId: string, data: ROITargetsInput) {
     // Handle target companies relation
     if (targetCompanyIds !== undefined) {
         upsertData.targetCompanies = {
-            set: targetCompanyIds.map(id => ({ id }))
+            set: targetCompanyIds.map((id: string) => ({ id }))
         }
     }
 
     return prisma.eventROITargets.upsert({
         where: { eventId },
         create: {
-            eventId,
+            event: { connect: { id: eventId } },
             ...rest,
             targetCompanies: targetCompanyIds
-                ? { connect: targetCompanyIds.map(id => ({ id })) }
+                ? { connect: targetCompanyIds.map((id: string) => ({ id })) }
                 : undefined,
         },
         update: upsertData,
@@ -136,10 +136,11 @@ export async function getROITargets(eventId: string) {
     })
 
     if (targets) {
+        const { event, ...cleanedTargets } = targets as any
         return {
-            ...targets,
-            budget: targets.event?.budget,
-            requesterEmail: targets.event?.requesterEmail,
+            ...cleanedTargets,
+            budget: event?.budget,
+            requesterEmail: event?.requesterEmail,
         }
     }
 
@@ -194,7 +195,7 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         actualCustomerMeetings,
         targetCompaniesHit,
         targetCompaniesHitCount: targetCompaniesHit.length,
-        actualTargetedReach: roiTargets?.actualTargetedReach || 0,
+        actualErta: roiTargets?.actualErta || 0,
         actualSpeaking: roiTargets?.actualSpeaking || 0,
         actualMediaPR: roiTargets?.actualMediaPR || 0,
     }

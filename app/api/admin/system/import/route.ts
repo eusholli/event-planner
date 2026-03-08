@@ -352,9 +352,9 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
 
                     // Backwards-compat: map old field names to new
                     const targetCustomerMeetings = roi.targetCustomerMeetings ?? roi.targetBoothMeetings ?? null
-                    const targetTargetedReach = roi.targetTargetedReach ?? roi.targetSocialReach ?? null
+                    const targetErta = roi.targetErta ?? roi.targetTargetedReach ?? roi.targetSocialReach ?? null
                     const targetSpeaking = roi.targetSpeaking ?? roi.targetKeynotes ?? null
-                    const actualTargetedReach = roi.actualTargetedReach ?? roi.actualSocialReach ?? null
+                    const actualErta = roi.actualErta ?? roi.actualTargetedReach ?? roi.actualSocialReach ?? null
                     const actualSpeaking = roi.actualSpeaking ?? roi.actualKeynotes ?? null
 
                     // Handle target companies - new format uses targetCompanyIds, old format uses targetCompanies as string[]
@@ -377,11 +377,11 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
                         winRate: roi.winRate,
                         expectedRevenue: roi.expectedRevenue,
                         targetCustomerMeetings,
-                        targetTargetedReach,
+                        targetErta,
                         targetSpeaking,
                         targetMediaPR: roi.targetMediaPR,
                         targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined,
-                        actualTargetedReach,
+                        actualErta,
                         actualSpeaking,
                         actualMediaPR: roi.actualMediaPR,
                         status: roi.status || 'DRAFT',
@@ -394,7 +394,7 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
 
                     await prisma.eventROITargets.upsert({
                         where: { eventId },
-                        create: { eventId, ...roiData },
+                        create: { event: { connect: { id: eventId } }, ...roiData },
                         update: {
                             ...roiData,
                             targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined,
