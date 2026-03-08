@@ -1,15 +1,12 @@
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Roles } from '@/lib/constants'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST() {
-    const { userId, sessionClaims } = await auth()
-
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+const postHandler = withAuth(async (req, { authCtx }) => {
+    const { sessionClaims } = await auth()
 
     // If role is already set, do nothing
     if (sessionClaims?.metadata?.role) {
@@ -18,7 +15,7 @@ export async function POST() {
 
     try {
         const client = await clerkClient()
-        await client.users.updateUserMetadata(userId, {
+        await client.users.updateUserMetadata(authCtx.userId, {
             publicMetadata: {
                 role: Roles.User,
             },
@@ -29,4 +26,6 @@ export async function POST() {
         console.error('Error initializing user role:', error)
         return NextResponse.json({ error: 'Failed to initialize role' }, { status: 500 })
     }
-}
+}, { requireAuth: true })
+
+export const POST = postHandler as any
