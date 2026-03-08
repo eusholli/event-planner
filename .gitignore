@@ -54,3 +54,4 @@ docker-compose.override.yml
 
 # Claude Code personal settings (team settings.json is committed)
 .claude/settings.local.json
+db-json/.enrichment-cache.json

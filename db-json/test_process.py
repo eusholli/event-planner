@@ -252,3 +252,49 @@ def test_enrich_skips_internal_attendees(tmp_path):
     # Only external attendee should be searched
     assert any("External" in q for q in calls)
     assert not any("Internal" in q for q in calls)
+
+def test_validate_passes_clean_data():
+    data = {
+        "events": [{
+            "id": "e1", "name": "MWC BCN 2026", "status": "OCCURRED",
+            "attendeeIds": ["a1"],
+            "rooms": [{"id": "r1", "name": "Room"}],
+            "meetings": [{"id": "m1", "roomId": "r1", "attendees": ["a1"]}],
+        }],
+        "attendees": [{"id": "a1", "companyId": "c1", "email": "a@b.com"}],
+        "companies": [{"id": "c1"}],
+    }
+    errors = p.validate(data)
+    assert errors == []
+
+def test_validate_catches_bad_attendee_id():
+    data = {
+        "events": [{"id": "e1", "name": "MWC BCN 2026", "status": "OCCURRED",
+                    "attendeeIds": ["missing"], "rooms": [], "meetings": []}],
+        "attendees": [],
+        "companies": [],
+    }
+    errors = p.validate(data)
+    assert any("attendeeId" in e for e in errors)
+
+def test_validate_catches_duplicate_emails():
+    data = {
+        "events": [{"id": "e1", "name": "MWC BCN 2026", "status": "OCCURRED",
+                    "attendeeIds": [], "rooms": [], "meetings": []}],
+        "attendees": [
+            {"id": "a1", "email": "same@x.com", "companyId": None},
+            {"id": "a2", "email": "same@x.com", "companyId": None},
+        ],
+        "companies": [],
+    }
+    errors = p.validate(data)
+    assert any("duplicate" in e.lower() for e in errors)
+
+def test_validate_mwc_still_present():
+    data = {
+        "events": [{"id": "e1", "name": "Other", "status": "PIPELINE",
+                    "attendeeIds": [], "rooms": [], "meetings": []}],
+        "attendees": [], "companies": [],
+    }
+    errors = p.validate(data)
+    assert any("MWC BCN 2026" in e for e in errors)

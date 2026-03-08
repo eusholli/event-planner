@@ -276,8 +276,77 @@ def enrich_with_tavily(data, cache_file, search_fn=None, api_key=None, delay=1.0
     print(f"\n  Enrichment complete: {done} items processed")
     return data
 
+def validate(data):
+    errors = []
+    attendee_ids = {a["id"] for a in data.get("attendees", [])}
+    company_ids = {c["id"] for c in data.get("companies", [])}
+
+    # Check MWC still present
+    if not any(e["name"] == "MWC BCN 2026" for e in data.get("events", [])):
+        errors.append("MWC BCN 2026 event missing from output")
+
+    for event in data.get("events", []):
+        event_room_ids = {r["id"] for r in event.get("rooms", [])}
+        # Check attendeeIds
+        for aid in event.get("attendeeIds", []):
+            if aid not in attendee_ids:
+                errors.append(f"Event '{event['name']}': attendeeId '{aid}' not in global pool")
+        # Check meeting roomIds and attendees
+        for mtg in event.get("meetings", []):
+            if mtg.get("roomId") and mtg["roomId"] not in event_room_ids:
+                errors.append(f"Meeting '{mtg.get('title', mtg['id'])}': roomId not in event rooms")
+            for mid in mtg.get("attendees", []):
+                if mid not in attendee_ids:
+                    errors.append(f"Meeting '{mtg.get('title', mtg['id'])}': attendee '{mid}' not in pool")
+
+    # Check companyIds
+    for att in data.get("attendees", []):
+        if att.get("companyId") and att["companyId"] not in company_ids:
+            errors.append(f"Attendee '{att.get('email')}': companyId not in companies")
+
+    # Duplicate emails
+    emails = [a["email"] for a in data.get("attendees", [])]
+    seen = set()
+    for em in emails:
+        if em in seen:
+            errors.append(f"Duplicate email: {em}")
+        seen.add(em)
+
+    return errors
+
 if __name__ == "__main__":
+    api_key = os.environ.get("TAVILY_API_KEY", "")
+    if not api_key:
+        print("WARNING: TAVILY_API_KEY not set — enrichment will be skipped")
+
+    print("Loading input files...")
     master = load_json(MASTER_FILE)
     mwc_src = load_json(MWC_FILE)
     data = copy.deepcopy(master)
-    print(f"Loaded {len(data['events'])} events, {len(data['attendees'])} attendees, {len(data['companies'])} companies")
+    print(f"Loaded: {len(data['events'])} events, {len(data['attendees'])} attendees, {len(data['companies'])} companies")
+
+    print("\nStep 1: Pruning old events...")
+    data, deleted_ids = prune_old_events(data, CUTOFF_DATE)
+
+    print("\nStep 2: Replacing MWC BCN 2026...")
+    data = replace_mwc_data(data, mwc_src)
+
+    if api_key:
+        print("\nStep 3: Tavily enrichment (cache: .enrichment-cache.json)...")
+        data = enrich_with_tavily(data, CACHE_FILE, api_key=api_key)
+    else:
+        print("\nStep 3: Skipping enrichment (no API key)")
+
+    print("\nStep 4: Validating...")
+    errors = validate(data)
+    if errors:
+        print(f"VALIDATION FAILED ({len(errors)} errors):")
+        for e in errors:
+            print(f"  - {e}")
+        sys.exit(1)
+    else:
+        print("Validation passed.")
+
+    data["exportedAt"] = datetime.now(timezone.utc).isoformat()
+    save_json(data, OUTPUT_FILE)
+    print(f"\nDone. {len(data['events'])} events, {len(data['attendees'])} attendees, {len(data['companies'])} companies")
