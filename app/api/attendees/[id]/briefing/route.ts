@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
+async function getHandler(
     request: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<Record<string, string>> }
 ) {
     const id = (await params).id
     try {
@@ -33,3 +34,5 @@ export async function GET(
         return NextResponse.json({ error: 'Failed to fetch briefing data' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(getHandler, { requireAuth: true }) as any

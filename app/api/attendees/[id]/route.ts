@@ -1,43 +1,19 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function PUT(
+async function putHandler(
     request: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<Record<string, string>> }
 ) {
     const id = (await params).id
     try {
-        const { canWrite } = await import('@/lib/roles')
-        const { currentUser } = await import('@clerk/nextjs/server')
         const { uploadImageToR2, deleteImageFromR2, fetchAndUploadImageToR2 } = await import('@/lib/storage')
 
-        // 1. Check Permissions
-        const hasAdminAccess = await canWrite()
-        let hasAccess = hasAdminAccess
-
-        if (!hasAccess) {
-            const user = await currentUser()
-            if (user?.emailAddresses?.some(e => e.emailAddress)) {
-                // Check if the user is trying to edit their own record
-                const attendeeToCheck = await prisma.attendee.findUnique({
-                    where: { id },
-                    select: { email: true }
-                })
-
-                if (attendeeToCheck && user.emailAddresses.some(e => e.emailAddress === attendeeToCheck.email)) {
-                    hasAccess = true
-                }
-            }
-        }
-
-        if (!hasAccess) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        // 2. Fetch Existing Attendee (for old image handling)
+        // Fetch Existing Attendee (for old image handling)
         const existingAttendee = await prisma.attendee.findUnique({
             where: { id }
         })
@@ -49,7 +25,7 @@ export async function PUT(
         // Note: Attendee is now system-wide, so we don't check for event lock on the attendee itself.
         // Editing an attendee updates it globally for all events.
 
-        // 3. Parse Form Data
+        // Parse Form Data
         const formData = await request.formData()
 
         const name = formData.get('name') as string
@@ -168,21 +144,16 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
+async function deleteHandler(
     request: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<Record<string, string>> }
 ) {
     const id = (await params).id
     try {
         const { searchParams } = new URL(request.url)
         const eventId = searchParams.get('eventId')
 
-        const { canWrite } = await import('@/lib/roles')
         const { deleteImageFromR2 } = await import('@/lib/storage')
-
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
 
         // If eventId provided, we are Unlinking
         if (eventId) {
@@ -232,3 +203,6 @@ export async function DELETE(
         return NextResponse.json({ error: 'Failed to delete attendee' }, { status: 500 })
     }
 }
+
+export const PUT = withAuth(putHandler, { requireAuth: true }) as any
+export const DELETE = withAuth(deleteHandler, { requireAuth: true }) as any

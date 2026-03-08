@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+async function getHandler(request: Request) {
     try {
-        const { canWrite } = await import('@/lib/roles')
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const { searchParams } = new URL(request.url)
         const query = searchParams.get('query')
 
@@ -32,13 +28,8 @@ export async function GET(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
     try {
-        const { canWrite } = await import('@/lib/roles')
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const json = await request.json()
         const { name, description, pipelineValue } = json
 
@@ -77,3 +68,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to create company' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(getHandler, { requireAuth: true }) as any
+export const POST = withAuth(postHandler, { requireAuth: true }) as any

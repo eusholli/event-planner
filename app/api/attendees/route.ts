@@ -1,24 +1,19 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { resolveEventId } from '@/lib/events'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
 
-export async function GET(request: Request) {
+async function getHandler(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const rawEventId = searchParams.get('eventId')
         const query = searchParams.get('query')
 
         if (query) {
-            const { canWrite } = await import('@/lib/roles')
-            // Basic permission check - ideally should be more granular but ensuring only authorized users search global list
-            if (!await canWrite()) {
-                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-            }
-
             const attendees = await prisma.attendee.findMany({
                 where: {
                     OR: [
@@ -60,13 +55,8 @@ export async function GET(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
     try {
-        const { canCreate } = await import('@/lib/roles')
-        if (!await canCreate()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const { uploadImageToR2, fetchAndUploadImageToR2 } = await import('@/lib/storage')
 
         const formData = await request.formData()
@@ -211,3 +201,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to create attendee' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(getHandler, { requireAuth: true }) as any
+export const POST = withAuth(postHandler, { requireAuth: true }) as any

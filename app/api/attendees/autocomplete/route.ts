@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
+async function postHandler(request: Request) {
     try {
         const body = await request.json()
         const { name, company } = body
@@ -52,3 +53,5 @@ export async function POST(request: Request) {
         }, { status: 500 })
     }
 }
+
+export const POST = withAuth(postHandler, { requireAuth: true }) as any

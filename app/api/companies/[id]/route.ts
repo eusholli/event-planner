@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
+async function getHandler(
     request: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<Record<string, string>> }
 ) {
     try {
-        const { canWrite } = await import('@/lib/roles')
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const { id } = await params
 
         const company = await prisma.company.findUnique({
@@ -33,16 +29,11 @@ export async function GET(
     }
 }
 
-export async function PUT(
+async function putHandler(
     request: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<Record<string, string>> }
 ) {
     try {
-        const { canWrite } = await import('@/lib/roles')
-        if (!await canWrite()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const { id } = await params
         const json = await request.json()
         const { name, description, pipelineValue } = json
@@ -83,16 +74,11 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
+async function deleteHandler(
     request: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<Record<string, string>> }
 ) {
     try {
-        const { canManageEvents } = await import('@/lib/roles')
-        if (!await canManageEvents()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
         const { id } = await params
 
         // Check if company has attendees
@@ -118,3 +104,7 @@ export async function DELETE(
         return NextResponse.json({ error: 'Failed to delete company' }, { status: 500 })
     }
 }
+
+export const GET = withAuth(getHandler, { requireAuth: true }) as any
+export const PUT = withAuth(putHandler, { requireAuth: true }) as any
+export const DELETE = withAuth(deleteHandler, { requireAuth: true }) as any
