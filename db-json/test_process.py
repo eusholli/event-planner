@@ -75,3 +75,114 @@ def test_cleanup_orphans_keeps_shared_attendees():
     result = p.cleanup_orphans(data)
     assert len(result["attendees"]) == 2
     assert len(result["companies"]) == 1
+
+def make_mwc_source():
+    return {
+        "event": {
+            "name": "MWC BCN 2026",
+            "startDate": "2026-03-02T00:00:00.000Z",
+            "endDate": "2026-03-05T00:00:00.000Z",
+            "tags": ["Cloud"],
+            "meetingTypes": ["Sales/Customer"],
+            "attendeeTypes": ["Sales"],
+            "timezone": "Europe/Madrid",
+            "boothLocation": "Hall 2",
+        },
+        "rooms": [
+            {"name": "Room A", "capacity": 10},
+        ],
+        "attendees": [
+            {"name": "Alice", "email": "alice@ext.com", "title": "CTO", "bio": "Bio",
+             "company": "ExtCo", "companyDescription": "ExtCo desc",
+             "linkedin": "li/alice", "imageUrl": "", "isExternal": True, "type": "Customer"},
+            {"name": "Bob", "email": "bob@rakuten.com", "title": "Sales", "bio": "",
+             "company": "Rakuten Symphony", "companyDescription": "",
+             "linkedin": "", "imageUrl": "", "isExternal": False, "type": "Sales"},
+        ],
+        "meetings": [
+            {"title": "MTG Alice", "purpose": "Discuss", "date": "2026-03-03",
+             "startTime": "10:00", "endTime": "11:00", "sequence": 1,
+             "status": "OCCURRED", "tags": [], "createdBy": "bob@rakuten.com",
+             "requesterEmail": "bob@rakuten.com", "meetingType": "Sales/Customer",
+             "location": None, "otherDetails": None, "isApproved": True,
+             "calendarInviteSent": False, "room": "Room A",
+             "attendees": ["alice@ext.com", "bob@rakuten.com"]},
+        ]
+    }
+
+def make_master_with_mwc():
+    return {
+        "version": "5.0-simplified-roi",
+        "events": [{
+            "id": "mwc-uuid",
+            "name": "MWC BCN 2026",
+            "startDate": "2026-03-02T00:00:00.000Z",
+            "endDate": "2026-03-05T00:00:00.000Z",
+            "slug": "mwc-bcn-2026",
+            "status": "OCCURRED",
+            "authorizedUserIds": ["user1"],
+            "roiTargets": {"id": "roi1", "eventId": "mwc-uuid", "expectedPipeline": 1000000},
+            "timezone": "Europe/Madrid",
+            "boothLocation": "",
+            "url": "", "address": "", "region": "", "budget": 0,
+            "targetCustomers": "", "password": "", "description": "",
+            "latitude": None, "longitude": None,
+            "tags": ["Old"], "meetingTypes": ["Old"], "attendeeTypes": ["Old"],
+            "rooms": [{"id": "old-room", "name": "Old Room", "capacity": 5, "eventId": "mwc-uuid"}],
+            "meetings": [{"id": "old-mtg", "title": "Old Meeting", "eventId": "mwc-uuid", "attendees": ["old-att"]}],
+            "attendeeIds": ["old-att"],
+        }],
+        "attendees": [
+            {"id": "old-att", "email": "old@old.com", "name": "Old Person",
+             "title": "", "bio": "", "companyId": "old-co",
+             "linkedin": "", "imageUrl": "", "isExternal": False, "type": "Sales", "seniorityLevel": None},
+        ],
+        "companies": [
+            {"id": "old-co", "name": "Old Co", "description": "", "pipelineValue": 0},
+        ],
+        "systemSettings": {},
+        "exportedAt": "2026-03-08T00:00:00.000Z",
+    }
+
+def test_replace_mwc_rooms_and_meetings():
+    data = make_master_with_mwc()
+    mwc_src = make_mwc_source()
+    result = p.replace_mwc_data(data, mwc_src)
+    mwc_event = next(e for e in result["events"] if e["name"] == "MWC BCN 2026")
+    assert len(mwc_event["rooms"]) == 1
+    assert mwc_event["rooms"][0]["name"] == "Room A"
+    assert len(mwc_event["meetings"]) == 1
+    assert mwc_event["meetings"][0]["title"] == "MTG Alice"
+    # Room reference resolved in meeting
+    assert mwc_event["meetings"][0]["roomId"] == mwc_event["rooms"][0]["id"]
+
+def test_replace_mwc_attendees_new():
+    data = make_master_with_mwc()
+    mwc_src = make_mwc_source()
+    result = p.replace_mwc_data(data, mwc_src)
+    emails = [a["email"] for a in result["attendees"]]
+    assert "alice@ext.com" in emails
+    assert "bob@rakuten.com" in emails
+    # Old attendee only in old MWC → removed
+    assert "old@old.com" not in emails
+
+def test_replace_mwc_preserves_roi_and_meta():
+    data = make_master_with_mwc()
+    mwc_src = make_mwc_source()
+    result = p.replace_mwc_data(data, mwc_src)
+    mwc_event = next(e for e in result["events"] if e["name"] == "MWC BCN 2026")
+    assert mwc_event["id"] == "mwc-uuid"
+    assert mwc_event["slug"] == "mwc-bcn-2026"
+    assert mwc_event["roiTargets"]["expectedPipeline"] == 1000000
+    assert mwc_event["tags"] == ["Cloud"]  # updated from source
+
+def test_replace_mwc_meeting_attendees_resolved_to_uuids():
+    data = make_master_with_mwc()
+    mwc_src = make_mwc_source()
+    result = p.replace_mwc_data(data, mwc_src)
+    mwc_event = next(e for e in result["events"] if e["name"] == "MWC BCN 2026")
+    meeting = mwc_event["meetings"][0]
+    # Attendees should be UUIDs, not email strings
+    attendee_ids = {a["id"] for a in result["attendees"]}
+    for att_id in meeting["attendees"]:
+        assert att_id in attendee_ids

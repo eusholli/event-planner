@@ -55,6 +55,134 @@ def cleanup_orphans(data):
     print(f"Cleanup: removed {removed_a} orphan attendees, {removed_c} orphan companies")
     return data
 
+def replace_mwc_data(data, mwc_src):
+    """Replace MWC BCN 2026 event data with content from single-event mwc_src."""
+    mwc_event = next((e for e in data["events"] if e["name"] == "MWC BCN 2026"), None)
+    if not mwc_event:
+        print("WARNING: MWC BCN 2026 not found in master data")
+        return data
+
+    mwc_id = mwc_event["id"]
+    src_event = mwc_src["event"]
+
+    # --- Update event metadata (keep preserved fields, update content fields) ---
+    mwc_event["tags"] = src_event.get("tags", mwc_event.get("tags", []))
+    mwc_event["meetingTypes"] = src_event.get("meetingTypes", mwc_event.get("meetingTypes", []))
+    mwc_event["attendeeTypes"] = src_event.get("attendeeTypes", mwc_event.get("attendeeTypes", []))
+    mwc_event["timezone"] = src_event.get("timezone") or mwc_event.get("timezone", "")
+    mwc_event["boothLocation"] = src_event.get("boothLocation") or mwc_event.get("boothLocation", "")
+    mwc_event["startDate"] = src_event.get("startDate", mwc_event["startDate"])
+    mwc_event["endDate"] = src_event.get("endDate", mwc_event["endDate"])
+
+    # --- Build rooms: generate UUIDs, map name -> id ---
+    room_name_to_id = {}
+    new_rooms = []
+    for room in mwc_src.get("rooms", []):
+        room_id = new_uuid()
+        room_name_to_id[room["name"]] = room_id
+        new_rooms.append({
+            "id": room_id,
+            "name": room["name"],
+            "capacity": room.get("capacity", 0),
+            "eventId": mwc_id,
+        })
+    mwc_event["rooms"] = new_rooms
+    print(f"  MWC rooms: {len(new_rooms)} replaced")
+
+    # --- Build attendee pool: match by email ---
+    email_to_existing = {a["email"]: a for a in data["attendees"]}
+    name_to_company = {c["name"]: c for c in data["companies"]}
+
+    new_attendee_ids = []
+    for src_att in mwc_src.get("attendees", []):
+        email = src_att["email"]
+        company_name = src_att.get("company", "")
+
+        # Resolve or create company
+        if company_name:
+            if company_name not in name_to_company:
+                co = {"id": new_uuid(), "name": company_name,
+                      "description": src_att.get("companyDescription", ""),
+                      "pipelineValue": 0}
+                data["companies"].append(co)
+                name_to_company[company_name] = co
+            company_id = name_to_company[company_name]["id"]
+        else:
+            company_id = None
+
+        if email in email_to_existing:
+            att = email_to_existing[email]
+            att["name"] = src_att.get("name", att["name"])
+            att["title"] = src_att.get("title", att.get("title", ""))
+            att["bio"] = src_att.get("bio", att.get("bio", ""))
+            att["linkedin"] = src_att.get("linkedin", att.get("linkedin", ""))
+            att["imageUrl"] = src_att.get("imageUrl", att.get("imageUrl", ""))
+            att["isExternal"] = src_att.get("isExternal", att.get("isExternal", False))
+            att["type"] = src_att.get("type", att.get("type", ""))
+            if company_id:
+                att["companyId"] = company_id
+        else:
+            att = {
+                "id": new_uuid(),
+                "name": src_att.get("name", ""),
+                "email": email,
+                "title": src_att.get("title", ""),
+                "bio": src_att.get("bio", ""),
+                "companyId": company_id,
+                "linkedin": src_att.get("linkedin", ""),
+                "imageUrl": src_att.get("imageUrl", ""),
+                "isExternal": src_att.get("isExternal", False),
+                "type": src_att.get("type", ""),
+                "seniorityLevel": None,
+            }
+            data["attendees"].append(att)
+            email_to_existing[email] = att
+
+        new_attendee_ids.append(att["id"])
+
+    # Build email -> UUID map for meeting attendee resolution
+    email_to_id = {a["email"]: a["id"] for a in data["attendees"]}
+
+    # --- Build meetings ---
+    new_meetings = []
+    for src_mtg in mwc_src.get("meetings", []):
+        room_name = src_mtg.get("room")
+        room_id = room_name_to_id.get(room_name) if room_name else None
+        mtg_attendee_ids = [
+            email_to_id[em] for em in src_mtg.get("attendees", [])
+            if em in email_to_id
+        ]
+        new_meetings.append({
+            "id": new_uuid(),
+            "title": src_mtg.get("title", ""),
+            "purpose": src_mtg.get("purpose", ""),
+            "startTime": src_mtg.get("startTime", ""),
+            "endTime": src_mtg.get("endTime", ""),
+            "date": src_mtg.get("date", ""),
+            "roomId": room_id,
+            "sequence": src_mtg.get("sequence", 1),
+            "status": src_mtg.get("status", "PIPELINE"),
+            "tags": src_mtg.get("tags", []),
+            "createdBy": src_mtg.get("createdBy", ""),
+            "requesterEmail": src_mtg.get("requesterEmail", ""),
+            "meetingType": src_mtg.get("meetingType"),
+            "location": src_mtg.get("location"),
+            "otherDetails": src_mtg.get("otherDetails"),
+            "isApproved": src_mtg.get("isApproved", False),
+            "calendarInviteSent": src_mtg.get("calendarInviteSent", False),
+            "eventId": mwc_id,
+            "attendees": mtg_attendee_ids,
+        })
+    mwc_event["meetings"] = new_meetings
+    mwc_event["attendeeIds"] = new_attendee_ids
+    print(f"  MWC meetings: {len(new_meetings)} replaced")
+    print(f"  MWC attendees: {len(new_attendee_ids)} linked")
+
+    # --- Remove attendees previously in MWC but not in new file ---
+    data = cleanup_orphans(data)
+
+    return data
+
 if __name__ == "__main__":
     master = load_json(MASTER_FILE)
     mwc_src = load_json(MWC_FILE)
