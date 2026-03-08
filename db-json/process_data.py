@@ -1,5 +1,5 @@
-# db-json/process-data.py
-import json, uuid, time, os, sys
+# db-json/process_data.py
+import json, uuid, time, os, sys, copy
 from datetime import datetime, timezone
 
 MASTER_FILE = "db-json/master-data-030826.json"
@@ -21,7 +21,6 @@ def new_uuid():
     return str(uuid.uuid4())
 
 if __name__ == "__main__":
-    import copy
     master = load_json(MASTER_FILE)
     mwc_src = load_json(MWC_FILE)
     data = copy.deepcopy(master)
