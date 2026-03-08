@@ -59,7 +59,10 @@ Events are color-coded by status:
 - **Deleting an Event**: Triggers an automatic backup before permanent deletion. Meetings and rooms are cascade-deleted; attendees are preserved (they are system-level entities).
 
 ### Navigation
-Click an event card to enter its **Dashboard**. From there, use the navigation bar to access all event pages.
+Click an event card to enter its **Dashboard**. From there, use the navigation bar to access all event pages, logically grouped into:
+- **Performance**: Dashboard, ROI, Reports
+- **Audience**: Attendees, Companies
+- **Logistics**: New Meeting, Calendar, Rooms
 
 > **Note**: Admin and User roles can only access events they are authorized for, and only those in **Committed** or **Occurred** status.
 
@@ -104,7 +107,8 @@ Use this tab to define what success looks like for the event.
 #### Financial Targets
 | Field | Description |
 | :--- | :--- |
-| **Target Investment** | Total budget allocated to this event (e.g., $37,000). |
+| **Requester Email** | Email of the person requesting the event. |
+| **Target Budget ($)** | Total budget allocated to this event (e.g., $37,000). |
 | **Expected Pipeline** | Total deal value you expect to generate from companies met. |
 | **Win Rate** | Expected conversion rate (enter as decimal, e.g., 0.15 for 15%). |
 | **Expected Revenue** | Auto-calculated: Pipeline × Win Rate. |
@@ -128,31 +132,7 @@ Targets go through a three-step approval process:
 2. **Submitted** → Click **Submit for Approval** to lock targets and request sign-off.
 3. **Approved** → A Root or Marketing user clicks **Approve** to finalize.
 
-### Tab 2: Performance Tracker
-
-This tab provides a live, visual comparison of your targets versus actuals.
-
-#### What Is Automatically Calculated
-The following metrics are computed in real time from your meeting and attendee data — no manual entry required:
-
-| Metric | How It's Calculated |
-| :--- | :--- |
-| **Actual Pipeline** | Sum of pipeline values across unique companies from confirmed/occurred meetings. If multiple attendees from the same company have different values, the highest is used. |
-| **Actual Revenue** | Actual Pipeline × Win Rate. |
-| **Booth Meetings** | Count of meetings with type "Booth". |
-| **C-Level Meetings** | Count of meetings that include at least one attendee with seniority level "C-Level". |
-| **Other Meetings** | Total meetings minus Booth and C-Level meetings. |
-| **Target Companies Hit** | Companies from your target list that appear in at least one confirmed/occurred meeting. |
-| **Investment** | Pulled from the event's budget field (set in Event Settings). |
-| **ROI Ratio** | Pipeline ÷ Investment, shown as a percentage. |
-
-#### Visual Elements
-- **Progress Rings**: Large donut charts for Pipeline and Revenue show percentage completion with color coding.
-- **Progress Bars**: Horizontal bars for meeting KPIs.
-- **Company Checklist**: Each target company shown with a ✅ (met) or ✖ (not met) indicator and overall hit rate.
-- **Color Coding**: 🟢 Green (≥100%), 🟡 Amber (≥50%), 🔴 Rose (<50%).
-
-### Tab 3: Post-Event Actuals
+### Tab 2: Event Execution
 
 Engagement metrics like social reach, keynotes, and media coverage can't be derived from meeting data. Enter them here after the event:
 
@@ -164,18 +144,41 @@ Engagement metrics like social reach, keynotes, and media coverage can't be deri
 
 Click **Save Actuals** to persist these values. They immediately appear in the Performance Tracker.
 
+### Tab 3: Performance Tracker
+
+This tab provides a live, visual comparison of your targets versus actuals.
+
+#### What Is Automatically Calculated
+The following metrics are computed in real time from your meeting and attendee data — no manual entry required:
+
+| Metric | How It's Calculated |
+| :--- | :--- |
+| **Actual Pipeline** | Sum of pipeline values across unique companies from confirmed/occurred meetings. |
+| **Actual Revenue** | Actual Pipeline × Win Rate. |
+| **Booth Meetings** | Count of meetings with type "Booth". |
+| **C-Level Meetings** | Count of meetings that include at least one attendee with seniority level "C-Level". |
+| **Other Meetings** | Total meetings minus Booth and C-Level meetings. |
+| **Target Companies Hit** | Companies from your target list that appear in at least one confirmed/occurred meeting. |
+| **Investment** | Pulled from the event's budgeted target target. |
+| **ROI Ratio** | Pipeline ÷ Investment, shown as a percentage. |
+
+#### Visual Elements
+- **Progress Rings**: Large donut charts for Pipeline and Revenue show percentage completion with color coding.
+- **Progress Bars**: Horizontal bars for meeting KPIs.
+- **Company Checklist**: Each target company shown with a ✅ (met) or ✖ (not met) indicator and overall hit rate.
+- **Color Coding**: 🟢 Green (≥100%), 🟡 Amber (≥50%), 🔴 Rose (<50%).
+
 ### Pipeline Value — How It Works
 
-Pipeline value is tracked at the **company level**, not per individual meeting. This keeps things manageable:
+Pipeline value is centralized at the **Company level**. This keeps things simple and consistent:
 
-1. When adding or editing an attendee, set their **Pipeline Value ($)** — this represents the estimated deal size for their company.
+1. When adding or editing a Company in the **Companies** directory, set its **Pipeline Value ($)**.
 2. When calculating the event's actual pipeline, the system:
    - Looks at all confirmed/occurred meetings.
-   - Groups attendees by company.
-   - Takes the **highest** pipeline value per company (to avoid double-counting).
-   - Sums across all unique companies.
+   - Identifies the unique companies represented by the attendees in those meetings.
+   - Sums the pipeline value of those unique companies.
 
-> **Tip**: You only need to set the pipeline value on one attendee per company. If the same company appears in multiple meetings, it's counted once.
+> **Tip**: You only need to set the pipeline value once per company in the global directory.
 
 ### Seniority Level — C-Level Tracking
 
@@ -189,15 +192,23 @@ ROI targets are included in both event-level and system-level exports/imports:
 
 ---
 
+## Companies
+
+Navigate to **Companies** (`/events/[id]/companies`) to manage the shared directory of companies across the system.
+
+- **Company Structure**: Attendees are linked to relational company records, rather than plain text strings. This ensures data consistency.
+- **Adding Companies**: Create new companies with a name, description, and pipeline value.
+- **Duplicate Prevention**: The system strictly prevents duplicate company names from being created.
+- **Integration**: Companies are shared across events. A target company added in the ROI Dashboard pulls from this centralized list.
+
 ## Managing Attendees
 
 Navigate to **Attendees** (`/events/[id]/attendees`) to manage your guest list.
 
 ### Adding Attendees
-Fill in the form with name, email, company, title, and optionally bio, LinkedIn URL, attendee type, seniority level, pipeline value, and profile image.
+Fill in the form with name, email, company, title, and optionally bio, LinkedIn URL, attendee type, seniority level, and profile image.
 
 - **Seniority Level**: Select from C-Level, VP, Director, Manager, or IC. Used by the ROI system to track C-Level meetings.
-- **Pipeline Value ($)**: Enter the estimated deal value for this attendee's company. Used to calculate event ROI pipeline.
 
 ### AI Auto Complete
 1. Enter a **Name** and **Company** in the form.
@@ -320,7 +331,7 @@ Navigate to **Settings** within an event (`/events/[id]/settings`) to configure:
 ### Event Details
 - **Name**, **Slug**, **Start/End Dates**, **Timezone**, **Region**.
 - **Address** and **Booth Location** (prefixed to room locations in calendar invites).
-- **URL**, **Description**, **Budget**, **Target Customers**.
+- **URL**, **Description**.
 - **Status**: Change event status (Pipeline/Committed/Occurred/Canceled).
 - **Password**: Set a password to restrict access.
 

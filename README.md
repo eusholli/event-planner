@@ -14,6 +14,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 - **Slug-Based URLs**: Human-friendly event URLs (e.g., `/events/mwc-2025`).
 - **Event Password Protection**: Optional password gating for sharing events securely.
 - **Authorized User Access**: Per-event user access control for Admin and User roles.
+- **Event Navigation**: Event pages logically grouped into Performance, Audience, and Logistics sub-menus.
 
 ### Meeting Management
 - **Dashboard**: Real-time overview of meeting stats, attendee counts, and room utilization.
@@ -23,8 +24,9 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 - **Meeting Tags & Types**: Customizable categorization per event.
 - **Read-Only Mode**: Events with "Occurred" status lock all editing to preserve historical data.
 
-### Attendee Management
+### Attendee Management & Companies
 - **Attendee Directory**: Sortable, searchable list with profile cards.
+- **Company Management**: Shared directory of relational company records, inherently preventing duplicate names and centralizing pipeline values.
 - **AI-Powered Auto Complete**: Enter a name and company — Google Gemini populates title, bio, LinkedIn URL, and company description.
 - **Attendee Types**: Customizable types (e.g., VIP, Speaker, Staff).
 - **Profile Images**: Upload and auto-resize attendee photos.
@@ -46,7 +48,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 - **Calendar View PDF**: Export the full calendar as a formatted PDF.
 
 ### Event Settings (Per-Event)
-- **Configuration**: Event name, dates, timezone, region, address, booth location, URL, budget, target customers, expected ROI.
+- **Configuration**: Event name, dates, timezone, region, address, booth location, URL, description, and password.
 - **Tags, Meeting Types, Attendee Types**: Per-event customization (inherited from system defaults).
 - **Authorized Users**: Grant access to specific Admin/User accounts.
 - **AI Scraper**: Auto-fill event details from a URL using AI.

@@ -63,11 +63,18 @@ erDiagram
         String[] tags
     }
 
+    Company {
+        String id PK
+        String name UK
+        String description
+        Float pipelineValue
+    }
+
     Attendee {
         String id PK
         String name
         String email UK
-        String company
+        String companyId FK
         String role "Meta: External/Internal"
         Boolean isExternal
     }
@@ -87,6 +94,7 @@ erDiagram
         String roomId FK
     }
 
+    Company ||--|{ Attendee : "employs"
     Meeting }|..|{ Attendee : "participates in"
     Room ||--|{ Meeting : "hosts"
 ```

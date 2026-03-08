@@ -50,10 +50,10 @@ const resolvedEventId = event.id
 **Key Models**:
 - `SystemSettings` - Global settings (Gemini API key, default types/tags)
 - `Event` - Top-level container with slug routing, `authorizedUserIds` for per-event access, ROI targets
-- `Attendee` - System-level with unique email; shared across events via many-to-many
+- `Attendee` - System-level with unique email. Links to a `Company` relation via `companyId`. Shared across events via many-to-many
 - `Meeting` - Event-scoped; `MeetingStatus` enum: `PIPELINE/CONFIRMED/OCCURRED/CANCELED`; has `sequence` field incremented on updates for calendar invite versioning
 - `Room` - Event-scoped
-- `Company` - System-level company records with `pipelineValue`
+- `Company` - System-level company records with a centralized `pipelineValue`, strictly avoiding data duplication.
 
 **Cascade behavior**: Deleting an event cascades to meetings and rooms but NOT attendees (only the join record is removed).
 
@@ -125,20 +125,22 @@ if (!await canWrite()) {
 
 **Backup**: `/api/settings/export` supports `BACKUP_SECRET_KEY` header to bypass auth.
 
-### Pages
+### Pages (Navigation Structure)
+
+Event pages are logically grouped into sub-menus: **Performance**, **Audience**, and **Logistics**.
 
 ```
 /                           - Home
-/events                     - Event list and creation
-/events/[id]/dashboard      - Overview with statistics
-/events/[id]/attendees      - Attendee management
-/events/[id]/calendar       - Drag-and-drop scheduler (react-big-calendar + react-dnd)
+/events                     - Events Portfolio
+/events/[id]/dashboard      - [Performance] Overview with statistics
+/events/[id]/roi            - [Performance] ROI targets vs. actuals tracking
+/events/[id]/reports        - [Performance] Analytics, PDF/CSV export
+/events/[id]/attendees      - [Audience] Attendee management
+/events/[id]/companies      - [Audience] Company shared directory
+/events/[id]/new-meeting    - [Logistics] Meeting creation form
+/events/[id]/calendar       - [Logistics] Drag-and-drop scheduler
+/events/[id]/rooms          - [Logistics] Room management
 /events/[id]/chat           - AI assistant with persistent history
-/events/[id]/companies      - Company management
-/events/[id]/new-meeting    - Meeting creation form
-/events/[id]/reports        - Analytics, PDF/CSV export
-/events/[id]/roi            - ROI targets vs. actuals tracking
-/events/[id]/rooms          - Room management
 /events/[id]/settings       - Event-level settings
 /admin/users                - User role management
 /admin/system               - System administration
