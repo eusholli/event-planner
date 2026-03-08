@@ -20,6 +20,20 @@ def save_json(data, path):
 def new_uuid():
     return str(uuid.uuid4())
 
+def prune_old_events(data, cutoff_iso):
+    """Remove events with startDate < cutoff_iso. Returns (data, deleted_event_ids)."""
+    keep = []
+    deleted_ids = set()
+    for event in data["events"]:
+        if event["startDate"] < cutoff_iso:
+            deleted_ids.add(event["id"])
+            print(f"  Pruning: {event['name']} ({event['startDate'][:10]})")
+        else:
+            keep.append(event)
+    data["events"] = keep
+    print(f"Pruned {len(deleted_ids)} events. Remaining: {len(keep)}")
+    return data, deleted_ids
+
 if __name__ == "__main__":
     master = load_json(MASTER_FILE)
     mwc_src = load_json(MWC_FILE)
