@@ -35,7 +35,7 @@ export const GET = withAuth(async (_req, { authCtx }) => {
     lastSentAt:          lastLog?.sentAt ?? null,
     lastTargetCount:     lastLog?.targetCount ?? null,
   })
-})
+}) as any
 
 // POST — subscribe or reactivate
 export const POST = withAuth(async (_req, { authCtx }) => {
@@ -61,7 +61,7 @@ export const POST = withAuth(async (_req, { authCtx }) => {
   })
 
   return NextResponse.json({ subscribed: true, email: sub.email })
-})
+}) as any
 
 // DELETE — deactivate
 export const DELETE = withAuth(async (_req, { authCtx }) => {
@@ -78,4 +78,4 @@ export const DELETE = withAuth(async (_req, { authCtx }) => {
   })
 
   return NextResponse.json({ subscribed: false })
-})
+}) as any

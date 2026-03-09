@@ -170,6 +170,35 @@ export async function exportEventData(eventId: string) {
         }
     })() : null
 
+    // Fetch intelligence subscriptions related to this event or its attendees
+    const eventAttendeeIds = event.attendees.map(a => a.id)
+    const relatedSubs = await prisma.intelligenceSubscription.findMany({
+        where: {
+            OR: [
+                { selectedEvents: { some: { eventId: event.id } } },
+                { selectedAttendees: { some: { attendeeId: { in: eventAttendeeIds } } } },
+            ],
+        },
+        include: {
+            selectedAttendees: { select: { attendeeId: true } },
+            selectedCompanies: { select: { companyId: true } },
+            selectedEvents: { select: { eventId: true } },
+        },
+    })
+
+    const intelligenceSubscriptions = relatedSubs.map(s => ({
+        userId: s.userId,
+        email: s.email,
+        active: s.active,
+        selectedAttendeeIds: s.selectedAttendees
+            .map(r => r.attendeeId)
+            .filter(id => eventAttendeeIds.includes(id)),
+        selectedCompanyIds: s.selectedCompanies.map(r => r.companyId),
+        selectedEventIds: s.selectedEvents
+            .map(r => r.eventId)
+            .filter(id => id === event.id),
+    }))
+
     return {
         event: {
             ...event,
@@ -183,6 +212,7 @@ export async function exportEventData(eventId: string) {
         rooms: event.rooms,
         meetings: normalizedMeetings,
         roiTargets,
+        intelligenceSubscriptions,
         exportedAt: new Date().toISOString(),
         version: '4.0'
     }
@@ -493,6 +523,52 @@ export async function importEventData(eventId: string, data: any) {
                 rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null,
             },
         }).catch(e => console.warn('ROI targets import skip', e))
+    }
+
+    // 7. Restore intelligence subscriptions scoped to this event
+    if (data.intelligenceSubscriptions && Array.isArray(data.intelligenceSubscriptions)) {
+        const eventAttendeeIds = (data.attendees ?? []).map((a: any) => a.id)
+
+        for (const s of data.intelligenceSubscriptions) {
+            let sub = await prisma.intelligenceSubscription.findUnique({ where: { userId: s.userId } })
+            if (!sub) {
+                sub = await prisma.intelligenceSubscription.create({
+                    data: { userId: s.userId, email: s.email, active: s.active ?? true },
+                }).catch(() => null)
+            }
+            if (!sub) continue
+
+            // Restore event selection
+            for (const eid of (s.selectedEventIds ?? [])) {
+                if (eid !== eventId) continue
+                await prisma.intelligenceSubEvent.upsert({
+                    where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId: eid } },
+                    create: { subscriptionId: sub.id, eventId: eid },
+                    update: {},
+                }).catch(() => {})
+            }
+
+            // Restore attendee selections (only those in this event)
+            for (const aid of (s.selectedAttendeeIds ?? [])) {
+                if (!eventAttendeeIds.includes(aid)) continue
+                const exists = await prisma.attendee.findUnique({ where: { id: aid } })
+                if (!exists) continue
+                await prisma.intelligenceSubAttendee.upsert({
+                    where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId: aid } },
+                    create: { subscriptionId: sub.id, attendeeId: aid },
+                    update: {},
+                }).catch(() => {})
+            }
+        }
+
+        // Recompute subscriptionCounts for entities in this event
+        const attendeeIds = (data.attendees ?? []).map((a: any) => a.id)
+        for (const aid of attendeeIds) {
+            const count = await prisma.intelligenceSubAttendee.count({ where: { attendeeId: aid } })
+            await prisma.attendee.update({ where: { id: aid }, data: { subscriptionCount: count } }).catch(() => {})
+        }
+        const eventSubCount = await prisma.intelligenceSubEvent.count({ where: { eventId } })
+        await prisma.event.update({ where: { id: eventId }, data: { subscriptionCount: eventSubCount } }).catch(() => {})
     }
 
     return { success: true }

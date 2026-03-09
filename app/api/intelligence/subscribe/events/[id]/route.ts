@@ -32,4 +32,4 @@ export const DELETE = withAuth(async (_req, { authCtx, params }) => {
   }
 
   return NextResponse.json({ selected: false, eventId })
-})
+}) as any

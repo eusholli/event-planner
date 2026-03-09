@@ -58,4 +58,4 @@ export const POST = withAuth(async (req, { authCtx }) => {
   }
 
   return NextResponse.json({ selected: true, attendeeId })
-})
+}) as any
