@@ -607,6 +607,10 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 onClose={() => setIsViewModalOpen(false)}
                 meeting={viewEvent}
                 rooms={rooms}
+                onEdit={(!isLocked && canCreate) ? () => {
+                    setIsViewModalOpen(false)
+                    if (viewEvent) handleDoubleClickEvent(viewEvent as Meeting)
+                } : undefined}
             />
         </>
     )

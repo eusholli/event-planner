@@ -9,6 +9,7 @@ import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook, generateScheduleBriefing, generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { generateCalendarViewPDF } from '@/lib/calendar-pdf'
 import MeetingCard from '@/components/MeetingCard'
+import MeetingDetailsModal from '@/components/MeetingDetailsModal'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
 
@@ -69,6 +70,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedEvent, setSelectedEvent] = useState<Partial<DashboardMeeting> | null>(null)
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+    const [viewEvent, setViewEvent] = useState<Partial<DashboardMeeting> | null>(null)
     const [conflicts, setConflicts] = useState<string[]>([])
     const [suggestions, setSuggestions] = useState<{ type: 'room' | 'time', label: string, value: any }[]>([])
     const [error, setError] = useState('')
@@ -116,8 +119,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
             const meeting = meetings.find(m => m.id === meetingIdParam)
             if (meeting) {
                 // Found in existing list
-                if (!isModalOpen && selectedEvent?.id !== meetingIdParam) {
-                    handleEventClick(meeting)
+                if (!isModalOpen && !isViewModalOpen && selectedEvent?.id !== meetingIdParam && viewEvent?.id !== meetingIdParam) {
+                    handleViewEventClick(meeting)
                 }
             } else {
                 // Not found in list - fetch individually
@@ -162,7 +165,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
 
                         // Add to list and open
                         setMeetings(prev => [...prev, formattedMeeting])
-                        handleEventClick(formattedMeeting)
+                        handleViewEventClick(formattedMeeting)
                     })
                     .catch(err => {
                         console.error('Failed to fetch deep-linked meeting:', err)
@@ -310,6 +313,11 @@ function DashboardContent({ eventId }: { eventId: string }) {
         setSuggestions([])
         setError('')
         setIsModalOpen(true)
+    }
+
+    const handleViewEventClick = (event: Meeting) => {
+        setViewEvent(event)
+        setIsViewModalOpen(true)
     }
 
     const handleSaveEvent = async (e: React.FormEvent) => {
@@ -884,6 +892,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                     key={meeting.id}
                                     meeting={meeting}
                                     rooms={rooms}
+                                    onClick={() => handleViewEventClick(meeting)}
                                     onDoubleClick={() => handleEventClick(meeting)}
                                     hasConflict={conflictedEventIds.has(meeting.id)}
                                 />
@@ -917,6 +926,24 @@ function DashboardContent({ eventId }: { eventId: string }) {
                 suggestions={suggestions}
                 error={error}
                 readOnly={!selectedEvent?.id ? false : (isLocked || (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress)))}
+            />
+
+            <MeetingDetailsModal
+                isOpen={isViewModalOpen}
+                onClose={() => {
+                    setIsViewModalOpen(false)
+                    if (meetingIdParam) {
+                        const params = new URLSearchParams(searchParams.toString())
+                        params.delete('meetingId')
+                        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+                    }
+                }}
+                meeting={viewEvent}
+                rooms={rooms}
+                onEdit={() => {
+                    setIsViewModalOpen(false)
+                    if (viewEvent) handleEventClick(viewEvent as Meeting)
+                }}
             />
         </div>
     )
