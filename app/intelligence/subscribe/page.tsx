@@ -111,7 +111,8 @@ function SubscribePage() {
 
   async function toggleSelection(type: EntityType, id: string, isSelected: boolean) {
     if (!sub) return
-    const path = `/api/intelligence/subscribe/${type}s`
+    const plural = type === 'company' ? 'companies' : `${type}s`
+    const path = `/api/intelligence/subscribe/${plural}`
     const method = isSelected ? 'DELETE' : 'POST'
     const url = isSelected ? `${path}/${id}` : path
     const body = isSelected ? undefined : JSON.stringify({ [`${type}Id`]: id })
