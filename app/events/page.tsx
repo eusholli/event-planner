@@ -9,6 +9,8 @@ import { EventCalendar } from '@/components/reports/EventCalendar'
 import { useUser } from '@/components/auth'
 import { canManageEvents } from '@/lib/role-utils'
 import { getStatusColor } from '@/lib/status-colors'
+import { Sparkles } from 'lucide-react'
+import moment from 'moment'
 
 interface Event {
     id: string
@@ -350,6 +352,24 @@ export default function EventsPage() {
                                                 </span>
                                                 {canManage && (
                                                     <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                const queryParts = [
+                                                                    `Event Name: ${event.name}`,
+                                                                    `Region: ${event.region || 'Unknown'}`,
+                                                                    `Date: ${event.startDate ? moment(event.startDate).format('YYYY-MM-DD') : 'Unknown'} - ${event.endDate ? moment(event.endDate).format('YYYY-MM-DD') : 'Unknown'}`,
+                                                                    `Location: ${event.address || 'Unknown'}`,
+                                                                    `Description: ${event.description || 'None provided'}`
+                                                                ]
+                                                                const prompt = `Generate a Rakuten Symphony event marketing plan that maximizes the value of Rakuten Symphony towards the expected audience and targeted companies. List the probable companies that will attend, in the order of most interesting to Rakuten Symphony.\n\nAlso generate real quantitative targets for the event ROI metrics (Expected Pipeline, Win Rate, Expected Revenue, Target Customer Meetings, Target ERTA, Target Speaking, Target Media/PR) that you think the team can realistically achieve, with explanations for each.\n\nThe returned marketing plan should be the best possible marketing plan for Rakuten Symphony attendance at the event.\n\nHere are the event details:\n\n${queryParts.join('\\n')}`
+                                                                router.push(`/intelligence?autoQuery=${encodeURIComponent(prompt)}&eventId=${event.slug || event.id}`)
+                                                            }}
+                                                            className="p-1.5 text-neutral-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Generate Event Marketing Plan"
+                                                        >
+                                                            <Sparkles className="w-4 h-4" />
+                                                        </button>
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
