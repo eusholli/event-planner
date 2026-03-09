@@ -51,7 +51,7 @@ function SubscribePage() {
     if (!isLoaded) return
     Promise.all([
       fetch('/api/intelligence/subscribe').then(r => r.json()),
-      fetch('/api/attendees').then(r => r.json()),
+      fetch('/api/attendees?all=true').then(r => r.json()),
       fetch('/api/companies').then(r => r.json()),
       fetch('/api/events').then(r => r.json()),
     ])

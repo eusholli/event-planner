@@ -29,6 +29,15 @@ async function getHandler(request: Request) {
             return NextResponse.json(attendees)
         }
 
+        const all = searchParams.get('all')
+        if (all === 'true') {
+            const attendees = await prisma.attendee.findMany({
+                include: { company: true },
+                orderBy: { name: 'asc' }
+            })
+            return NextResponse.json(attendees)
+        }
+
         const eventId = await resolveEventId(rawEventId || '')
 
         if (!eventId) {
