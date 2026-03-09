@@ -1,8 +1,15 @@
 // app/api/webhooks/intel-report/route.ts
 import { NextResponse } from 'next/server'
+import { clerkClient } from '@clerk/nextjs/server'
 import prisma from '@/lib/prisma'
-import { composeIntelligenceEmail, type TargetUpdate, type UpcomingEvent } from '@/lib/intelligence-email'
+import {
+  composeIntelligenceEmail,
+  composeAggregateEmail,
+  type TargetUpdate,
+  type UpcomingEvent,
+} from '@/lib/intelligence-email'
 import { sendPlainEmail } from '@/lib/email'
+import { Roles } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -44,14 +51,9 @@ export async function POST(req: Request) {
   // 1. Upsert reports — idempotent on runId+targetName
   try {
     for (const target of updatedTargets) {
-      console.log(`[intel-report] Upserting target: ${target.name} (${target.type})`)
       await prisma.intelligenceReport.upsert({
         where: { runId_targetName: { runId, targetName: target.name } },
-        update: {
-          summary: target.summary,
-          salesAngle: target.salesAngle,
-          fullReport: target.fullReport,
-        },
+        update: { summary: target.summary, salesAngle: target.salesAngle, fullReport: target.fullReport },
         create: {
           runId,
           targetType: target.type,
@@ -61,108 +63,130 @@ export async function POST(req: Request) {
           fullReport: target.fullReport,
         },
       })
-      console.log(`[intel-report] Upserted target: ${target.name}`)
     }
   } catch (err) {
     console.error('[intel-report] Failed to upsert reports:', err)
     return NextResponse.json({ error: 'Failed to store reports' }, { status: 500 })
   }
 
-  // 2. If no updated targets, return early
   if (updatedTargets.length === 0) {
     console.log(`Intelligence run ${runId}: no updated targets, skipping email dispatch`)
     return NextResponse.json({ status: 'ok', emailsSent: 0 })
   }
 
-  // 3. Fetch upcoming events (same for all subscribers)
+  // 2. Fetch upcoming events (shared for all emails)
   let upcomingEvents: UpcomingEvent[]
   try {
     const now = new Date()
     const thirtyDaysOut = new Date(now)
     thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30)
-    const upcomingEventRecords = await prisma.event.findMany({
-      where: {
-        startDate: { gte: now, lte: thirtyDaysOut },
-        status: { not: 'CANCELED' },
-      },
+    const records = await prisma.event.findMany({
+      where: { startDate: { gte: now, lte: thirtyDaysOut }, status: { not: 'CANCELED' } },
       orderBy: { startDate: 'asc' },
       select: { name: true, startDate: true, endDate: true, status: true },
     })
-    upcomingEvents = upcomingEventRecords.map((e) => ({
+    upcomingEvents = records.map(e => ({
       name: e.name,
       startDate: e.startDate?.toISOString().split('T')[0] ?? null,
       endDate: e.endDate?.toISOString().split('T')[0] ?? null,
       status: e.status,
     }))
-    console.log(`[intel-report] Fetched ${upcomingEvents.length} upcoming events`)
   } catch (err) {
     console.error('[intel-report] Failed to fetch upcoming events:', err)
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 })
   }
 
-  // 4. Build target lookup: lowercase name → target
+  // 3. Build target lookup (case-insensitive)
   const targetMap = new Map<string, TargetUpdate>()
   for (const t of updatedTargets) {
     targetMap.set(t.name.toLowerCase(), t)
   }
 
-  // 5. Process each active subscriber
-  let subscribers: Awaited<ReturnType<typeof prisma.intelligenceSubscription.findMany>>
-  try {
-    subscribers = await prisma.intelligenceSubscription.findMany({
-      where: { active: true },
-    })
-    console.log(`[intel-report] Found ${subscribers.length} active subscribers`)
-  } catch (err) {
-    console.error('[intel-report] Failed to fetch subscribers:', err)
-    return NextResponse.json({ error: 'Failed to fetch subscribers' }, { status: 500 })
-  }
+  // 4. Process each active subscriber
+  const subscribers = await prisma.intelligenceSubscription.findMany({
+    where: { active: true },
+    include: {
+      selectedAttendees: { select: { attendeeId: true } },
+      selectedCompanies: { select: { companyId: true } },
+      selectedEvents: {
+        select: {
+          eventId: true,
+          event: {
+            select: {
+              name: true,
+              attendees: { select: { name: true, company: { select: { name: true } } } },
+            },
+          },
+        },
+      },
+    },
+  })
 
   let emailsSent = 0
+  const runDate = runId.replace('-cron', '')
 
   for (const subscriber of subscribers) {
     try {
-      const attendee = await prisma.attendee.findUnique({
-        where: { email: subscriber.email },
-        select: { id: true, name: true },
-      })
+      // Direct selections: entity IDs → look up names
+      const directAttendeeIds = subscriber.selectedAttendees.map(r => r.attendeeId)
+      const directCompanyIds = subscriber.selectedCompanies.map(r => r.companyId)
 
-      if (!attendee) {
-        await prisma.intelligenceEmailLog.create({
-          data: { runId, userId: subscriber.userId, email: subscriber.email, targetCount: 0, status: 'skipped' },
-        })
-        continue
-      }
+      // Load names for direct attendee/company selections
+      const directAttendees = directAttendeeIds.length > 0
+        ? await prisma.attendee.findMany({
+            where: { id: { in: directAttendeeIds } },
+            select: { id: true, name: true },
+          })
+        : []
+      const directCompanies = directCompanyIds.length > 0
+        ? await prisma.company.findMany({
+            where: { id: { in: directCompanyIds } },
+            select: { id: true, name: true },
+          })
+        : []
 
-      // Get all meetings this person attended and their fellow attendees
-      const meetings = await prisma.meeting.findMany({
-        where: { attendees: { some: { id: attendee.id } } },
-        select: {
-          attendees: {
-            select: { name: true, company: { select: { name: true } } },
-          },
-        },
-      })
+      const directAttendeeNames = new Set(directAttendees.map(a => a.name.toLowerCase()))
+      const directCompanyNames = new Set(directCompanies.map(c => c.name.toLowerCase()))
 
-      // Collect unique company and attendee names from their meetings (excluding self)
-      const companyNames = new Set<string>()
-      const attendeeNames = new Set<string>()
-      for (const meeting of meetings) {
-        for (const a of meeting.attendees) {
-          if (a.name !== attendee.name) {
-            attendeeNames.add(a.name.toLowerCase())
-            companyNames.add(a.company.name.toLowerCase())
-          }
+      const matched: TargetUpdate[] = []
+
+      // Match directly selected entities (highlighted)
+      for (const [key, target] of targetMap.entries()) {
+        if (target.type === 'attendee' && directAttendeeNames.has(key)) {
+          matched.push({ ...target, highlighted: true })
+        } else if (target.type === 'company' && directCompanyNames.has(key)) {
+          matched.push({ ...target, highlighted: true })
         }
       }
 
-      // Match against updated targets
-      const matched: TargetUpdate[] = []
-      for (const [key, target] of targetMap.entries()) {
-        if (target.type === 'company' && companyNames.has(key)) {
-          matched.push(target)
-        } else if (target.type === 'attendee' && attendeeNames.has(key)) {
-          matched.push(target)
+      // Match via subscribed events (event-linked, not highlighted unless also direct)
+      const alreadyMatchedKeys = new Set(matched.map(t => t.name.toLowerCase()))
+
+      for (const subEvent of subscriber.selectedEvents) {
+        const eventName = subEvent.event.name
+
+        // Check if the event itself has an update
+        const eventKey = eventName.toLowerCase()
+        if (targetMap.has(eventKey) && !alreadyMatchedKeys.has(eventKey)) {
+          matched.push({ ...targetMap.get(eventKey)!, linkedEventName: eventName })
+          alreadyMatchedKeys.add(eventKey)
+        }
+
+        // Check attendees and their companies linked to this event
+        for (const att of subEvent.event.attendees) {
+          const attKey = att.name.toLowerCase()
+          const coKey = att.company.name.toLowerCase()
+
+          if (targetMap.has(attKey) && !alreadyMatchedKeys.has(attKey)) {
+            const isHighlighted = directAttendeeNames.has(attKey)
+            matched.push({ ...targetMap.get(attKey)!, highlighted: isHighlighted || undefined, linkedEventName: isHighlighted ? undefined : eventName })
+            alreadyMatchedKeys.add(attKey)
+          }
+          if (targetMap.has(coKey) && !alreadyMatchedKeys.has(coKey)) {
+            const isHighlighted = directCompanyNames.has(coKey)
+            matched.push({ ...targetMap.get(coKey)!, highlighted: isHighlighted || undefined, linkedEventName: isHighlighted ? undefined : eventName })
+            alreadyMatchedKeys.add(coKey)
+          }
         }
       }
 
@@ -173,7 +197,20 @@ export async function POST(req: Request) {
         continue
       }
 
-      const { subject, html } = await composeIntelligenceEmail(attendee.name, subscriber.email, subscriber.unsubscribeToken, matched, upcomingEvents)
+      // Resolve subscriber name from attendee record (best effort)
+      const attendee = await prisma.attendee.findUnique({
+        where: { email: subscriber.email },
+        select: { name: true },
+      })
+      const recipientName = attendee?.name ?? subscriber.email
+
+      const { subject, html } = await composeIntelligenceEmail(
+        recipientName,
+        subscriber.email,
+        subscriber.unsubscribeToken,
+        matched,
+        upcomingEvents
+      )
       await sendPlainEmail(subscriber.email, subject, html)
 
       await prisma.intelligenceEmailLog.create({
@@ -188,5 +225,39 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ status: 'ok', emailsSent })
+  // 5. Aggregate report for root/marketing users
+  let aggregateSent = 0
+  if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+    try {
+      const client = await clerkClient()
+      const allUsers = await client.users.getUserList({ limit: 500 })
+      const privilegedUsers = allUsers.data.filter(u =>
+        u.publicMetadata.role === Roles.Root || u.publicMetadata.role === Roles.Marketing
+      )
+
+      for (const u of privilegedUsers) {
+        const email = u.emailAddresses[0]?.emailAddress
+        if (!email) continue
+        try {
+          const firstName = u.firstName ?? u.emailAddresses[0]?.emailAddress ?? 'Team'
+          const { subject, html } = await composeAggregateEmail(firstName, updatedTargets, upcomingEvents, runDate)
+          await sendPlainEmail(email, subject, html)
+          await prisma.intelligenceEmailLog.create({
+            data: { runId, userId: u.id, email, targetCount: updatedTargets.length, status: 'aggregate' },
+          })
+          aggregateSent++
+        } catch (err) {
+          console.error(`Failed to send aggregate report to ${email}:`, err)
+          await prisma.intelligenceEmailLog.create({
+            data: { runId, userId: u.id, email, targetCount: 0, status: 'failed' },
+          })
+        }
+      }
+    } catch (err) {
+      console.error('[intel-report] Failed to fetch Clerk users for aggregate report:', err)
+      // Non-fatal: continue
+    }
+  }
+
+  return NextResponse.json({ status: 'ok', emailsSent, aggregateSent })
 }
