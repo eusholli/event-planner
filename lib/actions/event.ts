@@ -19,7 +19,7 @@ export async function generateEventDetails(url: string, currentData?: any) {
 
         const genAI = new GoogleGenerativeAI(apiKey)
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-3.1-flash-lite-preview',
             // @ts-ignore
             tools: [{ googleSearch: {} }]
         })
@@ -545,7 +545,7 @@ export async function importEventData(eventId: string, data: any) {
                     where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId: eid } },
                     create: { subscriptionId: sub.id, eventId: eid },
                     update: {},
-                }).catch(() => {})
+                }).catch(() => { })
             }
 
             // Restore attendee selections (only those in this event)
@@ -557,7 +557,7 @@ export async function importEventData(eventId: string, data: any) {
                     where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId: aid } },
                     create: { subscriptionId: sub.id, attendeeId: aid },
                     update: {},
-                }).catch(() => {})
+                }).catch(() => { })
             }
 
             // Restore company selections
@@ -568,7 +568,7 @@ export async function importEventData(eventId: string, data: any) {
                     where: { subscriptionId_companyId: { subscriptionId: sub.id, companyId: cid } },
                     create: { subscriptionId: sub.id, companyId: cid },
                     update: {},
-                }).catch(() => {})
+                }).catch(() => { })
             }
         }
 
@@ -576,17 +576,17 @@ export async function importEventData(eventId: string, data: any) {
         const attendeeIds = (data.attendees ?? []).map((a: any) => a.id)
         for (const aid of attendeeIds) {
             const count = await prisma.intelligenceSubAttendee.count({ where: { attendeeId: aid } })
-            await prisma.attendee.update({ where: { id: aid }, data: { subscriptionCount: count } }).catch(() => {})
+            await prisma.attendee.update({ where: { id: aid }, data: { subscriptionCount: count } }).catch(() => { })
         }
         const eventSubCount = await prisma.intelligenceSubEvent.count({ where: { eventId } })
-        await prisma.event.update({ where: { id: eventId }, data: { subscriptionCount: eventSubCount } }).catch(() => {})
+        await prisma.event.update({ where: { id: eventId }, data: { subscriptionCount: eventSubCount } }).catch(() => { })
 
         // Recompute company subscriptionCounts for restored company selections
         const companyIds = (data.intelligenceSubscriptions as any[]).flatMap((s: any) => s.selectedCompanyIds ?? [])
         const uniqueCompanyIds = [...new Set(companyIds)] as string[]
         for (const cid of uniqueCompanyIds) {
             const count = await prisma.intelligenceSubCompany.count({ where: { companyId: cid } })
-            await prisma.company.update({ where: { id: cid }, data: { subscriptionCount: count } }).catch(() => {})
+            await prisma.company.update({ where: { id: cid }, data: { subscriptionCount: count } }).catch(() => { })
         }
     }
 

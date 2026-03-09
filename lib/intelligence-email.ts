@@ -25,7 +25,7 @@ async function getGeminiModel() {
     throw new Error('Gemini API key not configured in system settings')
   }
   const genAI = new GoogleGenerativeAI(settings.geminiApiKey)
-  return genAI.getGenerativeModel({ model: 'gemini-2.5-pro' })
+  return genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
 }
 
 function parseGeminiResponse(text: string): { subject: string; html: string } {
@@ -109,18 +109,18 @@ export async function composeAggregateEmail(
   const model = await getGeminiModel()
 
   const byType = {
-    company:  allTargets.filter(t => t.type === 'company'),
+    company: allTargets.filter(t => t.type === 'company'),
     attendee: allTargets.filter(t => t.type === 'attendee'),
-    event:    allTargets.filter(t => t.type === 'event'),
+    event: allTargets.filter(t => t.type === 'event'),
   }
 
   const formatTarget = (t: TargetUpdate) =>
     `### ${t.name}\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n\nFull Report:\n${t.fullReport}`
 
   const targetsText = [
-    byType.company.length  ? `## Companies\n${byType.company.map(formatTarget).join('\n\n---\n\n')}`  : '',
+    byType.company.length ? `## Companies\n${byType.company.map(formatTarget).join('\n\n---\n\n')}` : '',
     byType.attendee.length ? `## Attendees\n${byType.attendee.map(formatTarget).join('\n\n---\n\n')}` : '',
-    byType.event.length    ? `## Events\n${byType.event.map(formatTarget).join('\n\n---\n\n')}`        : '',
+    byType.event.length ? `## Events\n${byType.event.map(formatTarget).join('\n\n---\n\n')}` : '',
   ].filter(Boolean).join('\n\n')
 
   const eventsText = upcomingEvents

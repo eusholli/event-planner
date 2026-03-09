@@ -14,7 +14,7 @@ if not API_KEY:
     print("Please ensure .env.local exists or export the key.")
     exit(1)
 
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={API_KEY}"
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={API_KEY}"
 
 def test_api():
     print(f"Calling Gemini API: {URL}")
