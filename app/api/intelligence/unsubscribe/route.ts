@@ -15,9 +15,9 @@ export async function GET(req: Request) {
     )
   }
 
-  // Accept userId or email — idempotent regardless
-  const sub = await prisma.intelligenceSubscription.findFirst({
-    where: { OR: [{ userId: token }, { email: token }] },
+  // Lookup by opaque unsubscribeToken only — idempotent regardless
+  const sub = await prisma.intelligenceSubscription.findUnique({
+    where: { unsubscribeToken: token },
   })
 
   if (sub) {

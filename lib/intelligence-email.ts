@@ -20,6 +20,7 @@ export type UpcomingEvent = {
 export async function composeIntelligenceEmail(
   recipientName: string,
   recipientEmail: string,
+  unsubscribeToken: string,
   matchedTargets: TargetUpdate[],
   upcomingEvents: UpcomingEvent[]
 ): Promise<{ subject: string; html: string }> {
@@ -59,7 +60,7 @@ Write a concise, professional HTML email. Rules:
 1. First line: "Subject: <your subject line here>" (on its own line)
 2. Then a blank line
 3. Then the full HTML body starting with <html>
-4. Structure: personalised opening sentence, then one <h3> per updated target with 2-3 bullet points of key updates and a "Sales Angle:" callout in a <blockquote>, then an upcoming events <table>, then an unsubscribe footer with this link: ${appUrl}/api/intelligence/unsubscribe?token=${recipientEmail}
+4. Structure: personalised opening sentence, then one <h3> per updated target with 2-3 bullet points of key updates and a "Sales Angle:" callout in a <blockquote>, then an upcoming events <table>, then an unsubscribe footer with this link: ${appUrl}/api/intelligence/unsubscribe?token=${unsubscribeToken}
 5. Tone: sharp, B2B sales, no fluff. Max 600 words.
 6. Do NOT wrap the HTML in markdown code fences.`
 

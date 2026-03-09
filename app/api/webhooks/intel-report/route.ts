@@ -37,25 +37,35 @@ export async function POST(req: Request) {
   if (!runId) {
     return NextResponse.json({ error: 'runId required' }, { status: 400 })
   }
+  if (!Array.isArray(updatedTargets)) {
+    return NextResponse.json({ error: 'updatedTargets must be an array' }, { status: 400 })
+  }
 
   // 1. Upsert reports — idempotent on runId+targetName
-  for (const target of updatedTargets) {
-    await prisma.intelligenceReport.upsert({
-      where: { runId_targetName: { runId, targetName: target.name } },
-      update: {
-        summary: target.summary,
-        salesAngle: target.salesAngle,
-        fullReport: target.fullReport,
-      },
-      create: {
-        runId,
-        targetType: target.type,
-        targetName: target.name,
-        summary: target.summary,
-        salesAngle: target.salesAngle,
-        fullReport: target.fullReport,
-      },
-    })
+  try {
+    for (const target of updatedTargets) {
+      console.log(`[intel-report] Upserting target: ${target.name} (${target.type})`)
+      await prisma.intelligenceReport.upsert({
+        where: { runId_targetName: { runId, targetName: target.name } },
+        update: {
+          summary: target.summary,
+          salesAngle: target.salesAngle,
+          fullReport: target.fullReport,
+        },
+        create: {
+          runId,
+          targetType: target.type,
+          targetName: target.name,
+          summary: target.summary,
+          salesAngle: target.salesAngle,
+          fullReport: target.fullReport,
+        },
+      })
+      console.log(`[intel-report] Upserted target: ${target.name}`)
+    }
+  } catch (err) {
+    console.error('[intel-report] Failed to upsert reports:', err)
+    return NextResponse.json({ error: 'Failed to store reports' }, { status: 500 })
   }
 
   // 2. If no updated targets, return early
@@ -65,23 +75,30 @@ export async function POST(req: Request) {
   }
 
   // 3. Fetch upcoming events (same for all subscribers)
-  const now = new Date()
-  const thirtyDaysOut = new Date(now)
-  thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30)
-  const upcomingEventRecords = await prisma.event.findMany({
-    where: {
-      startDate: { gte: now, lte: thirtyDaysOut },
-      status: { not: 'CANCELED' },
-    },
-    orderBy: { startDate: 'asc' },
-    select: { name: true, startDate: true, endDate: true, status: true },
-  })
-  const upcomingEvents: UpcomingEvent[] = upcomingEventRecords.map((e) => ({
-    name: e.name,
-    startDate: e.startDate?.toISOString().split('T')[0] ?? null,
-    endDate: e.endDate?.toISOString().split('T')[0] ?? null,
-    status: e.status,
-  }))
+  let upcomingEvents: UpcomingEvent[]
+  try {
+    const now = new Date()
+    const thirtyDaysOut = new Date(now)
+    thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30)
+    const upcomingEventRecords = await prisma.event.findMany({
+      where: {
+        startDate: { gte: now, lte: thirtyDaysOut },
+        status: { not: 'CANCELED' },
+      },
+      orderBy: { startDate: 'asc' },
+      select: { name: true, startDate: true, endDate: true, status: true },
+    })
+    upcomingEvents = upcomingEventRecords.map((e) => ({
+      name: e.name,
+      startDate: e.startDate?.toISOString().split('T')[0] ?? null,
+      endDate: e.endDate?.toISOString().split('T')[0] ?? null,
+      status: e.status,
+    }))
+    console.log(`[intel-report] Fetched ${upcomingEvents.length} upcoming events`)
+  } catch (err) {
+    console.error('[intel-report] Failed to fetch upcoming events:', err)
+    return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 })
+  }
 
   // 4. Build target lookup: lowercase name → target
   const targetMap = new Map<string, TargetUpdate>()
@@ -90,9 +107,16 @@ export async function POST(req: Request) {
   }
 
   // 5. Process each active subscriber
-  const subscribers = await prisma.intelligenceSubscription.findMany({
-    where: { active: true },
-  })
+  let subscribers: Awaited<ReturnType<typeof prisma.intelligenceSubscription.findMany>>
+  try {
+    subscribers = await prisma.intelligenceSubscription.findMany({
+      where: { active: true },
+    })
+    console.log(`[intel-report] Found ${subscribers.length} active subscribers`)
+  } catch (err) {
+    console.error('[intel-report] Failed to fetch subscribers:', err)
+    return NextResponse.json({ error: 'Failed to fetch subscribers' }, { status: 500 })
+  }
 
   let emailsSent = 0
 
@@ -149,7 +173,7 @@ export async function POST(req: Request) {
         continue
       }
 
-      const { subject, html } = await composeIntelligenceEmail(attendee.name, subscriber.email, matched, upcomingEvents)
+      const { subject, html } = await composeIntelligenceEmail(attendee.name, subscriber.email, subscriber.unsubscribeToken, matched, upcomingEvents)
       await sendPlainEmail(subscriber.email, subject, html)
 
       await prisma.intelligenceEmailLog.create({
