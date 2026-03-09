@@ -32,15 +32,17 @@ model Event {
   budget          Float?
   targetCustomers String?
   status          String     @default("PIPELINE")
-  slug            String     @unique
-  attendees       Attendee[]
-  meetings        Meeting[]
-  rooms           Room[]
-  roiTargets      EventROITargets?
-  password        String?
-  description     String?
-  latitude        Float?
-  longitude       Float?
+  slug              String     @unique
+  attendees         Attendee[]
+  meetings          Meeting[]
+  rooms             Room[]
+  roiTargets        EventROITargets?
+  password          String?
+  description       String?
+  latitude          Float?
+  longitude         Float?
+  subscriptionCount Int        @default(0)
+  intelligenceSubs  IntelligenceSubEvent[]
 }
 
 model Company {
@@ -48,8 +50,10 @@ model Company {
   name            String            @unique
   description     String?
   pipelineValue   Float?
-  attendees       Attendee[]
-  targetedByROI   EventROITargets[] @relation("TargetCompanies")
+  attendees         Attendee[]
+  targetedByROI     EventROITargets[] @relation("TargetCompanies")
+  subscriptionCount Int               @default(0)
+  intelligenceSubs  IntelligenceSubCompany[]
 }
 
 model Attendee {
@@ -65,8 +69,10 @@ model Attendee {
   isExternal     Boolean   @default(false)
   type           String?
   seniorityLevel String?
-  events         Event[]
-  meetings       Meeting[] @relation("AttendeeMeetings")
+  events            Event[]
+  meetings          Meeting[]  @relation("AttendeeMeetings")
+  subscriptionCount Int        @default(0)
+  intelligenceSubs  IntelligenceSubAttendee[]
 }
 
 model Room {
@@ -148,13 +154,16 @@ model EventROITargets {
 }
 
 model IntelligenceSubscription {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  email            String
-  active           Boolean  @default(true)
-  unsubscribeToken String   @unique @default(cuid())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  email               String
+  active              Boolean  @default(true)
+  unsubscribeToken    String   @unique @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  selectedAttendees   IntelligenceSubAttendee[]
+  selectedCompanies   IntelligenceSubCompany[]
+  selectedEvents      IntelligenceSubEvent[]
 }
 
 model IntelligenceReport {
@@ -182,4 +191,28 @@ model IntelligenceEmailLog {
   status      String
 
   @@index([runId, userId])
+}
+
+model IntelligenceSubAttendee {
+  subscriptionId String
+  attendeeId     String
+  subscription   IntelligenceSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  attendee       Attendee                 @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  @@id([subscriptionId, attendeeId])
+}
+
+model IntelligenceSubCompany {
+  subscriptionId String
+  companyId      String
+  subscription   IntelligenceSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  company        Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@id([subscriptionId, companyId])
+}
+
+model IntelligenceSubEvent {
+  subscriptionId String
+  eventId        String
+  subscription   IntelligenceSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  event          Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@id([subscriptionId, eventId])
 }
