@@ -175,14 +175,14 @@ export async function POST(req: Request) {
         // Check attendees and their companies linked to this event
         for (const att of subEvent.event.attendees) {
           const attKey = att.name.toLowerCase()
-          const coKey = att.company.name.toLowerCase()
+          const coKey = att.company?.name?.toLowerCase() ?? ''
 
           if (targetMap.has(attKey) && !alreadyMatchedKeys.has(attKey)) {
             const isHighlighted = directAttendeeNames.has(attKey)
             matched.push({ ...targetMap.get(attKey)!, highlighted: isHighlighted ? true : undefined, linkedEventName: isHighlighted ? undefined : eventName })
             alreadyMatchedKeys.add(attKey)
           }
-          if (targetMap.has(coKey) && !alreadyMatchedKeys.has(coKey)) {
+          if (coKey && targetMap.has(coKey) && !alreadyMatchedKeys.has(coKey)) {
             const isHighlighted = directCompanyNames.has(coKey)
             matched.push({ ...targetMap.get(coKey)!, highlighted: isHighlighted ? true : undefined, linkedEventName: isHighlighted ? undefined : eventName })
             alreadyMatchedKeys.add(coKey)

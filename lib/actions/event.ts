@@ -559,6 +559,17 @@ export async function importEventData(eventId: string, data: any) {
                     update: {},
                 }).catch(() => {})
             }
+
+            // Restore company selections
+            for (const cid of (s.selectedCompanyIds ?? [])) {
+                const exists = await prisma.company.findUnique({ where: { id: cid } })
+                if (!exists) continue
+                await prisma.intelligenceSubCompany.upsert({
+                    where: { subscriptionId_companyId: { subscriptionId: sub.id, companyId: cid } },
+                    create: { subscriptionId: sub.id, companyId: cid },
+                    update: {},
+                }).catch(() => {})
+            }
         }
 
         // Recompute subscriptionCounts for entities in this event
@@ -569,6 +580,14 @@ export async function importEventData(eventId: string, data: any) {
         }
         const eventSubCount = await prisma.intelligenceSubEvent.count({ where: { eventId } })
         await prisma.event.update({ where: { id: eventId }, data: { subscriptionCount: eventSubCount } }).catch(() => {})
+
+        // Recompute company subscriptionCounts for restored company selections
+        const companyIds = (data.intelligenceSubscriptions as any[]).flatMap((s: any) => s.selectedCompanyIds ?? [])
+        const uniqueCompanyIds = [...new Set(companyIds)] as string[]
+        for (const cid of uniqueCompanyIds) {
+            const count = await prisma.intelligenceSubCompany.count({ where: { companyId: cid } })
+            await prisma.company.update({ where: { id: cid }, data: { subscriptionCount: count } }).catch(() => {})
+        }
     }
 
     return { success: true }
