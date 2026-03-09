@@ -12,8 +12,8 @@ export const POST = withAuth(async (req, { authCtx }) => {
   const body = await req.json().catch(() => ({}))
   const email: string = body.email
 
-  if (!email) {
-    return NextResponse.json({ error: 'email required' }, { status: 400 })
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: 'valid email required' }, { status: 400 })
   }
 
   const sub = await prisma.intelligenceSubscription.upsert({

@@ -97,6 +97,9 @@ function SubscribePage() {
           <button
             onClick={handleToggle}
             disabled={toggling || !userEmail}
+            aria-label={status?.subscribed ? 'Unsubscribe from briefings' : 'Subscribe to briefings'}
+            aria-checked={status?.subscribed ?? false}
+            role="switch"
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
               status?.subscribed ? 'bg-zinc-900' : 'bg-zinc-300'
             } ${toggling || !userEmail ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -132,7 +135,7 @@ function SubscribePage() {
               <p>
                 Targets in last report:{' '}
                 <span className="text-zinc-700 font-medium">
-                  {status.lastTargetCount} update{status.lastTargetCount !== 1 ? 's' : ''}
+                  {status.lastTargetCount ?? 0} update{(status.lastTargetCount ?? 0) !== 1 ? 's' : ''}
                 </span>
               </p>
             </>

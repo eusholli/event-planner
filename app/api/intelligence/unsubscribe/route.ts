@@ -9,7 +9,10 @@ export async function GET(req: Request) {
   const token = searchParams.get('token') // token = userId (Clerk ID) or email
 
   if (!token) {
-    return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+    // No token — redirect to success page anyway (idempotent)
+    return NextResponse.redirect(
+      new URL('/intelligence/subscribe?unsubscribed=true', req.url)
+    )
   }
 
   // Accept userId or email — idempotent regardless
