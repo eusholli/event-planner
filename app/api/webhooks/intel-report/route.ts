@@ -179,12 +179,12 @@ export async function POST(req: Request) {
 
           if (targetMap.has(attKey) && !alreadyMatchedKeys.has(attKey)) {
             const isHighlighted = directAttendeeNames.has(attKey)
-            matched.push({ ...targetMap.get(attKey)!, highlighted: isHighlighted || undefined, linkedEventName: isHighlighted ? undefined : eventName })
+            matched.push({ ...targetMap.get(attKey)!, highlighted: isHighlighted ? true : undefined, linkedEventName: isHighlighted ? undefined : eventName })
             alreadyMatchedKeys.add(attKey)
           }
           if (targetMap.has(coKey) && !alreadyMatchedKeys.has(coKey)) {
             const isHighlighted = directCompanyNames.has(coKey)
-            matched.push({ ...targetMap.get(coKey)!, highlighted: isHighlighted || undefined, linkedEventName: isHighlighted ? undefined : eventName })
+            matched.push({ ...targetMap.get(coKey)!, highlighted: isHighlighted ? true : undefined, linkedEventName: isHighlighted ? undefined : eventName })
             alreadyMatchedKeys.add(coKey)
           }
         }
