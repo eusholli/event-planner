@@ -404,6 +404,116 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
             }
         }
 
+        // 5. Restore Intelligence Subscriptions
+        if (json.intelligenceSubscriptions && Array.isArray(json.intelligenceSubscriptions)) {
+          for (const s of json.intelligenceSubscriptions) {
+            // Upsert subscription record
+            await prisma.intelligenceSubscription.upsert({
+              where: { userId: s.userId },
+              create: {
+                id: s.id,
+                userId: s.userId,
+                email: s.email,
+                active: s.active ?? true,
+                unsubscribeToken: s.unsubscribeToken ?? undefined,
+              },
+              update: {
+                email: s.email,
+                active: s.active ?? true,
+              },
+            }).catch(e => console.warn('IntelligenceSubscription import skip', e))
+
+            const sub = await prisma.intelligenceSubscription.findUnique({ where: { userId: s.userId } })
+            if (!sub) continue
+
+            // Restore attendee selections (skip missing IDs)
+            if (s.selectedAttendeeIds) {
+              for (const attendeeId of s.selectedAttendeeIds) {
+                const exists = await prisma.attendee.findUnique({ where: { id: attendeeId } })
+                if (!exists) continue
+                await prisma.intelligenceSubAttendee.upsert({
+                  where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId } },
+                  create: { subscriptionId: sub.id, attendeeId },
+                  update: {},
+                }).catch(() => {})
+              }
+            }
+
+            // Restore company selections
+            if (s.selectedCompanyIds) {
+              for (const companyId of s.selectedCompanyIds) {
+                const exists = await prisma.company.findUnique({ where: { id: companyId } })
+                if (!exists) continue
+                await prisma.intelligenceSubCompany.upsert({
+                  where: { subscriptionId_companyId: { subscriptionId: sub.id, companyId } },
+                  create: { subscriptionId: sub.id, companyId },
+                  update: {},
+                }).catch(() => {})
+              }
+            }
+
+            // Restore event selections
+            if (s.selectedEventIds) {
+              for (const eventId of s.selectedEventIds) {
+                const exists = await prisma.event.findUnique({ where: { id: eventId } })
+                if (!exists) continue
+                await prisma.intelligenceSubEvent.upsert({
+                  where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId } },
+                  create: { subscriptionId: sub.id, eventId },
+                  update: {},
+                }).catch(() => {})
+              }
+            }
+          }
+
+          // Recompute subscriptionCounts from scratch (count junction rows)
+          const attendeeCounts = await prisma.intelligenceSubAttendee.groupBy({
+            by: ['attendeeId'],
+            _count: { attendeeId: true },
+          })
+          for (const row of attendeeCounts) {
+            await prisma.attendee.update({
+              where: { id: row.attendeeId },
+              data: { subscriptionCount: row._count.attendeeId },
+            }).catch(() => {})
+          }
+          // Zero out attendees not in junction table
+          await prisma.attendee.updateMany({
+            where: { id: { notIn: attendeeCounts.map(r => r.attendeeId) } },
+            data: { subscriptionCount: 0 },
+          })
+
+          const companyCounts = await prisma.intelligenceSubCompany.groupBy({
+            by: ['companyId'],
+            _count: { companyId: true },
+          })
+          for (const row of companyCounts) {
+            await prisma.company.update({
+              where: { id: row.companyId },
+              data: { subscriptionCount: row._count.companyId },
+            }).catch(() => {})
+          }
+          await prisma.company.updateMany({
+            where: { id: { notIn: companyCounts.map(r => r.companyId) } },
+            data: { subscriptionCount: 0 },
+          })
+
+          const eventCounts = await prisma.intelligenceSubEvent.groupBy({
+            by: ['eventId'],
+            _count: { eventId: true },
+          })
+          for (const row of eventCounts) {
+            await prisma.event.update({
+              where: { id: row.eventId },
+              data: { subscriptionCount: row._count.eventId },
+            }).catch(() => {})
+          }
+          await prisma.event.updateMany({
+            where: { id: { notIn: eventCounts.map(r => r.eventId) } },
+            data: { subscriptionCount: 0 },
+          })
+        }
+
         return NextResponse.json({ success: true, message: 'System restored successfully' })
     } catch (error) {
         console.error('System import error:', error)

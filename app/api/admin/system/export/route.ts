@@ -64,11 +64,29 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
 
         const settings = await prisma.systemSettings.findFirst()
 
+        const intelligenceSubscriptions = await prisma.intelligenceSubscription.findMany({
+          include: {
+            selectedAttendees: { select: { attendeeId: true } },
+            selectedCompanies: { select: { companyId: true } },
+            selectedEvents:    { select: { eventId: true } },
+          },
+        })
+
         const exportData = {
             systemSettings: settings,
             companies: companies,  // Global Company List
             attendees: Array.from(attendeeMap.values()), // Global Unique List
             events: normalizedEvents,
+            intelligenceSubscriptions: intelligenceSubscriptions.map(s => ({
+              id: s.id,
+              userId: s.userId,
+              email: s.email,
+              active: s.active,
+              unsubscribeToken: s.unsubscribeToken,
+              selectedAttendeeIds: s.selectedAttendees.map(r => r.attendeeId),
+              selectedCompanyIds:  s.selectedCompanies.map(r => r.companyId),
+              selectedEventIds:    s.selectedEvents.map(r => r.eventId),
+            })),
             exportedAt: new Date().toISOString(),
             version: '5.0-simplified-roi'
         }
