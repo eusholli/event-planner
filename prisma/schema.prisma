@@ -146,3 +146,39 @@ model EventROITargets {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }
+
+model IntelligenceSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  email     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IntelligenceReport {
+  id         String   @id @default(cuid())
+  runId      String
+  targetType String
+  targetName String
+  summary    String
+  salesAngle String
+  fullReport String
+  createdAt  DateTime @default(now())
+
+  @@unique([runId, targetName])
+  @@index([runId])
+  @@index([targetName])
+}
+
+model IntelligenceEmailLog {
+  id          String   @id @default(cuid())
+  runId       String
+  userId      String
+  email       String
+  sentAt      DateTime @default(now())
+  targetCount Int
+  status      String
+
+  @@index([runId, userId])
+}
