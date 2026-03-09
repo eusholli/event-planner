@@ -5,9 +5,11 @@ import prisma from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 function validateSecret(req: Request): boolean {
+  const secret = process.env.INTELLIGENCE_SECRET_KEY
+  if (!secret) return false // reject if env var not configured
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  return token === process.env.INTELLIGENCE_SECRET_KEY && token.length > 0
+  return token === secret && token.length > 0
 }
 
 export async function GET(req: Request) {
@@ -15,6 +17,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  try {
   const now = new Date()
   const windowStart = new Date(now)
   windowStart.setDate(windowStart.getDate() - 90)
@@ -104,4 +107,8 @@ export async function GET(req: Request) {
       status: e.status,
     })),
   })
+  } catch (err) {
+    console.error('Intelligence targets error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
