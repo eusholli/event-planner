@@ -478,10 +478,14 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
             }).catch(() => {})
           }
           // Zero out attendees not in junction table
-          await prisma.attendee.updateMany({
-            where: { id: { notIn: attendeeCounts.map(r => r.attendeeId) } },
-            data: { subscriptionCount: 0 },
-          })
+          if (attendeeCounts.length > 0) {
+            await prisma.attendee.updateMany({
+              where: { id: { notIn: attendeeCounts.map(r => r.attendeeId) } },
+              data: { subscriptionCount: 0 },
+            })
+          } else {
+            await prisma.attendee.updateMany({ data: { subscriptionCount: 0 } })
+          }
 
           const companyCounts = await prisma.intelligenceSubCompany.groupBy({
             by: ['companyId'],
@@ -493,10 +497,14 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
               data: { subscriptionCount: row._count.companyId },
             }).catch(() => {})
           }
-          await prisma.company.updateMany({
-            where: { id: { notIn: companyCounts.map(r => r.companyId) } },
-            data: { subscriptionCount: 0 },
-          })
+          if (companyCounts.length > 0) {
+            await prisma.company.updateMany({
+              where: { id: { notIn: companyCounts.map(r => r.companyId) } },
+              data: { subscriptionCount: 0 },
+            })
+          } else {
+            await prisma.company.updateMany({ data: { subscriptionCount: 0 } })
+          }
 
           const eventCounts = await prisma.intelligenceSubEvent.groupBy({
             by: ['eventId'],
@@ -508,10 +516,14 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
               data: { subscriptionCount: row._count.eventId },
             }).catch(() => {})
           }
-          await prisma.event.updateMany({
-            where: { id: { notIn: eventCounts.map(r => r.eventId) } },
-            data: { subscriptionCount: 0 },
-          })
+          if (eventCounts.length > 0) {
+            await prisma.event.updateMany({
+              where: { id: { notIn: eventCounts.map(r => r.eventId) } },
+              data: { subscriptionCount: 0 },
+            })
+          } else {
+            await prisma.event.updateMany({ data: { subscriptionCount: 0 } })
+          }
         }
 
         return NextResponse.json({ success: true, message: 'System restored successfully' })
