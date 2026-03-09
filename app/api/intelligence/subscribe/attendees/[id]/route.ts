@@ -24,8 +24,8 @@ export const DELETE = withAuth(async (_req, { authCtx, params }) => {
       prisma.intelligenceSubAttendee.delete({
         where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId } },
       }),
-      prisma.attendee.update({
-        where: { id: attendeeId },
+      prisma.attendee.updateMany({
+        where: { id: attendeeId, subscriptionCount: { gt: 0 } },
         data: { subscriptionCount: { decrement: 1 } },
       }),
     ])

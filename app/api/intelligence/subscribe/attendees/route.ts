@@ -15,9 +15,15 @@ async function ensureSubscription(userId: string): Promise<string> {
       const user = await currentUser()
       email = user?.primaryEmailAddress?.emailAddress ?? email
     }
-    sub = await prisma.intelligenceSubscription.create({
-      data: { userId, email, active: false },
-    })
+    try {
+      sub = await prisma.intelligenceSubscription.create({
+        data: { userId, email, active: false },
+      })
+    } catch {
+      // Race condition: another request created it first
+      sub = await prisma.intelligenceSubscription.findUnique({ where: { userId } })
+      if (!sub) throw new Error('Failed to create or find subscription')
+    }
   }
   return sub.id
 }
@@ -40,16 +46,15 @@ export const POST = withAuth(async (req, { authCtx }) => {
     return NextResponse.json({ error: 'Attendee not found' }, { status: 404 })
   }
 
-  // Upsert junction row + increment count (idempotent)
-  const existing = await prisma.intelligenceSubAttendee.findUnique({
-    where: { subscriptionId_attendeeId: { subscriptionId, attendeeId } },
-  })
-
-  if (!existing) {
+  // Idempotent: attempt create + increment atomically, ignore duplicate
+  try {
     await prisma.$transaction([
       prisma.intelligenceSubAttendee.create({ data: { subscriptionId, attendeeId } }),
       prisma.attendee.update({ where: { id: attendeeId }, data: { subscriptionCount: { increment: 1 } } }),
     ])
+  } catch (err: any) {
+    // P2002 = unique constraint violation = already selected, treat as no-op
+    if (err?.code !== 'P2002') throw err
   }
 
   return NextResponse.json({ selected: true, attendeeId })
