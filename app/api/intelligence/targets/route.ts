@@ -48,7 +48,11 @@ export async function GET(req: Request) {
     select: {
       name: true,
       pipelineValue: true,
-      _count: { select: { attendees: true } },
+      attendees: {
+        select: {
+          _count: { select: { meetings: { where: { eventId: { in: windowEventIds } } } } },
+        },
+      },
     },
   })
 
@@ -75,7 +79,7 @@ export async function GET(req: Request) {
       title: true,
       seniorityLevel: true,
       company: { select: { name: true } },
-      _count: { select: { meetings: true } },
+      _count: { select: { meetings: { where: { eventId: { in: windowEventIds } } } } },
     },
   })
 
@@ -84,7 +88,7 @@ export async function GET(req: Request) {
     companies: companies.map((c) => ({
       name: c.name,
       pipelineValue: c.pipelineValue ?? 0,
-      upcomingMeetings: c._count.attendees,
+      upcomingMeetings: c.attendees.reduce((sum, a) => sum + a._count.meetings, 0),
     })),
     attendees: attendees.map((a) => ({
       name: a.name,
