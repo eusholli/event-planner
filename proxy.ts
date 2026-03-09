@@ -24,11 +24,21 @@ const isReportRoute = createRouteMatcher([
     '/reports(.*)'
 ]);
 
+const isIntelligenceApiRoute = createRouteMatcher([
+    '/api/intelligence(.*)',
+    '/api/webhooks/intel-report(.*)'
+]);
+
 export const proxy = clerkMiddleware(async (auth, req) => {
     if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
         return;
     }
     if (isProtectedRoute(req)) {
+        // Allow intelligence API routes to bypass Clerk (they use Bearer token auth)
+        if (isIntelligenceApiRoute(req)) {
+            return NextResponse.next();
+        }
+
         // Allow backup key bypass for export route
         const backupKey = process.env.BACKUP_SECRET_KEY;
         const headerKey = req.headers.get('x-backup-key');
