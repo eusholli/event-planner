@@ -1,0 +1,56 @@
+// app/api/intelligence/subscribe/attendees/route.ts
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { withAuth } from '@/lib/with-auth'
+import { currentUser } from '@clerk/nextjs/server'
+
+export const dynamic = 'force-dynamic'
+
+// Ensure a subscription record exists for this user (creates inactive one if needed)
+async function ensureSubscription(userId: string): Promise<string> {
+  let sub = await prisma.intelligenceSubscription.findUnique({ where: { userId } })
+  if (!sub) {
+    let email = 'unknown@example.com'
+    if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+      const user = await currentUser()
+      email = user?.primaryEmailAddress?.emailAddress ?? email
+    }
+    sub = await prisma.intelligenceSubscription.create({
+      data: { userId, email, active: false },
+    })
+  }
+  return sub.id
+}
+
+// POST — add attendee selection
+export const POST = withAuth(async (req, { authCtx }) => {
+  const { userId } = authCtx
+  const body = await req.json().catch(() => ({}))
+  const { attendeeId } = body
+
+  if (!attendeeId || typeof attendeeId !== 'string') {
+    return NextResponse.json({ error: 'attendeeId required' }, { status: 400 })
+  }
+
+  const subscriptionId = await ensureSubscription(userId)
+
+  // Check attendee exists
+  const attendee = await prisma.attendee.findUnique({ where: { id: attendeeId } })
+  if (!attendee) {
+    return NextResponse.json({ error: 'Attendee not found' }, { status: 404 })
+  }
+
+  // Upsert junction row + increment count (idempotent)
+  const existing = await prisma.intelligenceSubAttendee.findUnique({
+    where: { subscriptionId_attendeeId: { subscriptionId, attendeeId } },
+  })
+
+  if (!existing) {
+    await prisma.$transaction([
+      prisma.intelligenceSubAttendee.create({ data: { subscriptionId, attendeeId } }),
+      prisma.attendee.update({ where: { id: attendeeId }, data: { subscriptionCount: { increment: 1 } } }),
+    ])
+  }
+
+  return NextResponse.json({ selected: true, attendeeId })
+})
