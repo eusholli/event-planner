@@ -3,9 +3,10 @@
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download } from "lucide-react";
+import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell } from "lucide-react";
 import clsx from "clsx";
 import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
 
@@ -279,6 +280,14 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        <Link
+                            href="/intelligence/subscribe"
+                            title="Manage Subscribe"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-zinc-100 text-zinc-700 hover:bg-zinc-200 active:scale-95 shadow-sm"
+                        >
+                            <Bell size={13} />
+                            Manage Subscribe
+                        </Link>
                         <button
                             onClick={handleNewSession}
                             disabled={!isConnected || isWaitingForResponse}

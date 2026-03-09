@@ -3,12 +3,14 @@
 import { useEffect, useState, Suspense, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 type EntityType = 'attendee' | 'company' | 'event'
 
 type AttendeeItem = { id: string; name: string; title: string; companyName: string }
-type CompanyItem  = { id: string; name: string; description: string | null; pipelineValue: number | null }
-type EventItem    = { id: string; name: string; startDate: string | null; endDate: string | null; status: string }
+type CompanyItem = { id: string; name: string; description: string | null; pipelineValue: number | null }
+type EventItem = { id: string; name: string; startDate: string | null; endDate: string | null; status: string }
 
 type SubState = {
   subscribed: boolean
@@ -35,14 +37,14 @@ function SubscribePage() {
   const searchParams = useSearchParams()
   const justUnsubscribed = searchParams.get('unsubscribed') === 'true'
 
-  const [sub, setSub]             = useState<SubState | null>(null)
+  const [sub, setSub] = useState<SubState | null>(null)
   const [attendees, setAttendees] = useState<AttendeeItem[]>([])
   const [companies, setCompanies] = useState<CompanyItem[]>([])
-  const [events, setEvents]       = useState<EventItem[]>([])
-  const [search, setSearch]       = useState('')
-  const [loading, setLoading]     = useState(true)
-  const [toggling, setToggling]   = useState(false)
-  const [error, setError]         = useState<string | null>(null)
+  const [events, setEvents] = useState<EventItem[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [toggling, setToggling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? null
 
@@ -60,7 +62,7 @@ function SubscribePage() {
         // Normalize: handle both array and { attendees: [...] } response shapes
         const rawAttendees = Array.isArray(attendeeData) ? attendeeData : (attendeeData.attendees ?? [])
         const rawCompanies = Array.isArray(companyData) ? companyData : (companyData.companies ?? [])
-        const rawEvents    = Array.isArray(eventData)   ? eventData   : (eventData.events ?? [])
+        const rawEvents = Array.isArray(eventData) ? eventData : (eventData.events ?? [])
         setAttendees(rawAttendees.map((a: any) => ({
           id: a.id,
           name: a.name,
@@ -174,164 +176,271 @@ function SubscribePage() {
 
   const canSubscribe = totalSelected > 0
 
+  const subscribedEvents = events.filter(e => sub?.selectedEventIds.includes(e.id))
+  const subscribedCompanies = companies.filter(c => sub?.selectedCompanyIds.includes(c.id))
+  const subscribedAttendees = attendees.filter(a => sub?.selectedAttendeeIds.includes(a.id))
+  const hasSubscribedItems = subscribedEvents.length > 0 || subscribedCompanies.length > 0 || subscribedAttendees.length > 0
+
   return (
-    <div className="max-w-3xl mx-auto p-8">
-      <h1 className="text-xl font-semibold text-zinc-900 mb-2">Market Intelligence Subscription</h1>
-      <p className="text-sm text-zinc-500 mb-6">
-        Select the companies, attendees, and events you want to track. You&apos;ll receive a
-        personalised briefing after each research cycle (Tuesday &amp; Thursday mornings).
-      </p>
-
-      {justUnsubscribed && (
-        <div className="mb-4 p-3 bg-zinc-100 border border-zinc-200 rounded-lg text-sm text-zinc-600">
-          You&apos;ve been unsubscribed successfully.
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
-      {/* Subscribe toggle */}
-      <div className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mb-6">
-        <div className="flex items-center justify-between gap-4">
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-zinc-50 p-4 md:p-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-100 bg-white sticky top-0 z-10">
+          <Link href="/intelligence" className="p-2 -ml-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors" title="Back to Insights">
+            <ArrowLeft size={18} />
+          </Link>
           <div>
-            <p className="text-sm font-medium text-zinc-900">Send briefings to</p>
-            <p className="text-sm text-zinc-500 font-mono mt-0.5">{userEmail ?? '—'}</p>
-            {!canSubscribe && (
-              <p className="text-xs text-zinc-400 mt-1">Select at least one item below to subscribe</p>
-            )}
+            <h2 className="text-base font-semibold text-zinc-900">Manage Subscriptions</h2>
+            <p className="text-xs text-zinc-500 font-mono">
+              MARKET INTELLIGENCE
+            </p>
           </div>
-          <button
-            onClick={handleToggleSubscribe}
-            disabled={toggling || !userEmail || !canSubscribe}
-            title={!canSubscribe ? 'Select at least one item to subscribe' : undefined}
-            aria-label={sub?.subscribed ? 'Unsubscribe from briefings' : 'Subscribe to briefings'}
-            aria-checked={sub?.subscribed ?? false}
-            role="switch"
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-              sub?.subscribed ? 'bg-zinc-900' : 'bg-zinc-300'
-            } ${toggling || !userEmail || !canSubscribe ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-              sub?.subscribed ? 'translate-x-6' : 'translate-x-1'
-            }`} />
-          </button>
         </div>
 
-        {sub?.subscribed && sub.lastSentAt && (
-          <div className="mt-3 space-y-1 text-sm text-zinc-500">
-            <p>Last briefing: <span className="text-zinc-700 font-medium">{formatDate(sub.lastSentAt)}</span></p>
-            <p>Targets in last report: <span className="text-zinc-700 font-medium">{sub.lastTargetCount ?? 0}</span></p>
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-zinc-50/50">
+          <p className="text-sm text-zinc-500">
+            Select the companies, attendees, and events you want to track. You&apos;ll receive a
+            personalised briefing after each research cycle (Tuesday &amp; Thursday mornings).
+          </p>
+
+          {justUnsubscribed && (
+            <div className="p-3 bg-white border border-zinc-200 rounded-xl text-sm text-zinc-600 shadow-sm">
+              You&apos;ve been unsubscribed successfully.
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 shadow-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Subscribe toggle */}
+          <div className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-zinc-900">Send briefings to</p>
+                <p className="text-sm text-zinc-500 font-mono mt-0.5">{userEmail ?? '—'}</p>
+                {!canSubscribe && (
+                  <p className="text-xs text-zinc-400 mt-1">Select at least one item below to subscribe</p>
+                )}
+              </div>
+              <button
+                onClick={handleToggleSubscribe}
+                disabled={toggling || !userEmail || !canSubscribe}
+                title={!canSubscribe ? 'Select at least one item to subscribe' : undefined}
+                aria-label={sub?.subscribed ? 'Unsubscribe from briefings' : 'Subscribe to briefings'}
+                aria-checked={sub?.subscribed ?? false}
+                role="switch"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${sub?.subscribed ? 'bg-zinc-900' : 'bg-zinc-300'
+                  } ${toggling || !userEmail || !canSubscribe ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${sub?.subscribed ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+              </button>
+            </div>
+
+            {sub?.subscribed && sub.lastSentAt && (
+              <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center gap-6 text-sm text-zinc-500">
+                <p>Last briefing: <span className="text-zinc-900 font-medium">{formatDate(sub.lastSentAt)}</span></p>
+                <p>Targets: <span className="text-zinc-900 font-medium">{sub.lastTargetCount ?? 0}</span></p>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Search */}
+          <input
+            type="search"
+            placeholder="Search all events, companies, attendees..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-sm bg-white"
+          />
+
+          {/* Currently Subscribed Box */}
+          {hasSubscribedItems && (
+            <div className="border border-indigo-100 rounded-xl p-5 bg-indigo-50/30 shadow-sm">
+              <h2 className="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+                Currently Subscribed
+                <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2 rounded-full text-xs font-medium">
+                  {totalSelected}
+                </span>
+              </h2>
+
+              <div className="space-y-3">
+                {subscribedEvents.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-medium text-indigo-800 uppercase tracking-wider mb-1">Events</h3>
+                    <div className="space-y-1">
+                      {subscribedEvents.map(e => (
+                        <label key={`sub-event-${e.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => toggleSelection('event', e.id, true)}
+                            className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                            e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
+                              'bg-zinc-100 text-zinc-500'
+                            }`}>{e.status}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {subscribedCompanies.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-medium text-indigo-800 uppercase tracking-wider mb-1 mt-2">Companies</h3>
+                    <div className="space-y-1">
+                      {subscribedCompanies.map(c => (
+                        <label key={`sub-company-${c.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => toggleSelection('company', c.id, true)}
+                            className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
+                          {c.pipelineValue ? (
+                            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
+                          ) : (
+                            <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Pipeline: Not Defined</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {subscribedAttendees.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-medium text-indigo-800 uppercase tracking-wider mb-1 mt-2">Attendees</h3>
+                    <div className="space-y-1">
+                      {subscribedAttendees.map(a => (
+                        <label key={`sub-attendee-${a.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => toggleSelection('attendee', a.id, true)}
+                            className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
+                          <span className="text-xs text-zinc-500">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Events section */}
+          {filteredEvents.length > 0 && (
+            <section className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
+              <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
+                All Events
+                {sub && sub.selectedEventIds.length > 0 && (
+                  <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedEventIds.length} selected</span>
+                )}
+              </h2>
+              <div className="space-y-1">
+                {filteredEvents.map(e => {
+                  const isSelected = sub?.selectedEventIds.includes(e.id) ?? false
+                  return (
+                    <label key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelection('event', e.id, isSelected)}
+                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                      />
+                      <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
+                      <span className="text-xs text-zinc-400">{formatDate(e.startDate)}–{formatDate(e.endDate)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                        e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
+                          'bg-zinc-100 text-zinc-500'
+                        }`}>{e.status}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Companies section */}
+          {filteredCompanies.length > 0 && (
+            <section className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
+              <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
+                All Companies
+                {sub && sub.selectedCompanyIds.length > 0 && (
+                  <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedCompanyIds.length} selected</span>
+                )}
+              </h2>
+              <div className="space-y-1">
+                {filteredCompanies.map(c => {
+                  const isSelected = sub?.selectedCompanyIds.includes(c.id) ?? false
+                  return (
+                    <label key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelection('company', c.id, isSelected)}
+                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                      />
+                      <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
+                      {c.pipelineValue ? (
+                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
+                      ) : (
+                        <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Pipeline: Not Defined</span>
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Attendees section */}
+          {filteredAttendees.length > 0 && (
+            <section className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
+              <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
+                All Attendees
+                {sub && sub.selectedAttendeeIds.length > 0 && (
+                  <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedAttendeeIds.length} selected</span>
+                )}
+              </h2>
+              <div className="space-y-1">
+                {filteredAttendees.map(a => {
+                  const isSelected = sub?.selectedAttendeeIds.includes(a.id) ?? false
+                  return (
+                    <label key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelection('attendee', a.id, isSelected)}
+                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                      />
+                      <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
+                      <span className="text-xs text-zinc-500">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {search && filteredAttendees.length === 0 && filteredCompanies.length === 0 && filteredEvents.length === 0 && (
+            <div className="text-center py-12 bg-white rounded-xl border border-zinc-200 shadow-sm mt-6">
+              <p className="text-sm text-zinc-500">No results found for &quot;<span className="font-medium text-zinc-900">{search}</span>&quot;</p>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Search */}
-      <input
-        type="search"
-        placeholder="Search all events, companies, attendees..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="w-full mb-6 px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-      />
-
-      {/* Events section */}
-      {filteredEvents.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-sm font-semibold text-zinc-700 mb-2 pb-1 border-b border-zinc-200">
-            Events {sub && sub.selectedEventIds.length > 0 && (
-              <span className="font-normal text-zinc-400">({sub.selectedEventIds.length} selected)</span>
-            )}
-          </h2>
-          <div className="space-y-1">
-            {filteredEvents.map(e => {
-              const isSelected = sub?.selectedEventIds.includes(e.id) ?? false
-              return (
-                <label key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelection('event', e.id, isSelected)}
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400"
-                  />
-                  <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
-                  <span className="text-xs text-zinc-400">{formatDate(e.startDate)}–{formatDate(e.endDate)}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                    e.status === 'CANCELED'  ? 'bg-red-100 text-red-700' :
-                    'bg-zinc-100 text-zinc-500'
-                  }`}>{e.status}</span>
-                </label>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Companies section */}
-      {filteredCompanies.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-sm font-semibold text-zinc-700 mb-2 pb-1 border-b border-zinc-200">
-            Companies {sub && sub.selectedCompanyIds.length > 0 && (
-              <span className="font-normal text-zinc-400">({sub.selectedCompanyIds.length} selected)</span>
-            )}
-          </h2>
-          <div className="space-y-1">
-            {filteredCompanies.map(c => {
-              const isSelected = sub?.selectedCompanyIds.includes(c.id) ?? false
-              return (
-                <label key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelection('company', c.id, isSelected)}
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400"
-                  />
-                  <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
-                  {c.pipelineValue && (
-                    <span className="text-xs text-zinc-400">Pipeline{formatCurrency(c.pipelineValue)}</span>
-                  )}
-                </label>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Attendees section */}
-      {filteredAttendees.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-sm font-semibold text-zinc-700 mb-2 pb-1 border-b border-zinc-200">
-            Attendees {sub && sub.selectedAttendeeIds.length > 0 && (
-              <span className="font-normal text-zinc-400">({sub.selectedAttendeeIds.length} selected)</span>
-            )}
-          </h2>
-          <div className="space-y-1">
-            {filteredAttendees.map(a => {
-              const isSelected = sub?.selectedAttendeeIds.includes(a.id) ?? false
-              return (
-                <label key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelection('attendee', a.id, isSelected)}
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400"
-                  />
-                  <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
-                  <span className="text-xs text-zinc-400">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
-                </label>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {search && filteredAttendees.length === 0 && filteredCompanies.length === 0 && filteredEvents.length === 0 && (
-        <p className="text-sm text-zinc-400 text-center py-8">No results for &quot;{search}&quot;</p>
-      )}
     </div>
   )
 }
