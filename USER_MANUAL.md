@@ -56,6 +56,7 @@ Events are color-coded by status:
 ### Creating & Managing Events (Root/Marketing Only)
 - **New Event**: Click the **"+"** button. Enter a name to create a new event in Pipeline status.
 - **Edit/Delete**: Use the icons on event cards.
+- **AI Marketing Plan**: Click the Sparkles icon on any event card to generate a comprehensive, target-audience-focused marketing plan using OpenClaw Insights.
 - **Deleting an Event**: Triggers an automatic backup before permanent deletion. Meetings and rooms are cascade-deleted; attendees are preserved (they are system-level entities).
 
 ### Navigation
@@ -74,7 +75,7 @@ The **Dashboard** (`/events/[id]/dashboard`) is your event command center.
 
 ### Overview
 - **Real-time stats**: Attendee count, meeting count, room utilization.
-- **Meeting list**: Filterable and searchable. Click meetings to view/edit details.
+- **Meeting list**: Filterable and searchable. Click a meeting to open a view-only details modal. Click **Edit** within the modal to make changes.
 - **Status breakdown**: Visual indicators for Pipeline, Confirmed, Occurred, and Canceled meetings.
 
 ### Export Options
@@ -121,7 +122,7 @@ Use this tab to define what success looks like for the event.
 | **Other Meetings** | Target for non-booth, non-C-level meetings. |
 
 #### Engagement Targets
-Set numeric targets for: **Social Reach**, **Keynotes**, **Seminars**, **Media/PR**, and **Booth Sessions**.
+Set numeric targets for: **Social Reach**, **Target ERTA** (Engagement Rate by Target Account), **Keynotes**, **Seminars**, **Media/PR**, and **Booth Sessions**.
 
 #### Target Companies
 Type company names and press Enter (or click **Add**) to build a target list. These are companies you want to ensure you meet with at the event. The Performance Tracker will show which ones you actually met.
@@ -137,6 +138,7 @@ Targets go through a three-step approval process:
 Engagement metrics like social reach, keynotes, and media coverage can't be derived from meeting data. Enter them here after the event:
 
 - **Social Reach**: Total social media impressions/reach.
+- **Actual ERTA**: The achieved Engagement Rate by Target Account at the event.
 - **Keynotes**: Number of keynote presentations delivered.
 - **Seminars**: Number of seminars or panels participated in.
 - **Media / PR**: Number of media mentions or PR activities.
@@ -159,7 +161,7 @@ The following metrics are computed in real time from your meeting and attendee d
 | **C-Level Meetings** | Count of meetings that include at least one attendee with seniority level "C-Level". |
 | **Other Meetings** | Total meetings minus Booth and C-Level meetings. |
 | **Target Companies Hit** | Companies from your target list that appear in at least one confirmed/occurred meeting. |
-| **Investment** | Pulled from the event's budgeted target target. |
+| **Investment** | Pulled from the event's budgeted target. |
 | **ROI Ratio** | Pipeline ÷ Investment, shown as a percentage. |
 
 #### Visual Elements
@@ -258,7 +260,7 @@ Navigate to **New Meeting** (`/events/[id]/new-meeting`) for a full-featured mee
 Navigate to **Calendar** (`/events/[id]/calendar`) for a visual schedule:
 - **Day / Week / Month** views.
 - **Drag and Drop**: Reschedule meetings by dragging them to new time slots.
-- **Click** a meeting to view details; **double-click** to edit.
+- **Click** a meeting to open the read-only details modal; click **Edit** from there to make changes.
 - Color-coded by meeting status.
 
 ### Meeting Status Workflow

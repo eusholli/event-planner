@@ -35,6 +35,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 ### AI Systems
 - **AI Chat Assistant** (`/events/[id]/chat`): Built-in conversational AI using Vercel AI SDK 5.0 and Google Gemini. Context-aware of event data with tool-calling for searching meetings, attendees, rooms, and generating navigation links. Persistent chat history per event.
 - **OpenClaw Insights** (`/events/[id]/intelligence`): Market intelligence agent powered by OpenClaw via WebSocket proxy (`ws-proxy`). Features real-time streaming responses, thinking/status indicators, session management, and PDF download for each response.
+- **AI Marketing Plan Generation**: Generate a tailored event marketing plan targeting specific audiences and maximizing ROI, powered by OpenClaw. Accessible via the Sparkles icon directly from event cards in the portfolio.
 
 ### Rooms
 - **Room Management**: Create and manage rooms with capacity tracking.
@@ -112,6 +113,9 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 
     # OpenClaw Insights WebSocket (Optional)
     NEXT_PUBLIC_WS_URL=ws://localhost:8080/
+
+    # Scheduled Cron Secret Key (Required for Data Sync)
+    CRON_SECRET_KEY=your_secure_secret_key
 
     # Disable Auth for Testing (Optional)
     # NEXT_PUBLIC_DISABLE_CLERK_AUTH=true

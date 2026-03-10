@@ -16,6 +16,7 @@ Welcome to the Event Planner! Follow these simplified steps to get your event se
     - **Dates & Location**: Start/End dates, Region, Timezone, and Address.
 4. **AI Scraper (Optional)**: Paste the event's official URL and click the AI sparkle button to let Google Gemini automatically fill in the description, dates, and location.
 5. **Save**: The event is now created in **Pipeline** status!
+6. **AI Marketing Plan**: Back in the portfolio, click the Sparkles icon on your new event card to instantly generate a tailored event marketing plan powered by OpenClaw.
 
 ---
 
@@ -54,8 +55,9 @@ Define what success looks like before the event starts.
 With your attendees and targets set, you can begin executing your event strategy.
 
 1. **Create Rooms**: Go to **Logistics → Rooms** to define your meeting spaces and their capacities.
-2. **Schedule Meetings**:
+2. **Schedule & Manage Meetings**:
     - Go to **Logistics → Calendar** for a drag-and-drop view, or **Logistics → New Meeting** to use the full scheduling form.
+    - **View Details**: Click any existing meeting to open a quick, read-only details modal. To make changes, click the **Edit** button within the modal.
     - Select your Attendees, Room, Date/Time, and set the Status to **Confirmed**.
 3. **Monitor Progress**:
     - **Dashboard**: Go to **Performance → Dashboard** for a real-time overview of meeting counts and room utilization.
