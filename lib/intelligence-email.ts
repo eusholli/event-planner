@@ -69,7 +69,7 @@ export async function composeIntelligenceEmail(
     .map(e => `- ${e.name}: ${e.startDate ?? 'TBD'} to ${e.endDate ?? 'TBD'} (${e.status})`)
     .join('\n')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const prompt = `You are composing a market intelligence briefing email for an internal Rakuten Symphony sales/marketing team member.
 
