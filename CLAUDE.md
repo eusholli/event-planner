@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Event Planner is a Next.js 16 application for managing multi-event conferences with attendees, meetings, and schedules. Built with Prisma (PostgreSQL), Clerk authentication, Vercel AI SDK 5.0, and Google Gemini 2.5 Pro. Requires Node.js >=24.0.0.
+Event Planner is a Next.js 16 application for managing multi-event conferences with attendees, meetings, and schedules. Built with Prisma (PostgreSQL), Tailwind CSS v4, Clerk authentication, Vercel AI SDK 5.0, and Google Gemini 2.5 Pro. Requires Node.js >=24.0.0.
 
 ## Development Commands
 
@@ -52,6 +52,7 @@ const resolvedEventId = event.id
 - `Event` - Top-level container with slug routing, `authorizedUserIds` for per-event access, ROI targets
 - `Attendee` - System-level with unique email. Links to a `Company` relation via `companyId`. Shared across events via many-to-many
 - `Meeting` - Event-scoped; `MeetingStatus` enum: `PIPELINE/CONFIRMED/OCCURRED/CANCELED`; has `sequence` field incremented on updates for calendar invite versioning
+- `Event` status workflow: `PIPELINE` (amber) → `COMMITTED` (green) → `OCCURRED` (grey, read-only) → `CANCELED` (red)
 - `Room` - Event-scoped
 - `Company` - System-level company records with a centralized `pipelineValue`, strictly avoiding data duplication.
 
@@ -98,6 +99,8 @@ const resolvedEventId = event.id
 
 **Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
 
+**OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent accessed via WebSocket proxy (`NEXT_PUBLIC_WS_URL`). Features real-time streaming responses with thinking/status indicators. Served at `/intelligence` (standalone) with subscribe management at `/intelligence/subscribe`. Inbound intelligence reports arrive via `/api/webhooks/intel-report`.
+
 ### API Routes
 
 **Pattern**: RESTful with Next.js App Router
@@ -122,6 +125,10 @@ if (!await canWrite()) {
 - `/api/image-proxy` - Proxies external images to avoid CORS
 - `/api/attendees/autocomplete` - AI-powered attendee info lookup (actual Gemini call)
 - `/api/chat/status` - Chat system status
+- `/api/intelligence/subscribe` - Intelligence subscription CRUD (attendees, companies, events)
+- `/api/intelligence/targets` - Cron-triggered target list (requires `CRON_SECRET_KEY`)
+- `/api/intelligence/unsubscribe` - Unsubscribe handler (used in emails)
+- `/api/webhooks/intel-report` - Inbound intelligence reports from OpenClaw
 
 **Backup**: `/api/settings/export` supports `BACKUP_SECRET_KEY` header to bypass auth.
 
@@ -144,7 +151,8 @@ Event pages are logically grouped into sub-menus: **Performance**, **Audience**,
 /events/[id]/settings       - Event-level settings
 /admin/users                - User role management
 /admin/system               - System administration
-/intelligence               - AI intelligence features
+/intelligence               - OpenClaw Insights AI (standalone)
+/intelligence/subscribe     - Manage intelligence subscriptions
 /manual                     - User manual
 /settings                   - System settings (root only)
 ```
@@ -186,7 +194,8 @@ BACKUP_SECRET_KEY          # Bypass auth for export endpoint
 MAPBOX_ACCESS_TOKEN        # Geocoding/maps
 SENTRY_AUTH_TOKEN          # Error tracking
 NEXT_PUBLIC_APP_URL        # Public app URL used in intelligence email unsubscribe links (e.g. https://www.aieventplanner.work)
-CRON_SECRET_KEY    # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report)
+NEXT_PUBLIC_WS_URL         # WebSocket URL for OpenClaw Insights (e.g. ws://localhost:8080/)
+CRON_SECRET_KEY            # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report)
 ```
 
 **Gemini API key** is stored in the `SystemSettings` DB table, not as an env var.
