@@ -43,7 +43,7 @@ An autonomous marketing intelligence pipeline that researches target companies a
 - OpenClaw is responsible for research quality only — delivers structured JSON
 - NextJS is responsible for subscriber matching, personalization, and all outbound email
 - `IntelligenceReport` table is an audit log — every run is stored, emails are traceable
-- Both new endpoints protected by `INTELLIGENCE_SECRET_KEY` (same pattern as `BACKUP_SECRET_KEY`)
+- Both new endpoints protected by `CRON_SECRET_KEY` (same pattern as `BACKUP_SECRET_KEY`)
 
 ---
 
@@ -93,7 +93,7 @@ model IntelligenceEmailLog {
 ## Phase 1: Data Bridge
 
 **Endpoint:** `GET /api/intelligence/targets`
-**Auth:** `Authorization: Bearer <INTELLIGENCE_SECRET_KEY>`
+**Auth:** `Authorization: Bearer <CRON_SECRET_KEY>`
 **Called by:** OpenClaw Cron at start of each run
 
 ### Prioritization logic
@@ -136,7 +136,7 @@ event pipeline. Follow these steps exactly:
 
 1. FETCH TARGETS
    web_fetch GET https://<app-url>/api/intelligence/targets
-   Header: Authorization: Bearer <INTELLIGENCE_SECRET_KEY>
+   Header: Authorization: Bearer <CRON_SECRET_KEY>
    Parse into companies[], attendees[], and upcomingEvents[].
 
 2. RESEARCH EACH TARGET
@@ -169,7 +169,7 @@ event pipeline. Follow these steps exactly:
 
 4. DELIVER
    web_fetch POST <app-url>/api/webhooks/intel-report
-   Header: Authorization: Bearer <INTELLIGENCE_SECRET_KEY>
+   Header: Authorization: Bearer <CRON_SECRET_KEY>
    Body: JSON payload from step 3.
    Confirm HTTP 200.
 
@@ -189,7 +189,7 @@ event pipeline. Follow these steps exactly:
 
 ### Endpoint: `POST /api/webhooks/intel-report`
 
-**Auth:** `Authorization: Bearer <INTELLIGENCE_SECRET_KEY>`
+**Auth:** `Authorization: Bearer <CRON_SECRET_KEY>`
 **Not** behind Clerk auth — called by OpenClaw, not a browser.
 
 ### Handler logic
@@ -286,7 +286,7 @@ Tone: sharp, B2B sales, no fluff. Max 600 words.
 ### New environment variable
 
 ```bash
-INTELLIGENCE_SECRET_KEY   # shared secret for targets endpoint and webhook
+CRON_SECRET_KEY   # shared secret for targets endpoint and webhook
 ```
 
 ### Threat model
@@ -299,7 +299,7 @@ INTELLIGENCE_SECRET_KEY   # shared secret for targets endpoint and webhook
 
 ### OpenClaw
 
-- `INTELLIGENCE_SECRET_KEY` stored in OpenClaw credentials or cron env — never committed to workspace repo
+- `CRON_SECRET_KEY` stored in OpenClaw credentials or cron env — never committed to workspace repo
 - Cron prompt references key via environment variable placeholder
 
 ---
@@ -330,4 +330,4 @@ INTELLIGENCE_SECRET_KEY   # shared secret for targets endpoint and webhook
 
 - If the subscriber has no meetings yet, they get no report. Consider a fallback: send the top 5 company updates regardless, as a general briefing.
 - The 20-target cap may need tuning once the DB grows. Monitor cron run duration in `memory/` logs.
-- `INTELLIGENCE_SECRET_KEY` rotation: document a rotation procedure (update env var + OpenClaw cron prompt atomically).
+- `CRON_SECRET_KEY` rotation: document a rotation procedure (update env var + OpenClaw cron prompt atomically).

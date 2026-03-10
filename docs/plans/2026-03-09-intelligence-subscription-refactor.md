@@ -16,7 +16,7 @@
 
 - **No test framework.** All verification via `curl` commands against `npm run dev` (localhost:3000).
 - **API routes:** `app/api/[resource]/route.ts` — export named functions `GET`, `POST`, `DELETE`.
-- **Auth wrapper:** `withAuth()` from `lib/with-auth.ts`. All intelligence subscribe endpoints use this. Webhook/targets endpoints validate `Authorization: Bearer <INTELLIGENCE_SECRET_KEY>` manually.
+- **Auth wrapper:** `withAuth()` from `lib/with-auth.ts`. All intelligence subscribe endpoints use this. Webhook/targets endpoints validate `Authorization: Bearer <CRON_SECRET_KEY>` manually.
 - **Prisma:** `import prisma from '@/lib/prisma'`
 - **Clerk backend:** `import { clerkClient, currentUser } from '@clerk/nextjs/server'` — see `app/api/admin/users/route.ts` for usage pattern. `await clerkClient()` returns the client. Role is in `user.publicMetadata.role`.
 - **Email:** `import { sendPlainEmail } from '@/lib/email'`
@@ -631,7 +631,7 @@ import prisma from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 function validateSecret(req: Request): boolean {
-  const secret = process.env.INTELLIGENCE_SECRET_KEY
+  const secret = process.env.CRON_SECRET_KEY
   if (!secret) return false
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
@@ -718,7 +718,7 @@ export async function GET(req: Request) {
 
 ```bash
 curl -s http://localhost:3000/api/intelligence/targets \
-  -H "Authorization: Bearer $INTELLIGENCE_SECRET_KEY"
+  -H "Authorization: Bearer $CRON_SECRET_KEY"
 ```
 
 Expected: `{"generatedAt":"...","companies":[...],"attendees":[...],"events":[...]}` — all arrays will be empty until users make selections.
@@ -950,7 +950,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 function validateSecret(req: Request): boolean {
-  const secret = process.env.INTELLIGENCE_SECRET_KEY
+  const secret = process.env.CRON_SECRET_KEY
   if (!secret) return false
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
@@ -1202,7 +1202,7 @@ export async function POST(req: Request) {
 
 ```bash
 curl -s -X POST http://localhost:3000/api/webhooks/intel-report \
-  -H "Authorization: Bearer $INTELLIGENCE_SECRET_KEY" \
+  -H "Authorization: Bearer $CRON_SECRET_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "runId": "2026-03-09-test",

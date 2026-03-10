@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 function validateSecret(req: Request): boolean {
-  const secret = process.env.INTELLIGENCE_SECRET_KEY
+  const secret = process.env.CRON_SECRET_KEY
   if (!secret) return false
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''

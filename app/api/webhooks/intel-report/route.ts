@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 function validateSecret(req: Request): boolean {
-  const secret = process.env.INTELLIGENCE_SECRET_KEY
+  const secret = process.env.CRON_SECRET_KEY
   if (!secret) return false
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
@@ -134,15 +134,15 @@ export async function POST(req: Request) {
       // Load names for direct attendee/company selections
       const directAttendees = directAttendeeIds.length > 0
         ? await prisma.attendee.findMany({
-            where: { id: { in: directAttendeeIds } },
-            select: { id: true, name: true },
-          })
+          where: { id: { in: directAttendeeIds } },
+          select: { id: true, name: true },
+        })
         : []
       const directCompanies = directCompanyIds.length > 0
         ? await prisma.company.findMany({
-            where: { id: { in: directCompanyIds } },
-            select: { id: true, name: true },
-          })
+          where: { id: { in: directCompanyIds } },
+          select: { id: true, name: true },
+        })
         : []
 
       const directAttendeeNames = new Set(directAttendees.map(a => a.name.toLowerCase()))

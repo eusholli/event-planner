@@ -186,7 +186,7 @@ BACKUP_SECRET_KEY          # Bypass auth for export endpoint
 MAPBOX_ACCESS_TOKEN        # Geocoding/maps
 SENTRY_AUTH_TOKEN          # Error tracking
 NEXT_PUBLIC_APP_URL        # Public app URL used in intelligence email unsubscribe links (e.g. https://www.aieventplanner.work)
-INTELLIGENCE_SECRET_KEY    # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report)
+CRON_SECRET_KEY    # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report)
 ```
 
 **Gemini API key** is stored in the `SystemSettings` DB table, not as an env var.

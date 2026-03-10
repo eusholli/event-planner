@@ -101,7 +101,7 @@ git commit -m "feat: add IntelligenceSubscription, IntelligenceReport, Intellige
 
 Add to `.env`:
 ```bash
-INTELLIGENCE_SECRET_KEY=your-secret-key-here
+CRON_SECRET_KEY=your-secret-key-here
 ```
 
 Generate a strong random value:
@@ -121,7 +121,7 @@ The key is shared between the NextJS app and the OpenClaw cron prompt. Store it 
 **Step 3: Commit**
 
 ```bash
-git add .env.multi 2>/dev/null; git commit -m "feat: add INTELLIGENCE_SECRET_KEY env var placeholder" --allow-empty
+git add .env.multi 2>/dev/null; git commit -m "feat: add CRON_SECRET_KEY env var placeholder" --allow-empty
 ```
 
 Note: Do NOT commit `.env` itself (it's gitignored).
@@ -151,7 +151,7 @@ export const dynamic = 'force-dynamic'
 function validateSecret(req: Request): boolean {
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  return token === process.env.INTELLIGENCE_SECRET_KEY && token.length > 0
+  return token === process.env.CRON_SECRET_KEY && token.length > 0
 }
 
 export async function GET(req: Request) {
@@ -257,7 +257,7 @@ export async function GET(req: Request) {
 Start dev server in another terminal: `npm run dev`
 
 ```bash
-curl -s -H "Authorization: Bearer $(grep INTELLIGENCE_SECRET_KEY .env | cut -d= -f2)" \
+curl -s -H "Authorization: Bearer $(grep CRON_SECRET_KEY .env | cut -d= -f2)" \
   http://localhost:3000/api/intelligence/targets | python3 -m json.tool
 ```
 
@@ -446,7 +446,7 @@ export const maxDuration = 300
 function validateSecret(req: Request): boolean {
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  return token === process.env.INTELLIGENCE_SECRET_KEY && token.length > 0
+  return token === process.env.CRON_SECRET_KEY && token.length > 0
 }
 
 type WebhookPayload = {
@@ -698,7 +698,7 @@ await prisma.intelligenceReport.upsert({
 **Step 4: Test with curl (empty targets — smoke test)**
 
 ```bash
-SECRET=$(grep INTELLIGENCE_SECRET_KEY .env | cut -d= -f2)
+SECRET=$(grep CRON_SECRET_KEY .env | cut -d= -f2)
 curl -s -X POST http://localhost:3000/api/webhooks/intel-report \
   -H "Authorization: Bearer $SECRET" \
   -H "Content-Type: application/json" \
@@ -1193,7 +1193,7 @@ Open `IntelligenceSubscription` table — confirm your record is there with `act
 Pick a company name that matches one in your DB (check Prisma Studio → `Company` table):
 
 ```bash
-SECRET=$(grep INTELLIGENCE_SECRET_KEY .env | cut -d= -f2)
+SECRET=$(grep CRON_SECRET_KEY .env | cut -d= -f2)
 curl -s -X POST http://localhost:3000/api/webhooks/intel-report \
   -H "Authorization: Bearer $SECRET" \
   -H "Content-Type: application/json" \
