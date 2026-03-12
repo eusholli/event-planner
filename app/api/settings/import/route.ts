@@ -176,9 +176,12 @@ const postHandler = withAuth(async (request) => {
                         continue
                     }
 
-                    // Determine which event to connect this attendee to
-                    const eventName = att.eventName // optional field; system export doesn't have per-attendee eventName
-                    const eventId = eventName ? eventNameToId.get(eventName) : undefined
+                    // Resolve eventNames array (or fallback to single eventName) → event connects
+                    const eventNameList: string[] = att.eventNames ?? (att.eventName ? [att.eventName] : [])
+                    const eventConnects = eventNameList
+                        .map((name: string) => eventNameToId.get(name))
+                        .filter((id): id is string => !!id)
+                        .map((id: string) => ({ id }))
 
                     const upserted = await prisma.attendee.upsert({
                         where: { email: att.email },
@@ -187,14 +190,14 @@ const postHandler = withAuth(async (request) => {
                             companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
                             imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
                             type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
-                            events: eventId ? { connect: { id: eventId } } : undefined,
+                            events: eventConnects.length ? { connect: eventConnects } : undefined,
                         },
                         update: {
                             name: att.name, title: att.title ?? '',
                             companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
                             imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
                             type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
-                            events: eventId ? { connect: { id: eventId } } : undefined,
+                            events: eventConnects.length ? { connect: eventConnects } : undefined,
                         },
                     })
                     emailToAttendeeId.set(att.email, upserted.id)

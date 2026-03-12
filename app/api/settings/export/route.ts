@@ -12,7 +12,9 @@ async function exportData(): Promise<Response> {
         const events = await prisma.event.findMany({
             include: { roiTargets: { include: { targetCompanies: true } } }
         })
-        const attendees = await prisma.attendee.findMany()
+        const attendees = await prisma.attendee.findMany({
+            include: { events: { select: { name: true } } }
+        })
         const rooms = await prisma.room.findMany()
         const meetings = await prisma.meeting.findMany({
             include: { room: true, attendees: true }
@@ -60,10 +62,14 @@ async function exportData(): Promise<Response> {
             })
         }
 
-        // Attendees: strip id, companyId → companyName
+        // Attendees: strip id, companyId → companyName, add eventNames
         const attendeesOut = attendees.map(a => {
-            const { id, companyId, ...rest } = a as any
-            return { ...rest, companyName: companyIdToName.get(companyId) ?? '' }
+            const { id, companyId, events, ...rest } = a as any
+            return {
+                ...rest,
+                companyName: companyIdToName.get(companyId) ?? '',
+                eventNames: (events ?? []).map((e: any) => e.name),
+            }
         })
 
         // Rooms: strip id, eventId → eventName
