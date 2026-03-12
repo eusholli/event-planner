@@ -255,6 +255,35 @@ const postHandler = withAuth(async (request) => {
             }
         }
 
+        // 6b. Restore Attendee-Event join from meeting attendees
+        // For each meeting, ensure all its attendees are connected to the event
+        const eventAttendeeConnects = new Map<string, Set<string>>() // eventId -> Set<attendeeId>
+        if (config.meetings && Array.isArray(config.meetings)) {
+            for (const mtg of config.meetings) {
+                const eventId = eventNameToId.get(mtg.eventName)
+                if (!eventId) continue
+                const attendeeIds = (mtg.attendees ?? [])
+                    .map((email: string) => emailToAttendeeId.get(email))
+                    .filter(Boolean) as string[]
+                if (!eventAttendeeConnects.has(eventId)) {
+                    eventAttendeeConnects.set(eventId, new Set())
+                }
+                for (const aid of attendeeIds) {
+                    eventAttendeeConnects.get(eventId)!.add(aid)
+                }
+            }
+        }
+        for (const [eventId, attendeeIds] of eventAttendeeConnects) {
+            try {
+                await prisma.event.update({
+                    where: { id: eventId },
+                    data: { attendees: { connect: Array.from(attendeeIds).map(id => ({ id })) } },
+                })
+            } catch (e) {
+                warnings.push(`Event attendee join for event: failed — ${(e as Error).message}`)
+            }
+        }
+
         // 7. ROI Targets — upsert per event
         if (config.events && Array.isArray(config.events)) {
             for (const evt of config.events) {

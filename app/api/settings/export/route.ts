@@ -40,7 +40,7 @@ async function exportData(): Promise<Response> {
         // Events: strip id, translate authorizedUserIds → authorizedEmails, targetCompanyIds → targetCompanyNames
         const eventsOut: any[] = []
         for (const event of events) {
-            const { id, roiTargets, authorizedUserIds, ...eventRest } = event as any
+            const { id, roiTargets, authorizedUserIds, password: _pw, subscriptionCount: _sc, ...eventRest } = event as any
 
             // Translate authorizedUserIds → authorizedEmails (throws on Clerk failure)
             const authorizedEmails = await userIdsToEmails(authorizedUserIds ?? [])
