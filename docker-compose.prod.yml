@@ -3,7 +3,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=webproxy"
-      - "traefik.http.routers.event-planner.rule=Host(`events.maximh.us`)"
+      - "traefik.http.routers.event-planner.rule=Host(`events.maximh.us`) || Host(`aieventplanner.work`) || Host(`www.aieventplanner.work`)"
       - "traefik.http.routers.event-planner.entrypoints=websecure"
       - "traefik.http.routers.event-planner.tls.certresolver=myresolver"
       - "traefik.http.services.event-planner.loadbalancer.server.port=3000"
