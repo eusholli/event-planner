@@ -12,6 +12,11 @@ const postHandler = withAuth(async (request) => {
         const file = formData.get('file') as File
         if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
 
+        const MAX_IMPORT_SIZE = 10 * 1024 * 1024 // 10 MB
+        if (file.size > MAX_IMPORT_SIZE) {
+            return NextResponse.json({ error: 'Import file too large (max 10 MB)' }, { status: 413 })
+        }
+
         const text = await file.text()
         const config = JSON.parse(text)
         const warnings: string[] = []
@@ -20,10 +25,11 @@ const postHandler = withAuth(async (request) => {
             warnings.push(`File version is ${config.version}, expected 5.0. Import may produce unexpected results.`)
         }
 
-        const parseDates = (obj: any) => {
+        const parseEventDates = (obj: any) => {
             const out: any = { ...obj }
-            for (const key in out) {
-                if (typeof out[key] === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(out[key])) {
+            const dateFields = ['startDate', 'endDate', 'createdAt', 'updatedAt']
+            for (const key of dateFields) {
+                if (typeof out[key] === 'string') {
                     const d = new Date(out[key])
                     if (!isNaN(d.getTime())) out[key] = d
                 }
@@ -70,8 +76,8 @@ const postHandler = withAuth(async (request) => {
         if (config.events && Array.isArray(config.events)) {
             for (const evt of config.events) {
                 try {
-                    const parsed = parseDates(evt)
-                    const { roiTargets, authorizedEmails, ...eventFields } = parsed
+                    const parsed = parseEventDates(evt)
+                    const { id: _id, roiTargets, authorizedEmails, ...eventFields } = parsed
 
                     // Resolve authorizedEmails → authorizedUserIds
                     let authorizedUserIds: string[] = []
