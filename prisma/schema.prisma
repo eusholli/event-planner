@@ -82,6 +82,8 @@ model Room {
   eventId  String?
   meetings Meeting[]
   event    Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([name, eventId])
 }
 
 model Meeting {
