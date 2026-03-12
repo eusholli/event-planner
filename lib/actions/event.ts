@@ -118,6 +118,9 @@ async function resolveCompany(companyName: string, description?: string, pipelin
 
 // Data Management Actions
 export async function exportEventData(eventId: string) {
+    const { canWrite } = await import('@/lib/roles')
+    if (!await canWrite()) throw new Error('Forbidden')
+
     const { userIdsToEmails } = await import('@/lib/clerk-export')
 
     const event = await prisma.event.findUnique({
@@ -154,7 +157,7 @@ export async function exportEventData(eventId: string) {
     }))
 
     // Event: strip id, authorizedUserIds → authorizedEmails
-    const { id, authorizedUserIds, attendees: _atts, rooms: _rooms, meetings: _mtgs, roiTargets: _roi, ...eventRest } = event as any
+    const { id, password: _pw, authorizedUserIds, attendees: _atts, rooms: _rooms, meetings: _mtgs, roiTargets: _roi, ...eventRest } = event as any
     const eventOut = { ...eventRest, authorizedEmails }
 
     // Attendees: strip id/companyId, add companyName
@@ -181,7 +184,7 @@ export async function exportEventData(eventId: string) {
 
     // ROI targets: strip id/eventId, targetCompanyIds → targetCompanyNames
     const roiOut = event.roiTargets ? (() => {
-        const { id: _id, eventId: _eid, event: _ev, targetCompanies, ...roiRest } = event.roiTargets as any
+        const { id: _id, eventId: _eid, event: _ev, targetCompanies, targetCompanyIds: _tcids, ...roiRest } = event.roiTargets as any
         return { ...roiRest, targetCompanyNames: (targetCompanies ?? []).map((c: any) => c.name) }
     })() : null
 
