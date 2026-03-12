@@ -26,6 +26,8 @@ const isReportRoute = createRouteMatcher([
 
 const isIntelligenceApiRoute = createRouteMatcher([
     '/api/intelligence/targets(.*)',
+    '/api/intelligence/session(.*)',
+    '/api/intelligence/actions(.*)',
     '/api/webhooks/intel-report(.*)'
 ]);
 

@@ -111,10 +111,13 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                     setIsConnected(true);
                     setError(null);
 
-                    // Auto-send query from URL params (e.g. from attendee intelligence button)
-                    const autoQuery = new URLSearchParams(window.location.search).get("autoQuery");
+                    // Auto-send query from sessionStorage (preferred) or URL param fallback
+                    const autoQuery = sessionStorage.getItem('intelligenceAutoQuery')
+                        || new URLSearchParams(window.location.search).get("autoQuery");
                     if (autoQuery && !autoQuerySentRef.current) {
                         autoQuerySentRef.current = true;
+                        // Clear immediately to prevent re-send on reconnect
+                        sessionStorage.removeItem('intelligenceAutoQuery');
                         // Small delay to let history load first
                         setTimeout(() => {
                             if (cancelled || !ws || ws.readyState !== WebSocket.OPEN) return;
@@ -122,11 +125,13 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             setMessages((prev) => [...prev, userMsg]);
                             setIsWaitingForResponse(true);
                             ws.send(JSON.stringify({ type: "message", content: autoQuery }));
-                            // Clear the param from URL so refresh won't re-send
+                            // Clear URL param if present (backward compat)
                             const params = new URLSearchParams(window.location.search);
-                            params.delete("autoQuery");
-                            const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-                            router.replace(newUrl, { scroll: false });
+                            if (params.has("autoQuery")) {
+                                params.delete("autoQuery");
+                                const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+                                router.replace(newUrl, { scroll: false });
+                            }
                         }, 500);
                     }
                 };
@@ -183,9 +188,9 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             setIsWaitingForResponse(false);
                             setStatusMessage(null);
                         } else if (data.type === "session-cleared") {
-                            setMessages([]);
-                            setIsWaitingForResponse(false);
-                            setStatusMessage(null);
+                            setMessages([{ role: "user", content: "/new", id: Date.now().toString() }]);
+                            setIsWaitingForResponse(true);
+                            setStatusMessage("Starting new session…");
                             setError(null);
                         } else if (data.type === "user-message") {
                             setMessages((prev) => [
@@ -361,7 +366,30 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                                                 }
                                                 return <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono border border-zinc-200" {...props}>{children}</code>;
                                             },
-                                            a: ({ node, ...props }) => <a className="text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors font-medium" target="_blank" rel="noopener noreferrer" {...props} />,
+                                            a: ({ node, href, children, ...props }) => {
+                                              // Internal app links → styled navigation card
+                                              if (href && href.startsWith('/')) {
+                                                const label = typeof children === 'string' ? children :
+                                                  Array.isArray(children) ? children.join('') : String(children ?? href)
+                                                return (
+                                                  <Link href={href} className="inline-flex group my-2 w-full no-underline">
+                                                    <span className="bg-white border border-zinc-200 rounded-xl p-3 hover:border-blue-500 hover:shadow-md transition-all inline-flex items-center gap-3 w-full">
+                                                      <span className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0 inline-flex">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                        </svg>
+                                                      </span>
+                                                      <span className="inline-flex flex-col">
+                                                        <span className="text-sm font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors">{label}</span>
+                                                        <span className="text-xs text-zinc-400 mt-0.5">{href}</span>
+                                                      </span>
+                                                    </span>
+                                                  </Link>
+                                                )
+                                              }
+                                              // External links → open in new tab
+                                              return <a href={href} className="text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors font-medium" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+                                            },
                                         }}
                                     >
                                         {msg.content}

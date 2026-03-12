@@ -118,8 +118,11 @@ export default function Navigation() {
                 <div className="flex justify-between h-16">
                     <div className="flex">
                         <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" className="text-xl font-bold tracking-tight text-zinc-900">
+                            <Link href="/" className="relative text-xl font-bold tracking-tight text-zinc-900">
                                 AI Event Planner
+                                <sup className="absolute -top-2 -right-8 text-[10px] font-semibold tracking-wide text-zinc-400">
+                                    Alpha
+                                </sup>
                             </Link>
                         </div>
                         <SignedIn>
