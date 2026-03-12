@@ -262,346 +262,278 @@ export async function importEventData(eventId: string, data: any) {
     const { canWrite } = await import('@/lib/roles')
     if (!await canWrite()) throw new Error('Forbidden')
 
-    // 1. Scope Validation
-    if (data.event?.id && data.event.id !== eventId) {
-        throw new Error(`Invalid Event ID. Data belongs to event ${data.event.id} but you are importing into ${eventId}.`)
+    const warnings: string[] = []
+
+    if (data.version && data.version !== '5.0') {
+        warnings.push(`File version is ${data.version}, expected 5.0.`)
     }
 
-    // 1.5 Import Companies first (if present)
+    // Scope check: warn if event name doesn't match
+    if (data.event?.name) {
+        const targetEvent = await prisma.event.findUnique({ where: { id: eventId }, select: { name: true } })
+        if (targetEvent && targetEvent.name !== data.event.name) {
+            warnings.push(`Importing data from event '${data.event.name}' into event '${targetEvent.name}'.`)
+        }
+    }
+
+    // 1. Companies — upsert by name
+    const companyNameToId = new Map<string, string>()
     if (data.companies && Array.isArray(data.companies)) {
         for (const comp of data.companies) {
-            await prisma.company.upsert({
-                where: { id: comp.id },
-                create: {
-                    id: comp.id,
-                    name: comp.name,
-                    description: comp.description,
-                    pipelineValue: comp.pipelineValue,
-                },
-                update: {
-                    name: comp.name,
-                    description: comp.description,
-                    pipelineValue: comp.pipelineValue,
-                }
-            }).catch(e => console.warn('Company import skip', e))
+            try {
+                const upserted = await prisma.company.upsert({
+                    where: { name: comp.name },
+                    create: { name: comp.name, description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null },
+                    update: { description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null },
+                })
+                companyNameToId.set(comp.name, upserted.id)
+            } catch (e) {
+                warnings.push(`Company '${comp.name}': failed — ${(e as Error).message}`)
+            }
         }
     }
 
-    // 2. Event Update (Merge)
+    // 2. Event update (merge)
     if (data.event) {
-        const eventUpdate: any = {}
-        if (data.event.name !== undefined) eventUpdate.name = data.event.name
-        if (data.event.startDate !== undefined) eventUpdate.startDate = data.event.startDate
-        if (data.event.endDate !== undefined) eventUpdate.endDate = data.event.endDate
-        if (data.event.status !== undefined) eventUpdate.status = data.event.status
-        if (data.event.region !== undefined) eventUpdate.region = data.event.region
-        if (data.event.url !== undefined) eventUpdate.url = data.event.url
-        if (data.event.budget !== undefined) eventUpdate.budget = data.event.budget
-        if (data.event.targetCustomers !== undefined) eventUpdate.targetCustomers = data.event.targetCustomers
-        if (data.event.requesterEmail !== undefined) eventUpdate.requesterEmail = data.event.requesterEmail
-        if (data.event.tags !== undefined) eventUpdate.tags = data.event.tags
-        if (data.event.meetingTypes !== undefined) eventUpdate.meetingTypes = data.event.meetingTypes
-        if (data.event.attendeeTypes !== undefined) eventUpdate.attendeeTypes = data.event.attendeeTypes
-        if (data.event.address !== undefined) eventUpdate.address = data.event.address
-        if (data.event.timezone !== undefined) eventUpdate.timezone = data.event.timezone
-        if (data.event.slug !== undefined) eventUpdate.slug = data.event.slug
-        if (data.event.password !== undefined) eventUpdate.password = data.event.password
-        if (data.event.description !== undefined) eventUpdate.description = data.event.description
-        if (data.event.authorizedUserIds !== undefined) eventUpdate.authorizedUserIds = data.event.authorizedUserIds
-        if (data.event.boothLocation !== undefined) eventUpdate.boothLocation = data.event.boothLocation
+        const { authorizedEmails, roiTargets: _roi, id: _id, ...eventFields } = data.event
+        const eventUpdate: any = { ...eventFields }
 
-        // Geocode if address exists but coords are missing
-        if (data.event.address && (data.event.latitude === undefined || data.event.longitude === undefined)) {
-            try {
-                const geo = await geocodeAddress(data.event.address)
-                if (geo) {
-                    eventUpdate.latitude = geo.latitude
-                    eventUpdate.longitude = geo.longitude
-                }
-            } catch (e) {
-                console.error('Event import action geocoding failed', e)
+        // Resolve authorizedEmails → authorizedUserIds
+        if (Array.isArray(authorizedEmails)) {
+            const { emailsToUserIds } = await import('@/lib/clerk-export')
+            const { resolved, missing } = await emailsToUserIds(authorizedEmails)
+            eventUpdate.authorizedUserIds = resolved.map(r => r.userId)
+            for (const email of missing) {
+                warnings.push(`Authorized user '${email}' not found in Clerk — skipped`)
             }
         }
 
-        if (data.event.latitude !== undefined) eventUpdate.latitude = data.event.latitude
-        if (data.event.longitude !== undefined) eventUpdate.longitude = data.event.longitude
+        // Geocode if needed
+        if (eventFields.address && !eventFields.latitude) {
+            try {
+                const geo = await geocodeAddress(eventFields.address)
+                if (geo) { eventUpdate.latitude = geo.latitude; eventUpdate.longitude = geo.longitude }
+            } catch { /* non-fatal */ }
+        }
 
-        await prisma.event.update({
-            where: { id: eventId },
-            data: eventUpdate
-        })
+        await prisma.event.update({ where: { id: eventId }, data: eventUpdate })
     }
 
-    // 3. Import Rooms
+    // 3. Rooms — upsert by (name, eventId), build roomNameToId map
+    const roomNameToId = new Map<string, string>()
     if (data.rooms && Array.isArray(data.rooms)) {
         for (const room of data.rooms) {
-            const roomUpdate: any = {}
-            if (room.name !== undefined) roomUpdate.name = room.name
-            if (room.capacity !== undefined) roomUpdate.capacity = room.capacity
-
-            await prisma.room.upsert({
-                where: { id: room.id },
-                create: {
-                    id: room.id,
-                    name: room.name,
-                    capacity: room.capacity,
-                    eventId
-                },
-                update: roomUpdate
-            }).catch(e => console.warn('Room import skip', e))
+            try {
+                const existing = await prisma.room.findFirst({ where: { name: room.name, eventId } })
+                let roomId: string
+                if (existing) {
+                    await prisma.room.update({ where: { id: existing.id }, data: { capacity: room.capacity } })
+                    roomId = existing.id
+                } else {
+                    const created = await prisma.room.create({ data: { name: room.name, capacity: room.capacity, eventId } })
+                    roomId = created.id
+                }
+                roomNameToId.set(room.name, roomId)
+            } catch (e) {
+                warnings.push(`Room '${room.name}': failed — ${(e as Error).message}`)
+            }
         }
     }
 
-    // 4. Import Attendees
+    // 4. Attendees — upsert by email, resolve companyName, build emailToAttendeeId map
+    const emailToAttendeeId = new Map<string, string>()
     if (data.attendees && Array.isArray(data.attendees)) {
         for (const att of data.attendees) {
-            let companyId = att.companyId
-
-            // Backwards compatibility: If old format with company string
-            if (!companyId && att.company && typeof att.company === 'string') {
-                companyId = await resolveCompany(att.company, att.companyDescription, att.pipelineValue)
-            }
-
-            if (!companyId) {
-                console.warn('Attendee import skip - no companyId:', att.name)
-                continue
-            }
-
-            const attUpdate: any = {}
-            if (att.name !== undefined) attUpdate.name = att.name
-            if (att.email !== undefined) attUpdate.email = att.email
-            if (att.title !== undefined) attUpdate.title = att.title
-            attUpdate.companyId = companyId
-            if (att.bio !== undefined) attUpdate.bio = att.bio
-            if (att.linkedin !== undefined) attUpdate.linkedin = att.linkedin
-            if (att.imageUrl !== undefined) attUpdate.imageUrl = att.imageUrl
-            if (att.isExternal !== undefined) attUpdate.isExternal = att.isExternal
-            if (att.type !== undefined) attUpdate.type = att.type
-            if (att.seniorityLevel !== undefined) attUpdate.seniorityLevel = att.seniorityLevel
-
-            await prisma.attendee.upsert({
-                where: { id: att.id },
-                create: {
-                    id: att.id,
-                    name: att.name,
-                    email: att.email,
-                    title: att.title,
-                    companyId,
-                    bio: att.bio,
-                    linkedin: att.linkedin,
-                    imageUrl: att.imageUrl,
-                    isExternal: att.isExternal,
-                    type: att.type,
-                    seniorityLevel: att.seniorityLevel,
-                    events: {
-                        connect: { id: eventId }
-                    }
-                },
-                update: {
-                    ...attUpdate,
-                    events: {
-                        connect: { id: eventId }
-                    }
+            try {
+                // Resolve company: companyName (V5) or legacy att.company string
+                const nameForCompany = att.companyName ?? att.company
+                let companyId = companyNameToId.get(nameForCompany)
+                if (!companyId && nameForCompany) {
+                    companyId = await resolveCompany(nameForCompany, att.companyDescription)
+                    if (companyId) companyNameToId.set(nameForCompany, companyId)
                 }
-            }).catch(e => console.warn('Attendee import skip', e))
+                if (!companyId) {
+                    warnings.push(`Attendee '${att.email}': no company — skipped`)
+                    continue
+                }
+
+                const upserted = await prisma.attendee.upsert({
+                    where: { email: att.email },
+                    create: {
+                        name: att.name, email: att.email, title: att.title ?? '',
+                        companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
+                        imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
+                        type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
+                        events: { connect: { id: eventId } },
+                    },
+                    update: {
+                        name: att.name, title: att.title ?? '',
+                        companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
+                        imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
+                        type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
+                        events: { connect: { id: eventId } },
+                    },
+                })
+                emailToAttendeeId.set(att.email, upserted.id)
+            } catch (e) {
+                warnings.push(`Attendee '${att.email}': failed — ${(e as Error).message}`)
+            }
         }
     }
 
-    // 5. Import Meetings
+    // 5. Meetings — upsert by (title, date, startTime, eventId)
     if (data.meetings && Array.isArray(data.meetings)) {
         for (const mtg of data.meetings) {
-            let attendeeConnects: any = undefined
-            if (mtg.attendees !== undefined) {
-                attendeeConnects = mtg.attendees?.map((a: any) => {
-                    if (typeof a === 'string') return { id: a }
-                    return { id: a.id }
-                }) || []
-            }
+            try {
+                const roomId = mtg.room ? (roomNameToId.get(mtg.room) ?? null) : null
+                const attendeeConnects = (mtg.attendees ?? [])
+                    .map((email: string) => emailToAttendeeId.get(email))
+                    .filter(Boolean)
+                    .map((id: string) => ({ id }))
 
-            const mtgUpdate: any = {}
-            if (mtg.title !== undefined) mtgUpdate.title = mtg.title
-            if (mtg.purpose !== undefined) mtgUpdate.purpose = mtg.purpose
-            if (mtg.date !== undefined) mtgUpdate.date = mtg.date
-            if (mtg.startTime !== undefined) mtgUpdate.startTime = mtg.startTime
-            if (mtg.endTime !== undefined) mtgUpdate.endTime = mtg.endTime
-            if (mtg.roomId !== undefined) mtgUpdate.roomId = mtg.roomId
-            if (attendeeConnects !== undefined) {
-                mtgUpdate.attendees = { set: attendeeConnects }
-            }
-            if (mtg.sequence !== undefined) mtgUpdate.sequence = mtg.sequence
-            if (mtg.status !== undefined) mtgUpdate.status = mtg.status
-            if (mtg.tags !== undefined) mtgUpdate.tags = mtg.tags
-            if (mtg.calendarInviteSent !== undefined) mtgUpdate.calendarInviteSent = mtg.calendarInviteSent
-            if (mtg.createdBy !== undefined) mtgUpdate.createdBy = mtg.createdBy
-            if (mtg.isApproved !== undefined) mtgUpdate.isApproved = mtg.isApproved
-            if (mtg.meetingType !== undefined) mtgUpdate.meetingType = mtg.meetingType
-            if (mtg.otherDetails !== undefined) mtgUpdate.otherDetails = mtg.otherDetails
-            if (mtg.requesterEmail !== undefined) mtgUpdate.requesterEmail = mtg.requesterEmail
-            if (mtg.location !== undefined) mtgUpdate.location = mtg.location
+                const existing = await prisma.meeting.findFirst({
+                    where: { title: mtg.title, date: mtg.date, startTime: mtg.startTime, eventId }
+                })
 
-            const createConnects = mtg.attendees?.map((a: any) => {
-                if (typeof a === 'string') return { id: a }
-                return { id: a.id }
-            }) || []
-
-            await prisma.meeting.upsert({
-                where: { id: mtg.id },
-                create: {
-                    id: mtg.id,
-                    title: mtg.title,
-                    purpose: mtg.purpose,
-                    startTime: mtg.startTime,
-                    endTime: mtg.endTime,
-                    roomId: mtg.roomId,
-                    sequence: mtg.sequence || 0,
-                    status: mtg.status || 'PIPELINE',
-                    tags: mtg.tags || [],
-                    date: mtg.date,
-                    calendarInviteSent: mtg.calendarInviteSent || false,
-                    createdBy: mtg.createdBy,
-                    isApproved: mtg.isApproved || false,
-                    meetingType: mtg.meetingType,
-                    otherDetails: mtg.otherDetails,
-                    requesterEmail: mtg.requesterEmail,
-                    location: mtg.location,
-                    eventId,
-                    attendees: {
-                        connect: createConnects
-                    }
-                },
-                update: mtgUpdate
-            }).catch(e => console.warn('Meeting import skip', e))
-        }
-    }
-
-    // 6. Import ROI Targets
-    if (data.roiTargets) {
-        const roi = data.roiTargets
-
-        // Handle target companies
-        let targetCompanyConnect: any = undefined
-        if (roi.targetCompanyIds && Array.isArray(roi.targetCompanyIds)) {
-            targetCompanyConnect = roi.targetCompanyIds.map((id: string) => ({ id }))
-        } else if (roi.targetCompanies && Array.isArray(roi.targetCompanies)) {
-            // Legacy: targetCompanies was string[] of company names
-            const companyIds: string[] = []
-            for (const name of roi.targetCompanies) {
-                if (typeof name === 'string') {
-                    const companyId = await resolveCompany(name)
-                    companyIds.push(companyId)
+                const commonFields = {
+                    title: mtg.title, purpose: mtg.purpose ?? null,
+                    date: mtg.date, startTime: mtg.startTime, endTime: mtg.endTime,
+                    sequence: mtg.sequence ?? 0, status: mtg.status ?? 'PIPELINE',
+                    tags: mtg.tags ?? [], meetingType: mtg.meetingType ?? null,
+                    location: mtg.location ?? null, otherDetails: mtg.otherDetails ?? null,
+                    isApproved: mtg.isApproved ?? false,
+                    calendarInviteSent: mtg.calendarInviteSent ?? false,
+                    createdBy: mtg.createdBy ?? null, requesterEmail: mtg.requesterEmail ?? null,
+                    roomId, eventId,
                 }
-            }
-            targetCompanyConnect = companyIds.map(id => ({ id }))
-        }
 
-        await prisma.eventROITargets.upsert({
-            where: { eventId },
-            create: {
-                event: { connect: { id: eventId } },
-                expectedPipeline: roi.expectedPipeline,
-                winRate: roi.winRate,
-                expectedRevenue: roi.expectedRevenue,
-                targetCustomerMeetings: roi.targetCustomerMeetings ?? roi.targetBoothMeetings ?? null,
-                targetErta: roi.targetErta ?? roi.targetTargetedReach ?? roi.targetSocialReach ?? null,
-                targetSpeaking: roi.targetSpeaking ?? roi.targetKeynotes ?? null,
-                targetMediaPR: roi.targetMediaPR ?? null,
-                targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined,
-                actualErta: roi.actualErta ?? roi.actualTargetedReach ?? roi.actualSocialReach ?? null,
-                actualSpeaking: roi.actualSpeaking ?? roi.actualKeynotes ?? null,
-                actualMediaPR: roi.actualMediaPR ?? null,
-                status: roi.status || 'DRAFT',
-                approvedBy: roi.approvedBy,
-                approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
-                submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
-                rejectedBy: roi.rejectedBy ?? null,
-                rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null,
-            },
-            update: {
-                expectedPipeline: roi.expectedPipeline,
-                winRate: roi.winRate,
-                expectedRevenue: roi.expectedRevenue,
-                targetCustomerMeetings: roi.targetCustomerMeetings ?? roi.targetBoothMeetings ?? null,
-                targetErta: roi.targetErta ?? roi.targetTargetedReach ?? roi.targetSocialReach ?? null,
-                targetSpeaking: roi.targetSpeaking ?? roi.targetKeynotes ?? null,
-                targetMediaPR: roi.targetMediaPR ?? null,
-                targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined,
-                actualErta: roi.actualErta ?? roi.actualTargetedReach ?? roi.actualSocialReach ?? null,
-                actualSpeaking: roi.actualSpeaking ?? roi.actualKeynotes ?? null,
-                actualMediaPR: roi.actualMediaPR ?? null,
-                status: roi.status || 'DRAFT',
-                approvedBy: roi.approvedBy,
-                approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
-                submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
-                rejectedBy: roi.rejectedBy ?? null,
-                rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null,
-            },
-        }).catch(e => console.warn('ROI targets import skip', e))
+                if (existing) {
+                    await prisma.meeting.update({
+                        where: { id: existing.id },
+                        data: { ...commonFields, attendees: { set: attendeeConnects } },
+                    })
+                } else {
+                    await prisma.meeting.create({
+                        data: { ...commonFields, attendees: { connect: attendeeConnects } },
+                    })
+                }
+            } catch (e) {
+                warnings.push(`Meeting '${mtg.title}': failed — ${(e as Error).message}`)
+            }
+        }
     }
 
-    // 7. Restore intelligence subscriptions scoped to this event
+    // 6. ROI Targets
+    if (data.roiTargets) {
+        try {
+            const roi = data.roiTargets
+            const targetCompanyConnect = await Promise.all(
+                (roi.targetCompanyNames ?? []).map(async (name: string) => {
+                    // Use in-memory map first to avoid redundant DB lookup
+                    let id = companyNameToId.get(name)
+                    if (!id) id = await resolveCompany(name)
+                    return { id }
+                })
+            )
+
+            const roiData = {
+                expectedPipeline: roi.expectedPipeline ?? null,
+                winRate: roi.winRate ?? null,
+                expectedRevenue: roi.expectedRevenue ?? null,
+                targetCustomerMeetings: roi.targetCustomerMeetings ?? null,
+                targetErta: roi.targetErta ?? null,
+                targetSpeaking: roi.targetSpeaking ?? null,
+                targetMediaPR: roi.targetMediaPR ?? null,
+                actualErta: roi.actualErta ?? null,
+                actualSpeaking: roi.actualSpeaking ?? null,
+                actualMediaPR: roi.actualMediaPR ?? null,
+                status: roi.status ?? 'DRAFT',
+                approvedBy: roi.approvedBy ?? null,
+                approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+                rejectedBy: roi.rejectedBy ?? null,
+                rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null,
+            }
+
+            await prisma.eventROITargets.upsert({
+                where: { eventId },
+                create: { event: { connect: { id: eventId } }, ...roiData, targetCompanies: { connect: targetCompanyConnect } },
+                update: { ...roiData, targetCompanies: { set: targetCompanyConnect } },
+            })
+        } catch (e) {
+            warnings.push(`ROI targets: failed — ${(e as Error).message}`)
+        }
+    }
+
+    // 7. Intelligence subscriptions
     if (data.intelligenceSubscriptions && Array.isArray(data.intelligenceSubscriptions)) {
-        const eventAttendeeIds = (data.attendees ?? []).map((a: any) => a.id)
-
         for (const s of data.intelligenceSubscriptions) {
-            let sub = await prisma.intelligenceSubscription.findUnique({ where: { userId: s.userId } })
-            if (!sub) {
-                sub = await prisma.intelligenceSubscription.create({
-                    data: { userId: s.userId, email: s.email, active: s.active ?? true },
-                }).catch(() => null)
-            }
-            if (!sub) continue
+            try {
+                let sub = await prisma.intelligenceSubscription.findUnique({ where: { userId: s.userId } })
+                if (!sub) {
+                    sub = await prisma.intelligenceSubscription.create({
+                        data: { userId: s.userId, email: s.email, active: s.active ?? true },
+                    }).catch(() => null)
+                }
+                if (!sub) continue
 
-            // Restore event selection
-            for (const eid of (s.selectedEventIds ?? [])) {
-                if (eid !== eventId) continue
+                // Restore event selections
                 await prisma.intelligenceSubEvent.upsert({
-                    where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId: eid } },
-                    create: { subscriptionId: sub.id, eventId: eid },
+                    where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId } },
+                    create: { subscriptionId: sub.id, eventId },
                     update: {},
                 }).catch(() => { })
-            }
 
-            // Restore attendee selections (only those in this event)
-            for (const aid of (s.selectedAttendeeIds ?? [])) {
-                if (!eventAttendeeIds.includes(aid)) continue
-                const exists = await prisma.attendee.findUnique({ where: { id: aid } })
-                if (!exists) continue
-                await prisma.intelligenceSubAttendee.upsert({
-                    where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId: aid } },
-                    create: { subscriptionId: sub.id, attendeeId: aid },
-                    update: {},
-                }).catch(() => { })
-            }
+                // Restore attendee selections — resolve emails → IDs
+                for (const email of (s.selectedAttendeeEmails ?? [])) {
+                    const aid = emailToAttendeeId.get(email)
+                    if (!aid) continue
+                    await prisma.intelligenceSubAttendee.upsert({
+                        where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId: aid } },
+                        create: { subscriptionId: sub.id, attendeeId: aid },
+                        update: {},
+                    }).catch(() => { })
+                }
 
-            // Restore company selections
-            for (const cid of (s.selectedCompanyIds ?? [])) {
-                const exists = await prisma.company.findUnique({ where: { id: cid } })
-                if (!exists) continue
-                await prisma.intelligenceSubCompany.upsert({
-                    where: { subscriptionId_companyId: { subscriptionId: sub.id, companyId: cid } },
-                    create: { subscriptionId: sub.id, companyId: cid },
-                    update: {},
-                }).catch(() => { })
+                // Restore company selections — resolve names → IDs
+                for (const name of (s.selectedCompanyNames ?? [])) {
+                    const cid = companyNameToId.get(name)
+                    if (!cid) continue
+                    await prisma.intelligenceSubCompany.upsert({
+                        where: { subscriptionId_companyId: { subscriptionId: sub.id, companyId: cid } },
+                        create: { subscriptionId: sub.id, companyId: cid },
+                        update: {},
+                    }).catch(() => { })
+                }
+
+                // Restore event name selections (other events beyond the current one)
+                for (const eventName of (s.selectedEventNames ?? [])) {
+                    const eid = await prisma.event.findFirst({ where: { name: eventName }, select: { id: true } })
+                        .then(e => e?.id)
+                    if (!eid) continue
+                    await prisma.intelligenceSubEvent.upsert({
+                        where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId: eid } },
+                        create: { subscriptionId: sub.id, eventId: eid },
+                        update: {},
+                    }).catch(() => { })
+                }
+            } catch (e) {
+                warnings.push(`Intelligence sub for user '${s.userId}': failed — ${(e as Error).message}`)
             }
         }
 
-        // Recompute subscriptionCounts for entities in this event
-        const attendeeIds = (data.attendees ?? []).map((a: any) => a.id)
-        for (const aid of attendeeIds) {
+        // Recompute subscriptionCounts
+        for (const [, aid] of emailToAttendeeId) {
             const count = await prisma.intelligenceSubAttendee.count({ where: { attendeeId: aid } })
             await prisma.attendee.update({ where: { id: aid }, data: { subscriptionCount: count } }).catch(() => { })
         }
         const eventSubCount = await prisma.intelligenceSubEvent.count({ where: { eventId } })
         await prisma.event.update({ where: { id: eventId }, data: { subscriptionCount: eventSubCount } }).catch(() => { })
-
-        // Recompute company subscriptionCounts for restored company selections
-        const companyIds = (data.intelligenceSubscriptions as any[]).flatMap((s: any) => s.selectedCompanyIds ?? [])
-        const uniqueCompanyIds = [...new Set(companyIds)] as string[]
-        for (const cid of uniqueCompanyIds) {
+        for (const [, cid] of companyNameToId) {
             const count = await prisma.intelligenceSubCompany.count({ where: { companyId: cid } })
             await prisma.company.update({ where: { id: cid }, data: { subscriptionCount: count } }).catch(() => { })
         }
     }
 
-    return { success: true }
+    return { success: true, warnings }
 }
