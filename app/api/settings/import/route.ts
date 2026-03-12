@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { geocodeAddress } from '@/lib/geocoding'
 import { withAuth } from '@/lib/with-auth'
+import { emailsToUserIds } from '@/lib/clerk-export'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,191 +10,297 @@ const postHandler = withAuth(async (request) => {
     try {
         const formData = await request.formData()
         const file = formData.get('file') as File
-
-        if (!file) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
-        }
+        if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
 
         const text = await file.text()
         const config = JSON.parse(text)
+        const warnings: string[] = []
 
-        // Helper to parse dates in an object
+        if (config.version && config.version !== '5.0') {
+            warnings.push(`File version is ${config.version}, expected 5.0. Import may produce unexpected results.`)
+        }
+
         const parseDates = (obj: any) => {
-            const newObj: any = { ...obj }
-            for (const key in newObj) {
-                if (typeof newObj[key] === 'string') {
-                    // Check if it looks like a date (ISO format or YYYY-MM-DD)
-                    if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(newObj[key])) {
-                        const d = new Date(newObj[key])
-                        if (!isNaN(d.getTime())) {
-                            newObj[key] = d
-                        }
-                    }
+            const out: any = { ...obj }
+            for (const key in out) {
+                if (typeof out[key] === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(out[key])) {
+                    const d = new Date(out[key])
+                    if (!isNaN(d.getTime())) out[key] = d
                 }
             }
-            return newObj
+            return out
         }
 
-        // 1. Update System Settings
+        // 1. System settings
         if (config.system) {
-            const existingSettings = await prisma.systemSettings.findFirst()
-            // Only update fields that exist in SystemSettings (geminiApiKey)
-            const { geminiApiKey } = config.system
-
-            if (existingSettings) {
-                await prisma.systemSettings.update({
-                    where: { id: existingSettings.id },
-                    data: { geminiApiKey }
-                })
+            const { geminiApiKey, defaultTags, defaultMeetingTypes, defaultAttendeeTypes } = config.system
+            const existing = await prisma.systemSettings.findFirst()
+            const data = {
+                geminiApiKey,
+                defaultTags: defaultTags ?? [],
+                defaultMeetingTypes: defaultMeetingTypes ?? [],
+                defaultAttendeeTypes: defaultAttendeeTypes ?? [],
+            }
+            if (existing) {
+                await prisma.systemSettings.update({ where: { id: existing.id }, data })
             } else {
-                await prisma.systemSettings.create({
-                    data: { geminiApiKey }
-                })
+                await prisma.systemSettings.create({ data })
             }
         }
 
-        // 1b. Import Events
+        // 2. Companies — upsert by name
+        const companyNameToId = new Map<string, string>()
+        if (config.companies && Array.isArray(config.companies)) {
+            for (const comp of config.companies) {
+                try {
+                    const upserted = await prisma.company.upsert({
+                        where: { name: comp.name },
+                        create: { name: comp.name, description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null },
+                        update: { description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null },
+                    })
+                    companyNameToId.set(comp.name, upserted.id)
+                } catch (e) {
+                    warnings.push(`Company '${comp.name}': import failed — ${(e as Error).message}`)
+                }
+            }
+        }
+
+        // 3. Events — upsert by name, resolve authorizedEmails → authorizedUserIds
+        const eventNameToId = new Map<string, string>()
         if (config.events && Array.isArray(config.events)) {
             for (const evt of config.events) {
-                const parsedEvt = parseDates(evt)
+                try {
+                    const parsed = parseDates(evt)
+                    const { roiTargets, authorizedEmails, ...eventFields } = parsed
 
-                // Geocode if address exists but coords are missing
-                if (parsedEvt.address && (!parsedEvt.latitude || !parsedEvt.longitude)) {
-                    try {
-                        const geo = await geocodeAddress(parsedEvt.address)
-                        if (geo) {
-                            parsedEvt.latitude = geo.latitude
-                            parsedEvt.longitude = geo.longitude
+                    // Resolve authorizedEmails → authorizedUserIds
+                    let authorizedUserIds: string[] = []
+                    if (Array.isArray(authorizedEmails) && authorizedEmails.length > 0) {
+                        const { resolved, missing } = await emailsToUserIds(authorizedEmails)
+                        authorizedUserIds = resolved.map((r: { userId: string }) => r.userId)
+                        for (const email of missing) {
+                            warnings.push(`Event '${evt.name}': authorized user '${email}' not found in Clerk — skipped`)
                         }
-                    } catch (e) {
-                        console.error('Import settings geocoding failed', e)
                     }
-                }
 
-                // Use name as unique key? Or just create always?
-                const existing = await prisma.event.findFirst({ where: { name: parsedEvt.name } })
-                if (existing) {
-                    await prisma.event.update({
-                        where: { id: existing.id },
-                        data: parsedEvt
-                    })
-                } else {
-                    await prisma.event.create({ data: parsedEvt })
+                    // Geocode if needed
+                    if (eventFields.address && !eventFields.latitude) {
+                        try {
+                            const geo = await geocodeAddress(eventFields.address)
+                            if (geo) { eventFields.latitude = geo.latitude; eventFields.longitude = geo.longitude }
+                        } catch { /* non-fatal */ }
+                    }
+
+                    // Resolve slug collision for both create and update paths
+                    const resolveSlug = async (desiredSlug: string, excludeId?: string): Promise<string> => {
+                        if (!desiredSlug) return desiredSlug
+                        const conflict = await prisma.event.findFirst({
+                            where: { slug: desiredSlug, ...(excludeId ? { NOT: { id: excludeId } } : {}) }
+                        })
+                        return conflict ? `${desiredSlug}-${Math.random().toString(36).slice(2, 7)}` : desiredSlug
+                    }
+
+                    const existing = await prisma.event.findFirst({ where: { name: eventFields.name } })
+                    let eventId: string
+                    if (existing) {
+                        const slug = await resolveSlug(eventFields.slug, existing.id)
+                        await prisma.event.update({
+                            where: { id: existing.id },
+                            data: { ...eventFields, slug, authorizedUserIds },
+                        })
+                        eventId = existing.id
+                    } else {
+                        const slug = await resolveSlug(eventFields.slug)
+                        const created = await prisma.event.create({
+                            data: { ...eventFields, slug, authorizedUserIds },
+                        })
+                        eventId = created.id
+                    }
+                    eventNameToId.set(eventFields.name, eventId)
+                } catch (e) {
+                    warnings.push(`Event '${evt.name}': import failed — ${(e as Error).message}`)
                 }
             }
         }
 
-        // 2. Import Rooms
+        // 4. Rooms — resolve eventName → eventId, upsert by (name, eventId)
+        const roomKeyToId = new Map<string, string>() // key: `${eventName}::${roomName}`
         if (config.rooms && Array.isArray(config.rooms)) {
             for (const room of config.rooms) {
-                const existing = await prisma.room.findFirst({ where: { name: room.name } })
-
-                // Fix strategy: Look for event.
-                const evt = await prisma.event.findFirst()
-                const eventId = evt?.id
-
-                if (!existing) {
-                    await prisma.room.create({ data: { ...room, eventId } })
-                } else {
-                    // Update link if missing?
-                    if (!existing.eventId && eventId) {
-                        await prisma.room.update({ where: { id: existing.id }, data: { eventId } })
+                try {
+                    const eventId = eventNameToId.get(room.eventName)
+                    if (!eventId) {
+                        warnings.push(`Room '${room.name}': event '${room.eventName}' not found — skipped`)
+                        continue
                     }
+                    const existing = await prisma.room.findFirst({ where: { name: room.name, eventId } })
+                    let roomId: string
+                    if (existing) {
+                        await prisma.room.update({ where: { id: existing.id }, data: { capacity: room.capacity } })
+                        roomId = existing.id
+                    } else {
+                        const created = await prisma.room.create({ data: { name: room.name, capacity: room.capacity, eventId } })
+                        roomId = created.id
+                    }
+                    roomKeyToId.set(`${room.eventName}::${room.name}`, roomId)
+                } catch (e) {
+                    warnings.push(`Room '${room.name}': import failed — ${(e as Error).message}`)
                 }
             }
         }
 
-        // 3. Import Attendees
+        // 5. Attendees — resolve companyName → companyId, upsert by email
+        const emailToAttendeeId = new Map<string, string>()
         if (config.attendees && Array.isArray(config.attendees)) {
-            for (const attendee of config.attendees) {
-                const existing = await prisma.attendee.findUnique({ where: { email: attendee.email } })
-
-                // Link to event?
-                const evt = await prisma.event.findFirst()
-                const eventId = evt?.id
-
-                if (!existing) {
-                    await prisma.attendee.create({
-                        data: {
-                            ...attendee,
-                            events: eventId ? { connect: { id: eventId } } : undefined
-                        }
-                    })
-                } else {
-                    await prisma.attendee.update({
-                        where: { email: attendee.email },
-                        data: attendee
-                    })
-                }
-            }
-        }
-
-        // 4. Import Meetings
-        if (config.meetings && Array.isArray(config.meetings)) {
-            for (const meeting of config.meetings) {
-                // Extract relations and special fields
-                const { room: roomName, attendees: attendeeEmails, ...meetingFields } = meeting
-
-                // Find Room ID
-                let roomId = null
-                if (roomName) {
-                    const room = await prisma.room.findFirst({ where: { name: roomName } })
-                    if (room) roomId = room.id
-                }
-
-                // Find Attendee IDs
-                const attendees = []
-                if (attendeeEmails && Array.isArray(attendeeEmails)) {
-                    for (const email of attendeeEmails) {
-                        const attendee = await prisma.attendee.findUnique({ where: { email } })
-                        if (attendee) attendees.push({ id: attendee.id })
-                    }
-                }
-
-                // Check if meeting exists (by title and date/startTime)
-                const whereClause: any = { title: meeting.title }
-                if (meeting.startTime) whereClause.startTime = meeting.startTime
-                if (meeting.date) whereClause.date = meeting.date
-
-                const existing = await prisma.meeting.findFirst({
-                    where: whereClause
-                })
-
-                // Link to event?
-                const evt = await prisma.event.findFirst()
-                const eventId = evt?.id
-
-                if (!existing) {
-                    // Explicitly exclude roomId from meetingFields to prevent bad data injection
-                    const { roomId: _rawId, ...cleanMeetingFields } = meetingFields as any
-
-                    if (roomId) {
-                        // Double check if room exists
-                        const roomCheck = await prisma.room.findUnique({ where: { id: roomId } })
-                        if (!roomCheck) {
-                            roomId = null
-                        }
-                    }
-
-                    try {
-                        await prisma.meeting.create({
-                            data: {
-                                ...cleanMeetingFields,
-                                roomId: roomId,
-                                eventId: eventId,
-                                attendees: {
-                                    connect: attendees
-                                }
-                            }
+            for (const att of config.attendees) {
+                try {
+                    let companyId = companyNameToId.get(att.companyName)
+                    if (!companyId && att.companyName) {
+                        // Create company on-the-fly if missing
+                        const co = await prisma.company.upsert({
+                            where: { name: att.companyName },
+                            create: { name: att.companyName },
+                            update: {},
                         })
-                    } catch (e) {
-                        console.error('Import meeting error', e)
+                        companyId = co.id
+                        companyNameToId.set(att.companyName, companyId)
                     }
+                    if (!companyId) {
+                        warnings.push(`Attendee '${att.email}': no companyName — skipped`)
+                        continue
+                    }
+
+                    // Determine which event to connect this attendee to
+                    const eventName = att.eventName // optional field; system export doesn't have per-attendee eventName
+                    const eventId = eventName ? eventNameToId.get(eventName) : undefined
+
+                    const upserted = await prisma.attendee.upsert({
+                        where: { email: att.email },
+                        create: {
+                            name: att.name, email: att.email, title: att.title ?? '',
+                            companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
+                            imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
+                            type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
+                            events: eventId ? { connect: { id: eventId } } : undefined,
+                        },
+                        update: {
+                            name: att.name, title: att.title ?? '',
+                            companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
+                            imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
+                            type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
+                            events: eventId ? { connect: { id: eventId } } : undefined,
+                        },
+                    })
+                    emailToAttendeeId.set(att.email, upserted.id)
+                } catch (e) {
+                    warnings.push(`Attendee '${att.email}': import failed — ${(e as Error).message}`)
                 }
             }
         }
 
-        return NextResponse.json({ success: true })
+        // 6. Meetings — upsert by (title, date, startTime, eventId)
+        if (config.meetings && Array.isArray(config.meetings)) {
+            for (const mtg of config.meetings) {
+                try {
+                    const eventId = eventNameToId.get(mtg.eventName)
+                    if (!eventId) {
+                        warnings.push(`Meeting '${mtg.title}': event '${mtg.eventName}' not found — skipped`)
+                        continue
+                    }
+
+                    const roomId = mtg.room
+                        ? roomKeyToId.get(`${mtg.eventName}::${mtg.room}`) ?? null
+                        : null
+
+                    const attendeeConnects = (mtg.attendees ?? [])
+                        .map((email: string) => emailToAttendeeId.get(email))
+                        .filter(Boolean)
+                        .map((id: string) => ({ id }))
+
+                    const existing = await prisma.meeting.findFirst({
+                        where: { title: mtg.title, date: mtg.date, startTime: mtg.startTime, eventId }
+                    })
+
+                    const commonFields = {
+                        title: mtg.title, purpose: mtg.purpose ?? null,
+                        date: mtg.date, startTime: mtg.startTime, endTime: mtg.endTime,
+                        sequence: mtg.sequence ?? 0, status: mtg.status ?? 'PIPELINE',
+                        tags: mtg.tags ?? [], meetingType: mtg.meetingType ?? null,
+                        location: mtg.location ?? null, otherDetails: mtg.otherDetails ?? null,
+                        isApproved: mtg.isApproved ?? false,
+                        calendarInviteSent: mtg.calendarInviteSent ?? false,
+                        createdBy: mtg.createdBy ?? null, requesterEmail: mtg.requesterEmail ?? null,
+                        roomId, eventId,
+                    }
+
+                    if (existing) {
+                        await prisma.meeting.update({
+                            where: { id: existing.id },
+                            data: { ...commonFields, attendees: { set: attendeeConnects } },
+                        })
+                    } else {
+                        await prisma.meeting.create({
+                            data: { ...commonFields, attendees: { connect: attendeeConnects } },
+                        })
+                    }
+                } catch (e) {
+                    warnings.push(`Meeting '${mtg.title}': import failed — ${(e as Error).message}`)
+                }
+            }
+        }
+
+        // 7. ROI Targets — upsert per event
+        if (config.events && Array.isArray(config.events)) {
+            for (const evt of config.events) {
+                if (!evt.roiTargets) continue
+                const eventId = eventNameToId.get(evt.name)
+                if (!eventId) continue
+                try {
+                    const roi = evt.roiTargets
+                    const targetCompanyConnect = await Promise.all(
+                        (roi.targetCompanyNames ?? []).map(async (name: string) => {
+                            let id = companyNameToId.get(name)
+                            if (!id) {
+                                const co = await prisma.company.upsert({
+                                    where: { name }, create: { name }, update: {},
+                                })
+                                id = co.id
+                            }
+                            return { id }
+                        })
+                    )
+
+                    const roiData = {
+                        expectedPipeline: roi.expectedPipeline ?? null,
+                        winRate: roi.winRate ?? null,
+                        expectedRevenue: roi.expectedRevenue ?? null,
+                        targetCustomerMeetings: roi.targetCustomerMeetings ?? null,
+                        targetErta: roi.targetErta ?? null,
+                        targetSpeaking: roi.targetSpeaking ?? null,
+                        targetMediaPR: roi.targetMediaPR ?? null,
+                        actualErta: roi.actualErta ?? null,
+                        actualSpeaking: roi.actualSpeaking ?? null,
+                        actualMediaPR: roi.actualMediaPR ?? null,
+                        status: roi.status ?? 'DRAFT',
+                        approvedBy: roi.approvedBy ?? null,
+                        approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,
+                        submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null,
+                        rejectedBy: roi.rejectedBy ?? null,
+                        rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null,
+                    }
+
+                    await prisma.eventROITargets.upsert({
+                        where: { eventId },
+                        create: { event: { connect: { id: eventId } }, ...roiData, targetCompanies: { connect: targetCompanyConnect } },
+                        update: { ...roiData, targetCompanies: { set: targetCompanyConnect } },
+                    })
+                } catch (e) {
+                    warnings.push(`ROI targets for '${evt.name}': import failed — ${(e as Error).message}`)
+                }
+            }
+        }
+
+        return NextResponse.json({ success: true, warnings })
     } catch (error) {
         console.error('Import error:', error)
         return NextResponse.json({ error: 'Failed to import data' }, { status: 500 })
