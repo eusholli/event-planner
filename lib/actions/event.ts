@@ -295,7 +295,7 @@ export async function importEventData(eventId: string, data: any) {
 
     // 2. Event update (merge)
     if (data.event) {
-        const { authorizedEmails, roiTargets: _roi, id: _id, ...eventFields } = data.event
+        const { authorizedEmails, roiTargets: _roi, id: _id, slug: _slug, name: _name, ...eventFields } = data.event
         const eventUpdate: any = { ...eventFields }
 
         // Resolve authorizedEmails → authorizedUserIds
@@ -316,7 +316,11 @@ export async function importEventData(eventId: string, data: any) {
             } catch { /* non-fatal */ }
         }
 
-        await prisma.event.update({ where: { id: eventId }, data: eventUpdate })
+        try {
+            await prisma.event.update({ where: { id: eventId }, data: eventUpdate })
+        } catch (e) {
+            warnings.push(`Event metadata update failed — ${(e as Error).message}`)
+        }
     }
 
     // 3. Rooms — upsert by (name, eventId), build roomNameToId map
@@ -427,14 +431,21 @@ export async function importEventData(eventId: string, data: any) {
     if (data.roiTargets) {
         try {
             const roi = data.roiTargets
-            const targetCompanyConnect = await Promise.all(
+            const targetCompanyConnect = (await Promise.allSettled(
                 (roi.targetCompanyNames ?? []).map(async (name: string) => {
                     // Use in-memory map first to avoid redundant DB lookup
                     let id = companyNameToId.get(name)
-                    if (!id) id = await resolveCompany(name)
+                    if (!id) {
+                        try {
+                            id = await resolveCompany(name)
+                        } catch {
+                            warnings.push(`ROI target company '${name}': could not resolve — skipped`)
+                            return null
+                        }
+                    }
                     return { id }
                 })
-            )
+            )).flatMap(r => r.status === 'fulfilled' && r.value ? [r.value] : [])
 
             const roiData = {
                 expectedPipeline: roi.expectedPipeline ?? null,
@@ -475,7 +486,10 @@ export async function importEventData(eventId: string, data: any) {
                         data: { userId: s.userId, email: s.email, active: s.active ?? true },
                     }).catch(() => null)
                 }
-                if (!sub) continue
+                if (!sub) {
+                    warnings.push(`Intelligence sub for user '${s.userId}': could not create subscription — skipped`)
+                    continue
+                }
 
                 // Restore event selections
                 await prisma.intelligenceSubEvent.upsert({
