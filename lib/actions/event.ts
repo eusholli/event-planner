@@ -118,59 +118,74 @@ async function resolveCompany(companyName: string, description?: string, pipelin
 
 // Data Management Actions
 export async function exportEventData(eventId: string) {
+    const { userIdsToEmails } = await import('@/lib/clerk-export')
+
     const event = await prisma.event.findUnique({
         where: { id: eventId },
         include: {
-            attendees: { include: { meetings: true, company: true } },
+            attendees: { include: { company: true } },
             rooms: true,
             meetings: { include: { attendees: true, room: true } },
             roiTargets: { include: { targetCompanies: true } }
         }
     })
-
     if (!event) throw new Error('Event not found')
 
-    // Collect unique companies from this event's attendees
+    // Collect unique companies from this event's attendees + ROI targets
     const companyMap = new Map<string, any>()
     event.attendees.forEach(att => {
-        if (!companyMap.has(att.company.id)) {
-            companyMap.set(att.company.id, att.company)
-        }
+        if (!companyMap.has(att.company.id)) companyMap.set(att.company.id, att.company)
     })
-
-    // Also include target companies from ROI
     if (event.roiTargets?.targetCompanies) {
         event.roiTargets.targetCompanies.forEach(comp => {
-            if (!companyMap.has(comp.id)) {
-                companyMap.set(comp.id, comp)
-            }
+            if (!companyMap.has(comp.id)) companyMap.set(comp.id, comp)
         })
     }
 
-    // Normalize attendees (strip meetings and company object, keep companyId)
-    const normalizedAttendees = event.attendees.map(attendee => {
-        const { meetings, company, ...rest } = attendee
+    // Build lookup maps for name resolution
+    const attendeeIdToEmail = new Map(event.attendees.map(a => [a.id, a.email]))
+
+    // Translate authorizedUserIds → authorizedEmails (throws on Clerk failure)
+    const authorizedEmails = await userIdsToEmails(event.authorizedUserIds ?? [])
+
+    // Companies: strip id
+    const companiesOut = Array.from(companyMap.values()).map(c => ({
+        name: c.name, description: c.description, pipelineValue: c.pipelineValue,
+    }))
+
+    // Event: strip id, authorizedUserIds → authorizedEmails
+    const { id, authorizedUserIds, attendees: _atts, rooms: _rooms, meetings: _mtgs, roiTargets: _roi, ...eventRest } = event as any
+    const eventOut = { ...eventRest, authorizedEmails }
+
+    // Attendees: strip id/companyId, add companyName
+    const attendeesOut = event.attendees.map(att => {
+        const { id, companyId, company, ...rest } = att as any
+        return { ...rest, companyName: company.name }
+    })
+
+    // Rooms: strip id/eventId
+    const roomsOut = event.rooms.map(r => {
+        const { id, eventId, ...rest } = r as any
         return rest
     })
 
-    const normalizedMeetings = event.meetings.map(meeting => {
-        const { attendees, room, ...rest } = meeting
+    // Meetings: strip id/eventId/roomId, room → name, attendees → emails
+    const meetingsOut = event.meetings.map(mtg => {
+        const { id, eventId, roomId, room, attendees, ...rest } = mtg as any
         return {
             ...rest,
-            attendees: attendees.map(a => a.id)
+            room: room?.name ?? null,
+            attendees: attendees.map((a: any) => attendeeIdToEmail.get(a.id) ?? a.email),
         }
     })
 
-    // Normalize ROI targets
-    const roiTargets = event.roiTargets ? (() => {
-        const { eventId: _eid, targetCompanies, ...rest } = event.roiTargets
-        return {
-            ...rest,
-            targetCompanyIds: targetCompanies.map(c => c.id)
-        }
+    // ROI targets: strip id/eventId, targetCompanyIds → targetCompanyNames
+    const roiOut = event.roiTargets ? (() => {
+        const { id: _id, eventId: _eid, event: _ev, targetCompanies, ...roiRest } = event.roiTargets as any
+        return { ...roiRest, targetCompanyNames: (targetCompanies ?? []).map((c: any) => c.name) }
     })() : null
 
-    // Fetch intelligence subscriptions related to this event or its attendees
+    // Intelligence subscriptions (already event-scoped — translate IDs to names)
     const eventAttendeeIds = event.attendees.map(a => a.id)
     const relatedSubs = await prisma.intelligenceSubscription.findMany({
         where: {
@@ -181,8 +196,8 @@ export async function exportEventData(eventId: string) {
         },
         include: {
             selectedAttendees: { select: { attendeeId: true } },
-            selectedCompanies: { select: { companyId: true } },
-            selectedEvents: { select: { eventId: true } },
+            selectedCompanies: { select: { companyId: true, company: { select: { name: true } } } },
+            selectedEvents: { select: { eventId: true, event: { select: { name: true } } } },
         },
     })
 
@@ -190,31 +205,26 @@ export async function exportEventData(eventId: string) {
         userId: s.userId,
         email: s.email,
         active: s.active,
-        selectedAttendeeIds: s.selectedAttendees
-            .map(r => r.attendeeId)
-            .filter(id => eventAttendeeIds.includes(id)),
-        selectedCompanyIds: s.selectedCompanies.map(r => r.companyId),
-        selectedEventIds: s.selectedEvents
-            .map(r => r.eventId)
-            .filter(id => id === event.id),
+        selectedAttendeeEmails: s.selectedAttendees
+            .filter(r => eventAttendeeIds.includes(r.attendeeId))
+            .map(r => attendeeIdToEmail.get(r.attendeeId))
+            .filter((e): e is string => !!e),
+        selectedCompanyNames: s.selectedCompanies.map(r => r.company.name),
+        selectedEventNames: s.selectedEvents
+            .filter(r => r.eventId === event.id)
+            .map(r => r.event.name),
     }))
 
     return {
-        event: {
-            ...event,
-            meetings: undefined,
-            attendees: undefined,
-            rooms: undefined,
-            roiTargets: undefined
-        },
-        companies: Array.from(companyMap.values()),
-        attendees: normalizedAttendees,
-        rooms: event.rooms,
-        meetings: normalizedMeetings,
-        roiTargets,
+        event: eventOut,
+        companies: companiesOut,
+        attendees: attendeesOut,
+        rooms: roomsOut,
+        meetings: meetingsOut,
+        roiTargets: roiOut,
         intelligenceSubscriptions,
         exportedAt: new Date().toISOString(),
-        version: '4.0'
+        version: '5.0',
     }
 }
 
