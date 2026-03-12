@@ -274,6 +274,20 @@ def test_validate_v5_catches_bad_room_reference():
     assert any("Room B" in e for e in errors)
 
 
+def test_convert_attendees_no_duplicate_company_for_whitespace_name():
+    """Company with trailing whitespace in V4 should not produce a duplicate when mwc-final uses clean name."""
+    v4 = make_v4_master()
+    # Give the V4 company a trailing space in the name
+    v4["companies"][0]["name"] = "Old Co "
+    cmap = p.build_company_id_to_name(v4)
+    mwc_src = make_mwc_source()
+    # Bob's company in mwc_src is "Old Co" (no trailing space) — should match existing
+    p.convert_attendees(v4, cmap, mwc_src)
+    # No duplicate should have been added
+    company_names = [c["name"].strip() for c in v4["companies"]]
+    assert company_names.count("Old Co") == 1
+
+
 def test_convert_attendees_adds_new_mwc_attendees():
     """New attendees in mwc-final not in V4 must be added to the output."""
     v4 = make_v4_master()

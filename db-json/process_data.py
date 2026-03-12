@@ -120,7 +120,7 @@ def convert_attendees(v4_data, company_id_to_name, mwc_src=None):
             "seniorityLevel": None,
         })
         # Also ensure company is in companies list (add if new)
-        if company_name and not any(c["name"] == company_name for c in v4_data.get("companies", [])):
+        if company_name and not any(c["name"].strip() == company_name for c in v4_data.get("companies", [])):
             v4_data["companies"].append({
                 "id": f"__new__{email}",
                 "name": company_name,
