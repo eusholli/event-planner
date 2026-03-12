@@ -1,55 +1,97 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { withAuth } from '@/lib/with-auth'
+import { userIdsToEmails } from '@/lib/clerk-export'
 
 export const dynamic = 'force-dynamic'
 
 async function exportData(): Promise<Response> {
     try {
         const settings = await prisma.systemSettings.findFirst()
-        const events = await prisma.event.findMany()
+        const companies = await prisma.company.findMany()
+        const events = await prisma.event.findMany({
+            include: { roiTargets: { include: { targetCompanies: true } } }
+        })
         const attendees = await prisma.attendee.findMany()
         const rooms = await prisma.room.findMany()
         const meetings = await prisma.meeting.findMany({
-            include: {
-                room: true,
-                attendees: true
-            }
+            include: { room: true, attendees: true }
         })
-        const roiTargets = await prisma.eventROITargets.findMany()
 
-        // Helper to remove ID and other internal fields
-        const cleanData = (data: any) => {
-            if (!data) return null
-            const { id, ...rest } = data
-            return rest
+        // Build lookup maps
+        const companyIdToName = new Map(companies.map(c => [c.id, c.name]))
+        const eventIdToName = new Map(events.map(e => [e.id, e.name]))
+
+        // System settings
+        const systemOut = settings ? {
+            geminiApiKey: settings.geminiApiKey,
+            defaultTags: settings.defaultTags,
+            defaultMeetingTypes: settings.defaultMeetingTypes,
+            defaultAttendeeTypes: settings.defaultAttendeeTypes,
+        } : null
+
+        // Companies: strip id
+        const companiesOut = companies.map(c => ({
+            name: c.name,
+            description: c.description,
+            pipelineValue: c.pipelineValue,
+        }))
+
+        // Events: strip id, translate authorizedUserIds → authorizedEmails, targetCompanyIds → targetCompanyNames
+        const eventsOut: any[] = []
+        for (const event of events) {
+            const { id, roiTargets, authorizedUserIds, ...eventRest } = event as any
+
+            // Translate authorizedUserIds → authorizedEmails (throws on Clerk failure)
+            const authorizedEmails = await userIdsToEmails(authorizedUserIds ?? [])
+
+            const roiOut = roiTargets ? (() => {
+                const { id: _id, eventId: _eid, event: _ev, targetCompanies, ...roiRest } = roiTargets as any
+                return {
+                    ...roiRest,
+                    targetCompanyNames: (targetCompanies ?? []).map((c: any) => c.name),
+                }
+            })() : null
+
+            eventsOut.push({
+                ...eventRest,
+                authorizedEmails,
+                roiTargets: roiOut,
+            })
         }
 
-        // Group ROI targets by eventId
-        const roiByEvent = new Map(roiTargets.map(r => [r.eventId, r]))
+        // Attendees: strip id, companyId → companyName
+        const attendeesOut = attendees.map(a => {
+            const { id, companyId, ...rest } = a as any
+            return { ...rest, companyName: companyIdToName.get(companyId) ?? '' }
+        })
+
+        // Rooms: strip id, eventId → eventName
+        const roomsOut = rooms.map(r => {
+            const { id, eventId, ...rest } = r as any
+            return { ...rest, eventName: eventIdToName.get(eventId ?? '') ?? '' }
+        })
+
+        // Meetings: strip id/roomId/eventId, eventId → eventName, attendees → emails
+        const meetingsOut = meetings.map(m => {
+            const { id, roomId, eventId, room, attendees, ...rest } = m as any
+            return {
+                ...rest,
+                eventName: eventIdToName.get(eventId) ?? '',
+                room: room?.name ?? null,
+                attendees: attendees.map((a: any) => a.email),
+            }
+        })
 
         const exportDataObj = {
-            system: settings ? cleanData(settings) : null,
-            events: events.map(e => {
-                const roi = roiByEvent.get(e.id)
-                return {
-                    ...cleanData(e),
-                    roiTargets: roi ? (() => {
-                        const { id: _id, eventId: _eid, event: _ev, ...rest } = roi as any
-                        return rest
-                    })() : null
-                }
-            }),
-            attendees: attendees.map(a => cleanData(a)),
-            rooms: rooms.map(r => cleanData(r)),
-            meetings: meetings.map(m => {
-                const { id, roomId, room, attendees, ...rest } = m
-                return {
-                    ...rest,
-                    room: room?.name,
-                    attendees: attendees.map(a => a.email)
-                }
-            })
+            version: '5.0',
+            exportedAt: new Date().toISOString(),
+            system: systemOut,
+            companies: companiesOut,
+            events: eventsOut,
+            attendees: attendeesOut,
+            rooms: roomsOut,
+            meetings: meetingsOut,
         }
 
         const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
@@ -72,12 +114,9 @@ const getHandler = withAuth(async () => {
 }, { requireRole: 'root' })
 
 export async function GET(request: Request, ctx: { params: Promise<Record<string, string>> }) {
-    // Check backup key header first (automation bypass)
     const backupKey = request.headers.get('x-backup-key') ?? request.headers.get('authorization')?.replace('Bearer ', '')
     if (backupKey && process.env.BACKUP_SECRET_KEY && backupKey === process.env.BACKUP_SECRET_KEY) {
         return exportData()
     }
-    // Otherwise enforce root role
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return getHandler(request, ctx as any)
 }
