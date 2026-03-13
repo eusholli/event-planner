@@ -4,7 +4,7 @@ set -e
 
 # 1. Define Paths
 # IMPORTANT: Change this to the directory where your docker-compose.yml and .env file live
-PROJECT_DIR="/opt/eventplanner"
+PROJECT_DIR="/opt/event-planner"
 cd "$PROJECT_DIR"
 
 # 2. Load Environment Variables from .env
