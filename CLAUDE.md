@@ -55,6 +55,9 @@ const resolvedEventId = event.id
 - `Event` status workflow: `PIPELINE` (amber) → `COMMITTED` (green) → `OCCURRED` (grey, read-only) → `CANCELED` (red)
 - `Room` - Event-scoped
 - `Company` - System-level company records with a centralized `pipelineValue`, strictly avoiding data duplication.
+- `IntelligenceSubscription` - Per-user subscription record; tracks email, `unsubscribeToken`, `active` flag, and selected entity IDs (attendees/companies/events)
+- `IntelligenceReport` - Stores OpenClaw research reports; idempotent by `(runId, targetName)` composite unique key
+- `IntelligenceEmailLog` - Audit trail of sent/skipped/failed intelligence emails with target counts per run
 
 **Cascade behavior**: Deleting an event cascades to meetings and rooms but NOT attendees (only the join record is removed).
 
@@ -80,14 +83,22 @@ const resolvedEventId = event.id
 
 ### AI Chat System (`app/api/chat/route.ts`)
 
+**Two distinct chat systems exist — do not confuse them:**
+
+**Event-scoped AI Chat** (`/events/[id]/chat`):
 - Vercel AI SDK 5.0 `streamText` with Google Gemini 2.5 Pro
 - Event-scoped; tools created per-request via `createTools(eventId, slug)` in `lib/tools/`
 - Multi-step tool execution (max 5 steps via `stopWhen: stepCountIs(5)`)
-- 300-second timeout
+- 300-second timeout; history in localStorage
+- **AI Tools** (`lib/tools/`): `getMeetings`, `getAttendees`, `getRooms`, `createMeeting`, `updateMeeting`, `deleteMeeting`, `getNavigationLinks`
+- System prompt warns AI NOT to filter by event name (tools are already scoped). Navigation link results render as special UI cards in the frontend.
 
-**AI Tools** (`lib/tools/`): `getMeetings`, `getAttendees`, `getRooms`, `createMeeting`, `updateMeeting`, `deleteMeeting`, `getNavigationLinks`
-
-**Critical**: System prompt warns AI NOT to filter by event name (tools are already scoped). Navigation link results render as special UI cards in the frontend.
+**OpenClaw Intelligence Chat** (`/intelligence`):
+- WebSocket connection to `ws-proxy` → OpenClaw agent "Kenji"; system-wide, not event-scoped
+- `eventId` is passed as a breadcrumb only (helps Kenji orient to context); does not scope tools
+- Accessed from event cards via the sparkle icon (Generate Event Marketing Plan) which sets `sessionStorage.intelligenceAutoQuery` and navigates to `/intelligence?eventId=<slug>`
+- History persisted server-side in ws-proxy per userId
+- See `OPENCLAW_INTEGRATION.md` for full architecture details
 
 ### External Integrations
 
@@ -99,7 +110,20 @@ const resolvedEventId = event.id
 
 **Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
 
-**OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent accessed via WebSocket proxy (`NEXT_PUBLIC_WS_URL`). Features real-time streaming responses with thinking/status indicators. Served at `/intelligence` (standalone) with subscribe management at `/intelligence/subscribe`. Inbound intelligence reports arrive via `/api/webhooks/intel-report`.
+**OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent with two modes — real-time chat and scheduled intelligence reports. Runs as a 3-container Docker stack (see `OPENCLAW_INTEGRATION.md`):
+- `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw
+- `sales-recon-openclaw` (OpenClaw + Python + Crawl4AI, port 50045): Hosts agent "Kenji"; MCP tools include web search (Brave/Tavily) and Crawl4AI web scraping; runs scheduled cron cycles
+- `event-planner` (this app): Provides target list and webhook endpoints, stores reports, dispatches emails
+
+**WebSocket URL**: Browser connects to `NEXT_PUBLIC_WS_URL` (ws-proxy), not directly to OpenClaw. Falls back to `ws://localhost:8080/` when env var is unset.
+
+**Session token exchange**: ws-proxy calls `POST /api/intelligence/session` with the Clerk JWT (authenticated via `CRON_SECRET_KEY` Bearer token) to receive a signed action token. OpenClaw tools use this token when calling event-planner API endpoints.
+
+**Cron schedule**: Tuesday and Thursday at 06:00 Central Time (`0 6 * * 2` and `0 6 * * 4`). Registered inside the OpenClaw container via `event-planner-cron.py` in `~/dev/sales-recon`.
+
+**Memory files**: OpenClaw maintains `memory/{Company_Name}.md` and `memory/{First_Last}.md` structured with Latest / Profile / Key Decision Makers (companies only) / Archive sections.
+
+Served at `/intelligence` (standalone). Inbound intelligence reports arrive via `/api/webhooks/intel-report`.
 
 ### API Routes
 
@@ -126,6 +150,10 @@ if (!await canWrite()) {
 - `/api/attendees/autocomplete` - AI-powered attendee info lookup (actual Gemini call)
 - `/api/chat/status` - Chat system status
 - `/api/intelligence/subscribe` - Intelligence subscription CRUD (attendees, companies, events)
+- `/api/intelligence/subscribe/attendees/[id]` - Toggle per-attendee subscription
+- `/api/intelligence/subscribe/companies/[id]` - Toggle per-company subscription
+- `/api/intelligence/subscribe/events/[id]` - Toggle per-event subscription
+- `/api/intelligence/session` - Exchange Clerk JWT for action token (called by ws-proxy; requires `CRON_SECRET_KEY` Bearer auth)
 - `/api/intelligence/targets` - Cron-triggered target list (requires `CRON_SECRET_KEY`)
 - `/api/intelligence/unsubscribe` - Unsubscribe handler (used in emails)
 - `/api/webhooks/intel-report` - Inbound intelligence reports from OpenClaw
@@ -195,7 +223,7 @@ MAPBOX_ACCESS_TOKEN        # Geocoding/maps
 SENTRY_AUTH_TOKEN          # Error tracking
 NEXT_PUBLIC_APP_URL        # Public app URL used in intelligence email unsubscribe links (e.g. https://www.aieventplanner.work)
 NEXT_PUBLIC_WS_URL         # WebSocket URL for OpenClaw Insights (e.g. ws://localhost:8080/)
-CRON_SECRET_KEY            # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report)
+CRON_SECRET_KEY            # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report, /api/intelligence/session)
 ```
 
 **Gemini API key** is stored in the `SystemSettings` DB table, not as an env var.
