@@ -355,14 +355,16 @@ export default function EventsPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
+                                                                const rawDesc = event.description || 'None provided'
+                                                                const truncatedDesc = rawDesc.length > 1500 ? rawDesc.substring(0, 1500) + '...' : rawDesc
                                                                 const queryParts = [
                                                                     `Event Name: ${event.name}`,
                                                                     `Region: ${event.region || 'Unknown'}`,
                                                                     `Date: ${event.startDate ? moment(event.startDate).format('YYYY-MM-DD') : 'Unknown'} - ${event.endDate ? moment(event.endDate).format('YYYY-MM-DD') : 'Unknown'}`,
                                                                     `Location: ${event.address || 'Unknown'}`,
-                                                                    `Description: ${event.description || 'None provided'}`
+                                                                    `Description: ${truncatedDesc}`
                                                                 ]
-                                                                const prompt = `Generate a Rakuten Symphony event marketing plan that maximizes the value of Rakuten Symphony towards the expected audience and targeted companies. List the probable companies that will attend, in the order of most interesting to Rakuten Symphony.\n\nAlso generate real quantitative targets for the event ROI metrics (Expected Pipeline, Win Rate, Expected Revenue, Target Customer Meetings, Target ERTA, Target Speaking, Target Media/PR) that you think the team can realistically achieve, with explanations for each.\n\nThe returned marketing plan should be the best possible marketing plan for Rakuten Symphony attendance at the event.\n\nHere are the event details:\n\n${queryParts.join('\\n')}`
+                                                                const prompt = `Generate a Rakuten Symphony event marketing plan that maximizes the value of Rakuten Symphony towards the expected audience and targeted companies. List the probable companies that will attend, in the order of most interesting to Rakuten Symphony.\n\nAlso generate real quantitative targets for the event ROI metrics (Expected Pipeline, Win Rate, Expected Revenue, Target Customer Meetings, Target ERTA, Target Speaking, Target Media/PR) that you think the team can realistically achieve, with explanations for each.\n\nThe returned marketing plan should be the best possible marketing plan for Rakuten Symphony attendance at the event.\n\nHere are the event details:\n\n${queryParts.join('\n')}`
                                                                 sessionStorage.setItem('intelligenceAutoQuery', prompt)
                                                                 router.push(`/intelligence?eventId=${event.slug || event.id}`)
                                                             }}

@@ -17,7 +17,7 @@ import * as ops from '@/lib/tools/ops'
 
 export const dynamic = 'force-dynamic'
 
-const WRITE_TOOLS = new Set(['createMeeting', 'cancelMeeting', 'addAttendee', 'updateROITargets'])
+const WRITE_TOOLS = new Set(['createMeeting', 'cancelMeeting', 'addAttendee', 'updateROITargets', 'updateMeeting', 'updateCompany'])
 
 export async function POST(req: Request) {
   // Auth: verify action token
@@ -107,6 +107,20 @@ export async function POST(req: Request) {
       case 'cancelMeeting':
         result = await ops.cancelMeetingOp(eid, (a as { meetingId: string }).meetingId)
         break
+      case 'updateMeeting': {
+        const { meetingId, ...updates } = a as { meetingId: string; [key: string]: unknown }
+        if (!meetingId) return NextResponse.json({ error: 'meetingId required' }, { status: 400 })
+        const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } })
+        if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+        if (meeting.eventId !== eid) return NextResponse.json({ error: 'Meeting does not belong to this event' }, { status: 403 })
+        const updated = await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { ...updates, sequence: { increment: 1 } },
+          include: { room: true, attendees: true }
+        })
+        result = updated
+        break
+      }
       case 'getAttendees':
         result = await ops.getAttendeesOp(eid, a as GetAttendeesArgs)
         break
@@ -128,6 +142,17 @@ export async function POST(req: Request) {
       case 'updateROITargets':
         result = await ops.updateROITargetsOp(eid, a as ROITargetsInput)
         break
+      case 'updateCompany': {
+        // updateCompany is system-level (no per-event access check needed beyond what's already done)
+        const { companyId, ...companyUpdates } = a as { companyId: string; [key: string]: unknown }
+        if (!companyId) return NextResponse.json({ error: 'companyId required' }, { status: 400 })
+        const updatedCompany = await prisma.company.update({
+          where: { id: companyId },
+          data: companyUpdates
+        })
+        result = updatedCompany
+        break
+      }
       case 'getEvent':
         result = await ops.getEventOp(eid)
         break

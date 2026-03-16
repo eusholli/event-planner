@@ -357,7 +357,7 @@ export async function getROITargetsOp(eventId: string) {
 }
 
 export async function updateROITargetsOp(eventId: string, args: ROITargetsInput) {
-  const { targetCompanyIds, budget, requesterEmail, event, eventId: _eid, ...rest } = args as any
+  const { targetCompanyIds, targetCompanyNames, budget, requesterEmail, event, eventId: _eid, ...rest } = args as any
 
   if (budget !== undefined || requesterEmail !== undefined) {
     await prisma.event.update({
@@ -369,9 +369,28 @@ export async function updateROITargetsOp(eventId: string, args: ROITargetsInput)
     })
   }
 
+  // Resolve company names → IDs (find or create)
+  let resolvedIds: string[] = []
+  if (targetCompanyNames && targetCompanyNames.length > 0) {
+    for (const name of targetCompanyNames) {
+      let company = await prisma.company.findFirst({
+        where: { name: { equals: name, mode: 'insensitive' } }
+      })
+      if (!company) {
+        company = await prisma.company.create({ data: { name } })
+      }
+      resolvedIds.push(company.id)
+    }
+  }
+
+  // Merge with any explicit targetCompanyIds (de-duplicate)
+  const effectiveIds = targetCompanyIds !== undefined || resolvedIds.length > 0
+    ? [...new Set([...(targetCompanyIds ?? []), ...resolvedIds])]
+    : undefined
+
   const upsertData: any = { ...rest }
-  if (targetCompanyIds !== undefined) {
-    upsertData.targetCompanies = { set: targetCompanyIds.map((id: string) => ({ id })) }
+  if (effectiveIds !== undefined) {
+    upsertData.targetCompanies = { set: effectiveIds.map((id: string) => ({ id })) }
   }
 
   return prisma.eventROITargets.upsert({
@@ -379,8 +398,8 @@ export async function updateROITargetsOp(eventId: string, args: ROITargetsInput)
     create: {
       event: { connect: { id: eventId } },
       ...rest,
-      targetCompanies: targetCompanyIds
-        ? { connect: targetCompanyIds.map((id: string) => ({ id })) }
+      targetCompanies: effectiveIds
+        ? { connect: effectiveIds.map((id: string) => ({ id })) }
         : undefined,
     },
     update: upsertData,

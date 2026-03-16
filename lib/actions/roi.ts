@@ -14,6 +14,7 @@ export interface ROITargetsInput {
     targetSpeaking?: number | null
     targetMediaPR?: number | null
     targetCompanyIds?: string[]
+    targetCompanyNames?: string[]
     actualErta?: number | null
     actualSpeaking?: number | null
     actualMediaPR?: number | null
