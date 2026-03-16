@@ -67,6 +67,8 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      CRON_SECRET_KEY: ${CRON_SECRET_KEY:-}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
     depends_on:
       event-planner-migrate:
         condition: service_completed_successfully
