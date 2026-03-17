@@ -284,20 +284,43 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             };
                             setMessages((prev) => [...prev, actionItem]);
                         } else if (data.type === "action_result") {
-                            setMessages((prev) =>
-                                prev.map((item) => {
+                            // Single setMessages call — reads tool from `prev` (always current state,
+                            // no stale-closure risk) and conditionally appends the ROI nav link
+                            // in the same update.
+                            setMessages((prev) => {
+                                // Find the matching action to capture its tool name
+                                const matched = prev.find(
+                                    (m) => m.role === "pending_action" && (m as PendingActionItem).actionId === data.actionId
+                                ) as PendingActionItem | undefined;
+
+                                const updated = prev.map((item) => {
                                     if (item.role !== "pending_action") return item;
                                     const pItem = item as PendingActionItem;
                                     if (pItem.actionId !== data.actionId) return item;
                                     if (data.rejected) {
-                                        return { ...pItem, status: "rejected" };
+                                        return { ...pItem, status: "rejected" } as PendingActionItem;
                                     } else if (data.success) {
-                                        return { ...pItem, status: "success" };
+                                        return { ...pItem, status: "success" } as PendingActionItem;
                                     } else {
-                                        return { ...pItem, status: "error", resultMessage: data.data?.error || "Unknown error" };
+                                        return { ...pItem, status: "error", resultMessage: data.data?.error || "Unknown error" } as PendingActionItem;
                                     }
-                                })
-                            );
+                                });
+
+                                // Inject ROI navigation link for successful updateROITargets actions
+                                // eventId is the prop received by IntelligenceChat — do NOT call useSearchParams() here
+                                if (data.success && matched?.tool === "updateROITargets" && eventId) {
+                                    return [
+                                        ...updated,
+                                        {
+                                            role: "assistant" as const,
+                                            content: `**[View ROI Targets →](/events/${eventId}/roi)**`,
+                                            id: `roi-nav-${data.actionId}`,
+                                        },
+                                    ];
+                                }
+
+                                return updated;
+                            });
                         }
                     } catch (err) {
                         console.error("Failed to parse message:", err);
