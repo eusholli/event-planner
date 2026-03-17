@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useUser } from '@/components/auth'
 import { Roles } from '@/lib/constants'
 import { canManageEvents } from '@/lib/role-utils'
+import { STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 
 interface User {
     id: string
@@ -415,6 +416,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 onChange={e => setEvent({ ...event, status: e.target.value })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                             >
+                                <option value="AWARENESS">Awareness</option>
                                 <option value="PIPELINE">Pipeline</option>
                                 <option value="COMMITTED">Committed</option>
                                 <option value="OCCURRED">Occurred</option>

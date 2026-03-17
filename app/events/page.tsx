@@ -8,7 +8,7 @@ import { EventMap } from '@/components/reports/EventMap'
 import { EventCalendar } from '@/components/reports/EventCalendar'
 import { useUser } from '@/components/auth'
 import { canManageEvents } from '@/lib/role-utils'
-import { getStatusColor } from '@/lib/status-colors'
+import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 import { Sparkles } from 'lucide-react'
 import moment from 'moment'
 
@@ -37,7 +37,7 @@ export default function EventsPage() {
 
     // Filter State
     const [searchQuery, setSearchQuery] = useState('')
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'])
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...STATUS_DISPLAY_ORDER])
     const [selectedRegions, setSelectedRegions] = useState<string[]>([])
     const [selectedYears, setSelectedYears] = useState<string[]>([])
 
@@ -127,10 +127,10 @@ export default function EventsPage() {
 
     // Modal Action
     const handleViewDashboard = (event: Event) => {
-        if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED') {
+        if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED' || event.status === 'AWARENESS') {
             router.push(`/events/${event.slug || event.id}/dashboard`)
         } else {
-            alert('Event must be COMMITTED or OCCURRED to access management dashboard.')
+            alert('This event must be in Committed, Occurred, or Awareness status to access the management dashboard.')
         }
     }
 
@@ -187,7 +187,7 @@ export default function EventsPage() {
                         <button
                             onClick={() => {
                                 setSearchQuery('')
-                                setSelectedStatuses(['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'])
+                                setSelectedStatuses([...STATUS_DISPLAY_ORDER])
                                 setSelectedRegions([])
                                 setSelectedYears([])
                             }}
@@ -254,7 +254,7 @@ export default function EventsPage() {
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">Status</label>
                                 <div className="space-y-2">
-                                    {['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'].map(status => (
+                                    {STATUS_DISPLAY_ORDER.map(status => (
                                         <label key={status} className="flex items-center space-x-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -558,7 +558,7 @@ export default function EventsPage() {
                             >
                                 Close
                             </button>
-                            {(canManage || selectedEvent.status === 'COMMITTED' || selectedEvent.status === 'OCCURRED') && (
+                            {(canManage || selectedEvent.status === 'COMMITTED' || selectedEvent.status === 'OCCURRED' || selectedEvent.status === 'AWARENESS') && (
                                 <button
                                     onClick={() => handleViewDashboard(selectedEvent)}
                                     className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
