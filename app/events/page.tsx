@@ -42,6 +42,7 @@ export default function EventsPage() {
     const [selectedYears, setSelectedYears] = useState<string[]>([])
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+    const [sparkleLoadingId, setSparkleLoadingId] = useState<string | null>(null)
 
     const fetchEvents = () => {
         setLoading(true)
@@ -353,22 +354,56 @@ export default function EventsPage() {
                                                 {canManage && (
                                                     <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                                                         <button
-                                                            onClick={(e) => {
+                                                            onClick={async (e) => {
                                                                 e.stopPropagation()
-                                                                const queryParts = [
-                                                                    `Event Name: ${event.name}`,
-                                                                    `Region: ${event.region || 'Unknown'}`,
-                                                                    `Date: ${event.startDate ? moment(event.startDate).format('YYYY-MM-DD') : 'Unknown'} - ${event.endDate ? moment(event.endDate).format('YYYY-MM-DD') : 'Unknown'}`,
-                                                                    `Location: ${event.address || 'Unknown'}`,
-                                                                ]
-                                                                const prompt = `You are helping plan Rakuten Symphony's attendance at this event. Please complete these steps in order:\n\n**Step 1 — Research the event**\nUse your web search tools to discover the event's main themes, focus areas, and confirmed or likely attending companies (exhibitors, sponsors, keynote speakers).\n\n**Step 2 — Generate the marketing plan**\nWrite the best possible Rakuten Symphony event marketing plan. Include:\n- Narrative strategy (why this event matters for RS and what the primary goals should be)\n- Top companies to engage, ranked by strategic importance to Rakuten Symphony\n- Key speaking, PR, and media opportunities\n\n**Step 3 — Draft ROI targets**\nGenerate realistic quantitative targets for each metric with a one-sentence explanation:\n- Expected Pipeline (USD)\n- Win Rate (%)\n- Expected Revenue (USD — auto-calculated as Pipeline × Win Rate)\n- Target Customer Meetings (count)\n- Target ERTA — Engagement Rate for Targeted Accounts (% — measures engagements from employees at targeted companies divided by total employees from targeted companies reached)\n- Target Speaking engagements (count)\n- Target Media/PR mentions (count)\n- Suggested Budget (USD)\n\n**Step 4 — Capabilities summary**\nClose with exactly this message to the user:\n"I can update all of these ROI settings directly for this event — target companies (I'll find or create them by name), expected pipeline, win rate, expected revenue, customer meetings, ERTA (Engagement Rate for Targeted Accounts), speaking, media/PR, budget, and save this marketing plan text to the database. Tell me which fields to update, or say 'update all'. For any field that already has a value, I'll show you the current value and confirm before overwriting."\n\nEvent details:\n\n${queryParts.join('\n')}`
-                                                                sessionStorage.setItem('intelligenceAutoQuery', prompt)
-                                                                router.push(`/intelligence?eventId=${event.slug || event.id}`)
+                                                                setSparkleLoadingId(event.id)
+                                                                try {
+                                                                    // Pre-fetch current ROI values so Kenji can see what's already set
+                                                                    let currentROIBlock = ''
+                                                                    try {
+                                                                        const roiRes = await fetch(`/api/events/${event.id}/roi`)
+                                                                        if (roiRes.ok) {
+                                                                            const roiData = await roiRes.json()
+                                                                            const t = roiData?.targets || {}
+                                                                            const formatVal = (v: any) => (v === null || v === undefined) ? 'null' : String(v)
+                                                                            const formatPlan = (v: string | null | undefined) => {
+                                                                                if (!v) return 'null'
+                                                                                return v.length > 300 ? `${v.slice(0, 300)} [truncated — ${v.length} chars total]` : v
+                                                                            }
+                                                                            const companies = t.targetCompanies?.length
+                                                                                ? t.targetCompanies.map((c: { name: string }) => c.name).join(', ')
+                                                                                : 'null'
+                                                                            currentROIBlock = `\nCurrent ROI values:\n- expectedPipeline: ${formatVal(t.expectedPipeline)}\n- winRate: ${formatVal(t.winRate)}\n- expectedRevenue: ${formatVal(t.expectedRevenue)}\n- targetCustomerMeetings: ${formatVal(t.targetCustomerMeetings)}\n- targetErta: ${formatVal(t.targetErta)}\n- targetSpeaking: ${formatVal(t.targetSpeaking)}\n- targetMediaPR: ${formatVal(t.targetMediaPR)}\n- budget: ${formatVal(t.budget)}\n- requesterEmail: ${formatVal(t.requesterEmail)}\n- targetCompanies: ${companies}\n- marketingPlan: ${formatPlan(t.marketingPlan)}\n`
+                                                                        }
+                                                                    } catch {
+                                                                        // Silently skip — Kenji will operate without existing-value context
+                                                                    }
+
+                                                                    const queryParts = [
+                                                                        `Event Name: ${event.name}`,
+                                                                        `Region: ${event.region || 'Unknown'}`,
+                                                                        `Date: ${event.startDate ? moment(event.startDate).format('YYYY-MM-DD') : 'Unknown'} - ${event.endDate ? moment(event.endDate).format('YYYY-MM-DD') : 'Unknown'}`,
+                                                                        `Location: ${event.address || 'Unknown'}`,
+                                                                    ]
+                                                                    const prompt = `You are helping plan Rakuten Symphony's attendance at this event. Please complete these steps in order:\n\n**Step 1 — Research the event**\nUse your web search tools to discover the event's main themes, focus areas, and confirmed or likely attending companies (exhibitors, sponsors, keynote speakers).\n\n**Step 2 — Generate the marketing plan**\nWrite the best possible Rakuten Symphony event marketing plan. Include:\n- Narrative strategy (why this event matters for RS and what the primary goals should be)\n- Top companies to engage, ranked by strategic importance to Rakuten Symphony\n- Key speaking, PR, and media opportunities\n\n**Step 3 — Draft ROI targets**\nGenerate realistic quantitative targets for each metric with a one-sentence explanation:\n- Expected Pipeline (USD)\n- Win Rate (%)\n- Expected Revenue (USD — auto-calculated as Pipeline × Win Rate)\n- Target Customer Meetings (count)\n- Target ERTA — Engagement Rate for Targeted Accounts (% — measures engagements from employees at targeted companies divided by total employees from targeted companies reached)\n- Target Speaking engagements (count)\n- Target Media/PR mentions (count)\n- Suggested Budget (USD)\n\nThe prompt contains a 'Current ROI values:' block below showing what is already set for this event. For each field you intend to set that already has a non-null value in that block, show \`current → proposed\` side by side and ask for explicit confirmation before including that field in the action. Fields currently null can be included without asking.\n\n**Step 4 — Capabilities summary**\nClose with exactly this message to the user:\n"I can update all of these ROI settings directly for this event in a single action — target companies (I'll find or create them by name), expected pipeline, win rate, expected revenue, customer meetings, ERTA (Engagement Rate for Targeted Accounts), speaking, media/PR, budget, requester email, and the marketing plan text itself. Tell me which fields to update, or say 'update all'. For any field that already has a value (shown in Current ROI values below), I'll show you the current value and proposed new value side by side before you confirm. One action covers everything — no separate step for the marketing plan."\n\nEvent details:\n\n${queryParts.join('\n')}${currentROIBlock}`
+                                                                    sessionStorage.setItem('intelligenceAutoQuery', prompt)
+                                                                    router.push(`/intelligence?eventId=${event.slug || event.id}`)
+                                                                } finally {
+                                                                    setSparkleLoadingId(null)
+                                                                }
                                                             }}
-                                                            className="p-1.5 text-neutral-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            disabled={sparkleLoadingId === event.id}
+                                                            className="p-1.5 text-neutral-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
                                                             title="Generate Event Marketing Plan"
                                                         >
-                                                            <Sparkles className="w-4 h-4" />
+                                                            {sparkleLoadingId === event.id ? (
+                                                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                                </svg>
+                                                            ) : (
+                                                                <Sparkles className="w-4 h-4" />
+                                                            )}
                                                         </button>
                                                         <button
                                                             onClick={(e) => {
