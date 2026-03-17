@@ -25,7 +25,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. `EVENT_STATUS_COLORS` in `lib/status-colors.ts` contains an AWARENESS entry with blue (#3b82f6) colors and OCCURRED uses grey/slate colors
   2. `STATUS_DISPLAY_ORDER` exported from `lib/status-colors.ts` lists statuses in the order: AWARENESS, PIPELINE, COMMITTED, CANCELED, OCCURRED
   3. An AWARENESS event passes the `isEventEditable` check in `lib/events.ts` — API routes allow mutations on it without returning 403
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Add AWARENESS colors, reassign OCCURRED to slate, export STATUS_DISPLAY_ORDER, update isEventEditable allowlist
 
 ### Phase 2: UI Surface and Migration
 **Goal**: Users can see, filter, set, and navigate AWARENESS events through every primary UI surface, and the migration history on multi-event branch is clean
@@ -46,5 +49,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Status Foundation | 0/TBD | Not started | - |
+| 1. Status Foundation | 0/1 | Not started | - |
 | 2. UI Surface and Migration | 0/TBD | Not started | - |
