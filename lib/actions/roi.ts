@@ -20,6 +20,7 @@ export interface ROITargetsInput {
     actualMediaPR?: number | null
     budget?: number | null
     requesterEmail?: string | null
+    marketingPlan?: string | null
 }
 
 export interface ROIActuals {
