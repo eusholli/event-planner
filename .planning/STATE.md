@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-03-17T20:55:05.793Z"
+stopped_at: Completed 01-status-foundation 01-01-PLAN.md
+last_updated: "2026-03-17T21:14:22.793Z"
 last_activity: 2026-03-17 — Roadmap created; phases derived from requirements
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -50,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-status-foundation P01 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,9 @@ Recent decisions affecting current work:
 - Status stored as String in Prisma (no enum migration needed); no-op migration still required for build continuity
 - Any-to-any state transitions allowed (consistent with current behavior)
 - `isEventEditable` should include AWARENESS — confirm whether to use allowlist or simplify to `!== 'OCCURRED'` check before Phase 1 execution
+- [Phase 01-status-foundation]: AWARENESS uses blue palette (#3b82f6); OCCURRED reassigned to slate (#64748b)
+- [Phase 01-status-foundation]: isEventEditable uses Object.keys(EVENT_STATUS_COLORS) for dynamic allowlist
+- [Phase 01-status-foundation]: STATUS_DISPLAY_ORDER: ['AWARENESS', 'PIPELINE', 'COMMITTED', 'CANCELED', 'OCCURRED']
 
 ### Pending Todos
 
@@ -74,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17T20:55:05.791Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-status-foundation/01-CONTEXT.md
+Last session: 2026-03-17T21:14:22.791Z
+Stopped at: Completed 01-status-foundation 01-01-PLAN.md
+Resume file: None

@@ -9,10 +9,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Status Foundation
 
-- [ ] **FOUND-01**: `lib/status-colors.ts` adds AWARENESS entry with blue bg (#3b82f6), blue-700 text, blue-100 border
-- [ ] **FOUND-02**: `lib/status-colors.ts` reassigns OCCURRED to grey/slate colors (from blue) in the same change
-- [ ] **FOUND-03**: `lib/status-colors.ts` exports a `STATUS_DISPLAY_ORDER` constant: `['AWARENESS', 'PIPELINE', 'COMMITTED', 'CANCELED', 'OCCURRED']`
-- [ ] **FOUND-04**: `lib/events.ts` `isEventEditable` allowlist includes `'AWARENESS'` so AWARENESS events are fully editable via the fast-path check
+- [x] **FOUND-01**: `lib/status-colors.ts` adds AWARENESS entry with blue bg (#3b82f6), blue-700 text, blue-100 border
+- [x] **FOUND-02**: `lib/status-colors.ts` reassigns OCCURRED to grey/slate colors (from blue) in the same change
+- [x] **FOUND-03**: `lib/status-colors.ts` exports a `STATUS_DISPLAY_ORDER` constant: `['AWARENESS', 'PIPELINE', 'COMMITTED', 'CANCELED', 'OCCURRED']`
+- [x] **FOUND-04**: `lib/events.ts` `isEventEditable` allowlist includes `'AWARENESS'` so AWARENESS events are fully editable via the fast-path check
 
 ### UI — Events Portfolio Page
 
@@ -50,10 +50,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
 | PORT-01 | Phase 2 | Pending |
 | PORT-02 | Phase 2 | Pending |
 | PORT-03 | Phase 2 | Pending |
