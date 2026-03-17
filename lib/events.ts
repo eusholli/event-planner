@@ -1,5 +1,6 @@
 
 import prisma from '@/lib/prisma'
+import { EVENT_STATUS_COLORS } from '@/lib/status-colors'
 
 /**
  * Checks if an event is editable based on its ID or status string.
@@ -10,7 +11,8 @@ import prisma from '@/lib/prisma'
  */
 export async function isEventEditable(eventIdOrStatus: string): Promise<boolean> {
     // If it looks like a status string (uppercased), check directly
-    if (['PIPELINE', 'COMMITTED', 'OCCURRED', 'CANCELED'].includes(eventIdOrStatus)) {
+    const validStatuses = Object.keys(EVENT_STATUS_COLORS)
+    if (validStatuses.includes(eventIdOrStatus)) {
         return eventIdOrStatus !== 'OCCURRED'
     }
 
