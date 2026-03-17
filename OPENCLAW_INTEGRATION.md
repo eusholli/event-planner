@@ -73,9 +73,24 @@ Docker network: both containers share `sales-recon-net` (internal) and `webproxy
    - `tool` — tool invocation name
    - `chunk` — response text fragment
    - `final` — response complete
-7. `IntelligenceChat.tsx` renders each frame type with appropriate UI (typing indicator, tool badges, streamed markdown)
+   - `pending_action` — proposed write action requiring explicit user confirmation (see §4a)
+   - `action_result` — result after ws-proxy executes a confirmed action
+7. `IntelligenceChat.tsx` renders each frame type with appropriate UI (typing indicator, tool badges, streamed markdown, action confirmation cards)
 
-**Auto-query**: Setting `sessionStorage.intelligenceAutoQuery` before navigating to `/intelligence` causes the component to send that message automatically on connect (used by the event card sparkle icon).
+**Auto-query**: Setting `sessionStorage.intelligenceAutoQuery` before navigating to `/intelligence` causes the component to send that message automatically on connect (used by the event card sparkle icon). The sparkle button is **async**: it pre-fetches current ROI values from `/api/events/[id]/roi` and injects them into the prompt as a `Current ROI values:` block before navigating, so Kenji can compare current vs. proposed values. The button shows a spinner while the fetch is in progress. The prompt instructs Kenji to research the event, generate a marketing plan, draft ROI targets, and then offer to call `updateROITargets` in a single action.
+
+### §4a — Action Confirmation Protocol
+
+Write operations initiated by Kenji require explicit user approval before execution:
+
+1. Kenji calls `/api/intelligence/actions` with a write tool (e.g. `createMeeting`) **without** `confirmed: true`
+2. The endpoint returns `{ requires_confirmation: true, preview: { tool, eventId, args } }`
+3. ws-proxy sends `{ type: "pending_action", actionId, tool, eventId, preview }` to the browser
+4. `IntelligenceChat.tsx` renders an `ActionConfirmCard` with **Confirm** / **Reject** buttons
+5. User clicks Confirm → browser sends `{ type: "confirm_action", actionId }` to ws-proxy
+   - ws-proxy re-calls `/api/intelligence/actions` with `confirmed: true` and relays the result as `{ type: "action_result", actionId, success: true }`
+6. User clicks Reject → browser sends `{ type: "reject_action", actionId }` to ws-proxy
+   - ws-proxy sends `{ type: "action_result", actionId, rejected: true }` back to the browser
 
 ---
 
@@ -158,7 +173,44 @@ Processing steps:
 
 ---
 
-## 7. Intelligence Subscription System
+## 7. Intelligence Actions API (`POST /api/intelligence/actions`)
+
+OpenClaw tools call this endpoint to read from and write to the event-planner database. Authentication uses the action token (signed JWT, 1-hour TTL) obtained via the session exchange.
+
+**Request body**:
+```json
+{ "tool": "<tool name>", "eventId": "<UUID or slug>", "args": { ... } }
+```
+
+**RBAC enforcement**:
+- Action token must be valid (verified by `lib/action-tokens.ts`)
+- Write tools require the token's `role` to have write access
+- All event-scoped tools check per-event authorization (`authorizedUserIds`)
+- Write tools require `args.confirmed = true`; without it the endpoint returns `{ requires_confirmation: true, ... }` and no data is modified
+
+**Available tools**:
+
+| Tool | Type | Description |
+|------|------|-------------|
+| `listEvents` | read | List all events the token user can access |
+| `getEvent` | read | Get full event details |
+| `getMeetings` | read | Query meetings (filter by status, attendee, room, date) |
+| `createMeeting` | **write** | Create a new meeting |
+| `cancelMeeting` | **write** | Cancel a meeting |
+| `updateMeeting` | **write** | Update meeting fields; increments `sequence` for calendar versioning |
+| `getAttendees` | read | Query attendees |
+| `addAttendee` | **write** | Add/upsert an attendee to the event |
+| `getRooms` | read | List rooms |
+| `getRoomAvailability` | read | Check room availability in a time window |
+| `checkAttendeeAvailability` | read | Check attendee schedule conflicts |
+| `getROITargets` | read | Fetch ROI targets and actuals |
+| `updateROITargets` | **write** | Update ROI targets; accepts `targetCompanyNames` (resolves/creates companies by name) or `targetCompanyIds`; also accepts `marketingPlan` text |
+| `updateCompany` | **write** | Update a system-level company record |
+| `getNavigationLinks` | read | Return in-app deep-links for a resource |
+
+---
+
+## 8. Intelligence Subscription System
 
 Users subscribe at `/intelligence/subscribe`:
 - Select specific attendees, companies, and/or events to track
@@ -169,7 +221,7 @@ Users subscribe at `/intelligence/subscribe`:
 
 ---
 
-## 8. IntelligenceChat Component
+## 9. IntelligenceChat Component
 
 **Location**: `components/IntelligenceChat.tsx`
 **Pages**: `/intelligence` (standalone), linked from event cards via sparkle icon with `?eventId=`
@@ -184,7 +236,10 @@ Users subscribe at `/intelligence/subscribe`:
 
 **Auto-query flow**:
 ```typescript
-// Event card sparkle icon:
+// Event card sparkle icon (async onClick):
+setSparkleLoadingId(event.id)   // shows spinner on button
+const roiRes = await fetch(`/api/events/${event.id}/roi`)
+// injects 'Current ROI values:' block into prompt if fetch succeeds
 sessionStorage.setItem('intelligenceAutoQuery', prompt)
 router.push(`/intelligence?eventId=${event.slug || event.id}`)
 
@@ -206,10 +261,19 @@ const autoQuery = sessionStorage.getItem('intelligenceAutoQuery')
 | `session-cleared` | Reset UI for new session |
 | `user-message` | Echo user message (broadcast from server) |
 | `error` | Show error banner |
+| `pending_action` | Show `ActionConfirmCard` with Confirm/Reject buttons (`{ actionId, tool, eventId, preview }`) |
+| `action_result` | Update action card status (`{ actionId, success?, rejected?, data? }`); if `success=true` and `tool=updateROITargets`, also appends a navigation link card to `/events/[eventId]/roi` in the same state update |
+
+**Messages sent by client to ws-proxy**:
+| Type | Payload | Behavior |
+|------|---------|----------|
+| `confirm_action` | `{ actionId }` | ws-proxy executes the pending action |
+| `reject_action` | `{ actionId }` | ws-proxy cancels the pending action |
+| `new-session` | — | Reset conversation history |
 
 ---
 
-## 9. Environment Variables
+## 10. Environment Variables
 
 | Variable | Purpose |
 |----------|---------|
@@ -228,7 +292,7 @@ const autoQuery = sessionStorage.getItem('intelligenceAutoQuery')
 
 ---
 
-## 10. Local Development Setup
+## 11. Local Development Setup
 
 1. **Start the Docker stack**:
    ```bash

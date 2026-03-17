@@ -49,7 +49,7 @@ const resolvedEventId = event.id
 
 **Key Models**:
 - `SystemSettings` - Global settings (Gemini API key, default types/tags)
-- `Event` - Top-level container with slug routing, `authorizedUserIds` for per-event access, ROI targets
+- `Event` - Top-level container with slug routing, `authorizedUserIds` for per-event access, ROI targets (including `marketingPlan` text field)
 - `Attendee` - System-level with unique email. Links to a `Company` relation via `companyId`. Shared across events via many-to-many
 - `Meeting` - Event-scoped; `MeetingStatus` enum: `PIPELINE/CONFIRMED/OCCURRED/CANCELED`; has `sequence` field incremented on updates for calendar invite versioning
 - `Event` status workflow: `PIPELINE` (amber) → `COMMITTED` (green) → `OCCURRED` (grey, read-only) → `CANCELED` (red)
@@ -96,7 +96,7 @@ const resolvedEventId = event.id
 **OpenClaw Intelligence Chat** (`/intelligence`):
 - WebSocket connection to `ws-proxy` → OpenClaw agent "Kenji"; system-wide, not event-scoped
 - `eventId` is passed as a breadcrumb only (helps Kenji orient to context); does not scope tools
-- Accessed from event cards via the sparkle icon (Generate Event Marketing Plan) which sets `sessionStorage.intelligenceAutoQuery` and navigates to `/intelligence?eventId=<slug>`
+- Accessed from event cards via the sparkle icon (Generate Event Marketing Plan): the button is **async** — it pre-fetches the event's current ROI values from `/api/events/[id]/roi`, injects them into the prompt as a `Current ROI values:` block, then sets `sessionStorage.intelligenceAutoQuery` and navigates to `/intelligence?eventId=<slug>`. A spinner replaces the sparkle icon while the fetch is in progress.
 - History persisted server-side in ws-proxy per userId
 - See `OPENCLAW_INTEGRATION.md` for full architecture details
 
@@ -111,9 +111,11 @@ const resolvedEventId = event.id
 **Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
 
 **OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent with two modes — real-time chat and scheduled intelligence reports. Runs as a 3-container Docker stack (see `OPENCLAW_INTEGRATION.md`):
-- `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw
-- `sales-recon-openclaw` (OpenClaw + Python + Crawl4AI, port 50045): Hosts agent "Kenji"; MCP tools include web search (Brave/Tavily) and Crawl4AI web scraping; runs scheduled cron cycles
+- `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw, orchestrates the write-action confirmation protocol
+- `sales-recon-openclaw` (OpenClaw + Python + Crawl4AI, port 50045): Hosts agent "Kenji"; MCP tools include web search (Brave/Tavily), Crawl4AI web scraping, and event-planner DB operations via `/api/intelligence/actions`; runs scheduled cron cycles
 - `event-planner` (this app): Provides target list and webhook endpoints, stores reports, dispatches emails
+
+**Action confirmation**: When Kenji proposes a write operation (create/update/cancel meeting, update ROI targets, update company), ws-proxy sends a `pending_action` WebSocket frame. `IntelligenceChat.tsx` renders an `ActionConfirmCard`; the user must click Confirm before the action executes. See `OPENCLAW_INTEGRATION.md §4a` for the full protocol.
 
 **WebSocket URL**: Browser connects to `NEXT_PUBLIC_WS_URL` (ws-proxy), not directly to OpenClaw. Falls back to `ws://localhost:8080/` when env var is unset.
 
@@ -155,6 +157,7 @@ if (!await canWrite()) {
 - `/api/intelligence/subscribe/events/[id]` - Toggle per-event subscription
 - `/api/intelligence/session` - Exchange Clerk JWT for action token (called by ws-proxy; requires `CRON_SECRET_KEY` Bearer auth)
 - `/api/intelligence/targets` - Cron-triggered target list (requires `CRON_SECRET_KEY`)
+- `/api/intelligence/actions` - OpenClaw tool execution endpoint; authenticated by action token; write tools require `confirmed: true` or return `requires_confirmation: true`; supports `getMeetings`, `createMeeting`, `cancelMeeting`, `updateMeeting`, `getAttendees`, `addAttendee`, `getRooms`, `getRoomAvailability`, `checkAttendeeAvailability`, `getROITargets`, `updateROITargets` (accepts `targetCompanyNames`/`targetCompanyIds` and `marketingPlan`), `updateCompany`, `getEvent`, `getNavigationLinks`, `listEvents`
 - `/api/intelligence/unsubscribe` - Unsubscribe handler (used in emails)
 - `/api/webhooks/intel-report` - Inbound intelligence reports from OpenClaw
 
