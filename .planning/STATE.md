@@ -1,86 +1,48 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: planning
-stopped_at: Completed 02-ui-surface-and-migration-01-PLAN.md
-last_updated: "2026-03-17T21:44:00.223Z"
-last_activity: 2026-03-17 — Roadmap created; phases derived from requirements
+milestone_name: Add AWARENESS Status
+status: complete
+stopped_at: Milestone v1.0 complete
+last_updated: "2026-03-17"
+last_activity: 2026-03-17 — v1.0 milestone archived
 progress:
   total_phases: 2
   completed_phases: 2
   total_plans: 2
   completed_plans: 2
-  percent: 0
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-17)
+See: .planning/PROJECT.md (updated 2026-03-17 after v1.0 milestone)
 
 **Core value:** Events in the awareness phase are tracked and visible without cluttering the active pipeline
-**Current focus:** Phase 1 — Status Foundation
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 1 of 2 (Status Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-17 — Roadmap created; phases derived from requirements
+Phase: 2 of 2 (complete)
+Status: ✅ Milestone v1.0 shipped
+Last activity: 2026-03-17 — v1.0 milestone archived
 
-Progress: [░░░░░░░░░░] 0%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-- Last 5 plans: -
-- Trend: -
-
-*Updated after each plan completion*
-| Phase 01-status-foundation P01 | 12 | 2 tasks | 4 files |
-| Phase 02-ui-surface-and-migration P01 | 2 | 2 tasks | 2 files |
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- AWARENESS = blue (#3b82f6); OCCURRED reassigned to grey/slate
-- Status stored as String in Prisma (no enum migration needed); no-op migration still required for build continuity
-- Any-to-any state transitions allowed (consistent with current behavior)
-- `isEventEditable` should include AWARENESS — confirm whether to use allowlist or simplify to `!== 'OCCURRED'` check before Phase 1 execution
-- [Phase 01-status-foundation]: AWARENESS uses blue palette (#3b82f6); OCCURRED reassigned to slate (#64748b)
-- [Phase 01-status-foundation]: isEventEditable uses Object.keys(EVENT_STATUS_COLORS) for dynamic allowlist
-- [Phase 01-status-foundation]: STATUS_DISPLAY_ORDER: ['AWARENESS', 'PIPELINE', 'COMMITTED', 'CANCELED', 'OCCURRED']
-- [Phase 02-ui-surface-and-migration]: STATUS_DISPLAY_ORDER spread used for mutable useState initial value in filter state
-- [Phase 02-ui-surface-and-migration]: No Prisma migration file needed — Event.status is String not enum, schema already in sync on multi-event branch
+Full decisions in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-None yet.
+- [ ] INTEL-01: Replace hardcoded status ternary in `app/intelligence/subscribe/page.tsx` with `getStatusColor()` — deferred to next milestone
+- [ ] Fix dead `STATUS_DISPLAY_ORDER` import in `app/events/[id]/settings/page.tsx` (low severity)
+- [ ] Extract duplicated dashboard gate conditions to `canViewDashboard()` helper in `app/events/page.tsx`
 
 ### Blockers/Concerns
 
-- Dashboard access gate intent for non-managers not explicitly stated in PROJECT.md — research recommends including AWARENESS; confirm before Phase 2 execution
-- OpenClaw intel-report webhook filters `status: { not: 'CANCELED' }` — AWARENESS events will appear in the intelligence feed; validate if this is correct product behavior
-
-## Session Continuity
-
-Last session: 2026-03-17T21:42:10.574Z
-Stopped at: Completed 02-ui-surface-and-migration-01-PLAN.md
-Resume file: None
+None — v1.0 complete.
