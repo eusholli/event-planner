@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-17T21:22:36.710Z"
+stopped_at: Completed 02-ui-surface-and-migration-01-PLAN.md
+last_updated: "2026-03-17T21:42:10.575Z"
 last_activity: 2026-03-17 — Roadmap created; phases derived from requirements
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 0
 ---
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-status-foundation P01 | 12 | 2 tasks | 4 files |
+| Phase 02-ui-surface-and-migration P01 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - [Phase 01-status-foundation]: AWARENESS uses blue palette (#3b82f6); OCCURRED reassigned to slate (#64748b)
 - [Phase 01-status-foundation]: isEventEditable uses Object.keys(EVENT_STATUS_COLORS) for dynamic allowlist
 - [Phase 01-status-foundation]: STATUS_DISPLAY_ORDER: ['AWARENESS', 'PIPELINE', 'COMMITTED', 'CANCELED', 'OCCURRED']
+- [Phase 02-ui-surface-and-migration]: STATUS_DISPLAY_ORDER spread used for mutable useState initial value in filter state
+- [Phase 02-ui-surface-and-migration]: No Prisma migration file needed — Event.status is String not enum, schema already in sync on multi-event branch
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17T21:22:36.708Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-ui-surface-and-migration/02-CONTEXT.md
+Last session: 2026-03-17T21:42:10.574Z
+Stopped at: Completed 02-ui-surface-and-migration-01-PLAN.md
+Resume file: None

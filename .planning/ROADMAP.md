@@ -13,7 +13,7 @@ This milestone adds `AWARENESS` as a new event status before PIPELINE in the eve
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Status Foundation** - Add AWARENESS to the type source of truth and editability gate
-- [ ] **Phase 2: UI Surface and Migration** - Propagate AWARENESS to all user-visible UI locations and run migration
+- [x] **Phase 2: UI Surface and Migration** - Propagate AWARENESS to all user-visible UI locations and run migration (completed 2026-03-17)
 
 ## Phase Details
 
@@ -40,7 +40,7 @@ Plans:
   3. Non-manager authorized users can click "View Dashboard" on an AWARENESS event without receiving a blocking alert
   4. The status dropdown on an event settings page shows "Awareness" as the first option, and saving it correctly sets the event status to AWARENESS
   5. `npx prisma migrate status` reports no pending migrations on the multi-event branch
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md — Propagate AWARENESS to portfolio filters, dashboard gate, settings dropdown, and create Prisma migration
@@ -53,4 +53,4 @@ Phases execute in numeric order: 1 → 2
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Status Foundation | 0/1 | Not started | - |
-| 2. UI Surface and Migration | 0/1 | Not started | - |
+| 2. UI Surface and Migration | 1/1 | Complete   | 2026-03-17 |

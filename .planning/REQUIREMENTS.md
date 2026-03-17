@@ -16,18 +16,18 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### UI — Events Portfolio Page
 
-- [ ] **PORT-01**: Filter state initialization array in `app/events/page.tsx` includes `'AWARENESS'`
-- [ ] **PORT-02**: "Clear Filters" reset handler array in `app/events/page.tsx` includes `'AWARENESS'`
-- [ ] **PORT-03**: Filter checkbox rendering loop in `app/events/page.tsx` includes `'AWARENESS'`
-- [ ] **PORT-04**: "View Dashboard" modal access gate in `app/events/page.tsx` includes `AWARENESS` (allows non-manager users to view dashboard for AWARENESS events)
+- [x] **PORT-01**: Filter state initialization array in `app/events/page.tsx` includes `'AWARENESS'`
+- [x] **PORT-02**: "Clear Filters" reset handler array in `app/events/page.tsx` includes `'AWARENESS'`
+- [x] **PORT-03**: Filter checkbox rendering loop in `app/events/page.tsx` includes `'AWARENESS'`
+- [x] **PORT-04**: "View Dashboard" modal access gate in `app/events/page.tsx` includes `AWARENESS` (allows non-manager users to view dashboard for AWARENESS events)
 
 ### UI — Event Settings Page
 
-- [ ] **SETT-01**: Status `<select>` dropdown in `app/events/[id]/settings/page.tsx` includes `<option value="AWARENESS">Awareness</option>` as the first option
+- [x] **SETT-01**: Status `<select>` dropdown in `app/events/[id]/settings/page.tsx` includes `<option value="AWARENESS">Awareness</option>` as the first option
 
 ### Database
 
-- [ ] **DB-01**: Prisma migration created with `prisma migrate dev --name add-awareness-status` (no DDL change; required for build continuity on multi-event branch)
+- [x] **DB-01**: Prisma migration created with `prisma migrate dev --name add-awareness-status` (no DDL change; required for build continuity on multi-event branch)
 
 ## v2 Requirements
 
@@ -54,12 +54,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-02 | Phase 1 | Complete |
 | FOUND-03 | Phase 1 | Complete |
 | FOUND-04 | Phase 1 | Complete |
-| PORT-01 | Phase 2 | Pending |
-| PORT-02 | Phase 2 | Pending |
-| PORT-03 | Phase 2 | Pending |
-| PORT-04 | Phase 2 | Pending |
-| SETT-01 | Phase 2 | Pending |
-| DB-01 | Phase 2 | Pending |
+| PORT-01 | Phase 2 | Complete |
+| PORT-02 | Phase 2 | Complete |
+| PORT-03 | Phase 2 | Complete |
+| PORT-04 | Phase 2 | Complete |
+| SETT-01 | Phase 2 | Complete |
+| DB-01 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 10 total
