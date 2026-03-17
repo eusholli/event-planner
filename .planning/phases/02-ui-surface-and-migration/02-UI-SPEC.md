@@ -53,9 +53,11 @@ Pre-populated from codebase scan of `app/events/page.tsx` and `app/events/[id]/s
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (text-sm) | 400 regular | 1.5 |
-| Label | 12px (text-xs, uppercase tracking-wider) | 500 medium | 1.4 |
+| Label | 12px (text-xs, uppercase tracking-wider) | 400 regular | 1.4 |
 | Heading | 20px (text-xl / text-lg) | 600 semibold | 1.3 |
-| Display | 30px (text-3xl) | 700 bold | 1.2 |
+| Display | 30px (text-3xl) | 600 semibold | 1.2 |
+
+Exactly 2 weights in use: 400 (regular) for body and label roles; 600 (semibold) for heading and display roles.
 
 This phase does not introduce new typographic roles. All existing type styles are inherited unchanged.
 
