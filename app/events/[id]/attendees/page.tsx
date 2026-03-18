@@ -8,6 +8,9 @@ import AddAttendeeForm from '@/components/AddAttendeeForm'
 import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
+import useFilterParams from '@/hooks/useFilterParams'
+
+const ATTENDEES_FILTER_DEFAULTS = { search: '' }
 
 interface Company {
     id: string
@@ -63,7 +66,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     })
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-    const [searchQuery, setSearchQuery] = useState('')
+    const { filters: attendeeFilters, setFilter: setAttendeeFilter, isFiltered: attendeeIsFiltered, resetFilters: resetAttendeeFilters } = useFilterParams(ATTENDEES_FILTER_DEFAULTS)
 
     // Company selector state for edit modal
     const [editCompanies, setEditCompanies] = useState<Company[]>([])
@@ -335,8 +338,8 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const otherAttendees = attendees.filter(a => !userEmail || a.email !== userEmail)
 
     const companyName = (a: Attendee) => a.company?.name || ''
-    const internalAttendees = otherAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || companyName(a).toLowerCase().includes(searchQuery.toLowerCase())))
-    const externalAttendees = otherAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || companyName(a).toLowerCase().includes(searchQuery.toLowerCase())))
+    const internalAttendees = otherAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes((attendeeFilters.search as string).toLowerCase()) || companyName(a).toLowerCase().includes((attendeeFilters.search as string).toLowerCase())))
+    const externalAttendees = otherAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes((attendeeFilters.search as string).toLowerCase()) || companyName(a).toLowerCase().includes((attendeeFilters.search as string).toLowerCase())))
 
     const renderAttendeeCard = (attendee: Attendee) => (
         <div key={attendee.id} className="card hover:border-zinc-200 group relative flex flex-col">
@@ -475,10 +478,18 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                         type="text"
                         className="input-field pl-10"
                         placeholder="Search attendees..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={attendeeFilters.search as string}
+                        onChange={(e) => setAttendeeFilter('search', e.target.value)}
                     />
                 </div>
+                {attendeeIsFiltered && (
+                    <button
+                        onClick={resetAttendeeFilters}
+                        className="text-sm text-gray-500 hover:text-gray-700 underline"
+                    >
+                        Clear Search
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
