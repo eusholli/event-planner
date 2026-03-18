@@ -453,9 +453,9 @@ export default function EventsPage() {
                                                                         const prompt = buildMarketingPrompt(fullEvent)
                                                                         sessionStorage.setItem('intelligenceAutoQuery', prompt)
                                                                     }
-                                                                    router.push(`/intelligence?eventId=${event.slug || event.id}`)
                                                                 } finally {
                                                                     setSparkleLoadingId(null)
+                                                                    router.push(`/intelligence?eventId=${event.slug || event.id}`)
                                                                 }
                                                             }}
                                                             disabled={sparkleLoadingId === event.id}
