@@ -383,6 +383,9 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
 
     const handleGetHistory = () => {
         if (!wsRef.current || !isConnected || isWaitingForResponse) return;
+        setMessages((prev) => [...prev, { role: "user", content: "/history", id: Date.now().toString() }]);
+        setIsWaitingForResponse(true);
+        setStatusMessage("Fetching history…");
         wsRef.current.send(JSON.stringify({ type: "message", content: "/history" }));
     };
 
