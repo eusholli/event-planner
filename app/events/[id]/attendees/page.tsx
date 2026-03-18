@@ -66,7 +66,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     })
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-    const { filters: attendeeFilters, setFilter: setAttendeeFilter, isFiltered: attendeeIsFiltered, resetFilters: resetAttendeeFilters } = useFilterParams(ATTENDEES_FILTER_DEFAULTS)
+    const { filters: attendeeFilters, setFilter: setAttendeeFilter, isFiltered: attendeeIsFiltered, resetFilters: resetAttendeeFilters } = useFilterParams('attendees', ATTENDEES_FILTER_DEFAULTS)
 
     // Company selector state for edit modal
     const [editCompanies, setEditCompanies] = useState<Company[]>([])

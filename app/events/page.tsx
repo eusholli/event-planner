@@ -133,7 +133,7 @@ export default function EventsPage() {
     const canManage = canManageEvents(user?.publicMetadata?.role as string)
 
     // Filter + View State — persisted in URL
-    const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams(EVENTS_FILTER_DEFAULTS)
+    const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams('events', EVENTS_FILTER_DEFAULTS)
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
     const [sparkleLoadingId, setSparkleLoadingId] = useState<string | null>(null)

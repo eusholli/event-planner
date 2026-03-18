@@ -67,7 +67,7 @@ function ReportsContent({ eventId }: { eventId: string }) {
     const [loading, setLoading] = useState(true)
 
     // Filter + Sort State — persisted in URL
-    const { filters: reportFilters, setFilter: setReportFilter, setFilters: setReportFilters, resetFilters: resetReportFilters } = useFilterParams(REPORTS_FILTER_DEFAULTS)
+    const { filters: reportFilters, setFilter: setReportFilter, setFilters: setReportFilters, resetFilters: resetReportFilters } = useFilterParams('reports', REPORTS_FILTER_DEFAULTS)
 
     // Fetch Data
     // Fetch Initial Data

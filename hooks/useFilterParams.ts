@@ -1,8 +1,7 @@
 'use client'
 
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
-import { parseParam, serializeParam, isAtDefault, FilterParamDefault } from '@/lib/filter-params'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { isAtDefault, FilterParamDefault } from '@/lib/filter-params'
 
 type FilterDefaults = Record<string, FilterParamDefault>
 
@@ -10,46 +9,45 @@ type ParsedFilters<T extends FilterDefaults> = {
     [K in keyof T]: T[K] extends string[] ? string[] : T[K] extends boolean ? boolean : string
 }
 
-function useFilterParams<T extends FilterDefaults>(defaults: T) {
-    const searchParams = useSearchParams()
-    const router = useRouter()
-    const pathname = usePathname()
+function useFilterParams<T extends FilterDefaults>(storageKey: string, defaults: T) {
+    // Initialise with defaults — safe for SSR; localStorage is read after mount
+    const [filters, setFiltersState] = useState<ParsedFilters<T>>(
+        defaults as unknown as ParsedFilters<T>
+    )
 
-    const filters = useMemo((): ParsedFilters<T> => {
-        const result = {} as ParsedFilters<T>
-        for (const key in defaults) {
-            const raw = searchParams.get(key)
-            const defaultVal = defaults[key]
-            result[key as keyof T] = parseParam(raw, defaultVal as FilterParamDefault) as ParsedFilters<T>[keyof T]
+    // After mount, restore from localStorage (only current keys, ignoring stale ones)
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(`filterState_${storageKey}`)
+            if (!stored) return
+            const parsed = JSON.parse(stored)
+            const merged = {} as ParsedFilters<T>
+            for (const key in defaults) {
+                merged[key as keyof T] = (key in parsed ? parsed[key] : defaults[key]) as ParsedFilters<T>[keyof T]
+            }
+            setFiltersState(merged)
+        } catch {
+            // localStorage unavailable or corrupt — silently stay on defaults
         }
-        return result
-    }, [searchParams, defaults])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [storageKey])
+
+    // Persist to localStorage on every change
+    useEffect(() => {
+        try {
+            localStorage.setItem(`filterState_${storageKey}`, JSON.stringify(filters))
+        } catch {
+            // localStorage unavailable — ignore
+        }
+    }, [storageKey, filters])
 
     const setFilter = useCallback((key: keyof T & string, value: FilterParamDefault) => {
-        const params = new URLSearchParams(searchParams.toString())
-        const serialized = serializeParam(value, defaults[key])
-        if (serialized === null) {
-            params.delete(key)
-        } else {
-            params.set(key, serialized)
-        }
-        const qs = params.toString()
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    }, [searchParams, router, pathname, defaults])
+        setFiltersState(prev => ({ ...prev, [key]: value }))
+    }, [])
 
     const setFilters = useCallback((updates: Partial<Record<keyof T & string, FilterParamDefault>>) => {
-        const params = new URLSearchParams(searchParams.toString())
-        for (const key in updates) {
-            const serialized = serializeParam(updates[key]!, defaults[key])
-            if (serialized === null) {
-                params.delete(key)
-            } else {
-                params.set(key, serialized)
-            }
-        }
-        const qs = params.toString()
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    }, [searchParams, router, pathname, defaults])
+        setFiltersState(prev => ({ ...prev, ...updates }))
+    }, [])
 
     const isFiltered = useMemo(() => {
         for (const key in defaults) {
@@ -59,13 +57,8 @@ function useFilterParams<T extends FilterDefaults>(defaults: T) {
     }, [filters, defaults])
 
     const resetFilters = useCallback(() => {
-        const params = new URLSearchParams(searchParams.toString())
-        for (const key in defaults) {
-            params.delete(key)
-        }
-        const qs = params.toString()
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    }, [searchParams, router, pathname, defaults])
+        setFiltersState(defaults as unknown as ParsedFilters<T>)
+    }, [defaults])
 
     return { filters, setFilter, setFilters, isFiltered, resetFilters }
 }

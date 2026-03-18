@@ -27,7 +27,7 @@ function CompaniesContent() {
         pipelineValue: ''
     })
     const [loading, setLoading] = useState(false)
-    const { filters: companyFilters, setFilter: setCompanyFilter, isFiltered: companyIsFiltered, resetFilters: resetCompanyFilters } = useFilterParams(COMPANIES_FILTER_DEFAULTS)
+    const { filters: companyFilters, setFilter: setCompanyFilter, isFiltered: companyIsFiltered, resetFilters: resetCompanyFilters } = useFilterParams('companies', COMPANIES_FILTER_DEFAULTS)
 
     // Edit State
     const [editingCompany, setEditingCompany] = useState<Company | null>(null)

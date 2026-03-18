@@ -69,7 +69,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
     const meetingIdParam = searchParams.get('meetingId')
 
     // Filters — persisted in URL
-    const { filters: dashFilters, setFilter, isFiltered, resetFilters } = useFilterParams(DASHBOARD_FILTER_DEFAULTS)
+    const { filters: dashFilters, setFilter, isFiltered, resetFilters } = useFilterParams('dashboard', DASHBOARD_FILTER_DEFAULTS)
     // UI state — not persisted
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
