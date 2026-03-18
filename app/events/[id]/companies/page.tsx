@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import useFilterParams from '@/hooks/useFilterParams'
 
 interface Company {
     id: string
@@ -11,6 +12,8 @@ interface Company {
         attendees: number
     }
 }
+
+const COMPANIES_FILTER_DEFAULTS = { search: '' }
 
 export default function CompaniesPage() {
     return <CompaniesContent />
@@ -24,7 +27,7 @@ function CompaniesContent() {
         pipelineValue: ''
     })
     const [loading, setLoading] = useState(false)
-    const [searchQuery, setSearchQuery] = useState('')
+    const { filters: companyFilters, setFilter: setCompanyFilter, isFiltered: companyIsFiltered, resetFilters: resetCompanyFilters } = useFilterParams(COMPANIES_FILTER_DEFAULTS)
 
     // Edit State
     const [editingCompany, setEditingCompany] = useState<Company | null>(null)
@@ -146,9 +149,17 @@ function CompaniesContent() {
                             type="text"
                             className="input-field pl-10"
                             placeholder="Search companies..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            value={companyFilters.search as string}
+                            onChange={(e) => setCompanyFilter('search', e.target.value)}
                         />
+                        {companyIsFiltered && (
+                            <button
+                                onClick={resetCompanyFilters}
+                                className="text-sm text-gray-500 hover:text-gray-700 underline"
+                            >
+                                Clear Search
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -208,7 +219,7 @@ function CompaniesContent() {
                     <div className="lg:col-span-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {companies
-                                .filter(company => company.name.toLowerCase().includes(searchQuery.toLowerCase()) || (company.description && company.description.toLowerCase().includes(searchQuery.toLowerCase())))
+                                .filter(company => company.name.toLowerCase().includes((companyFilters.search as string).toLowerCase()) || (company.description && company.description.toLowerCase().includes((companyFilters.search as string).toLowerCase())))
                                 .map((company) => (
                                     <div key={company.id} className="bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between">
                                         <div>
@@ -261,7 +272,7 @@ function CompaniesContent() {
                                         </div>
                                     </div>
                                 ))}
-                            {companies.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
+                            {companies.filter(c => c.name.toLowerCase().includes((companyFilters.search as string).toLowerCase()) || (c.description && c.description.toLowerCase().includes((companyFilters.search as string).toLowerCase()))).length === 0 && (
                                 <div className="col-span-full py-20 text-center border-2 border-dashed border-neutral-200 rounded-xl bg-white/50">
                                     <div className="mx-auto w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
                                         <svg className="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,7 +281,7 @@ function CompaniesContent() {
                                     </div>
                                     <h3 className="text-lg font-medium text-neutral-900">No companies found</h3>
                                     <p className="text-neutral-500 mt-1">
-                                        {searchQuery ? 'Try adjusting your search.' : 'Add your first company using the form.'}
+                                        {companyFilters.search ? 'Try adjusting your search.' : 'Add your first company using the form.'}
                                     </p>
                                 </div>
                             )}
