@@ -10,62 +10,6 @@ import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell, Histor
 import clsx from "clsx";
 import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
 
-/* ── Action confirmation card ── */
-function ActionConfirmCard({
-    item,
-    onConfirm,
-    onReject,
-}: {
-    item: PendingActionItem;
-    onConfirm: (actionId: string) => void;
-    onReject: (actionId: string) => void;
-}) {
-    return (
-        <div className="flex flex-col max-w-[85%] self-start items-start">
-            <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 px-1">
-                Proposed Action
-            </div>
-            <div className="rounded-2xl px-5 py-4 shadow-sm bg-amber-50 border border-amber-200 rounded-bl-none w-full max-w-sm">
-                <div className="flex items-start gap-2 mb-3">
-                    <span className="text-amber-500 text-lg leading-none">⚡</span>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-900 break-words">{item.preview}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5 font-mono">{item.tool}</p>
-                    </div>
-                </div>
-                {item.status === "pending" && (
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => onConfirm(item.actionId)}
-                            className="flex-1 py-1.5 px-3 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 active:scale-95 transition-all"
-                        >
-                            ✓ Confirm
-                        </button>
-                        <button
-                            onClick={() => onReject(item.actionId)}
-                            className="flex-1 py-1.5 px-3 bg-zinc-200 text-zinc-700 text-xs font-medium rounded-lg hover:bg-zinc-300 active:scale-95 transition-all"
-                        >
-                            ✗ Reject
-                        </button>
-                    </div>
-                )}
-                {item.status === "confirmed" && (
-                    <p className="text-xs text-amber-600 font-medium">⏳ Executing...</p>
-                )}
-                {item.status === "success" && (
-                    <p className="text-xs text-emerald-600 font-medium">✓ Done{item.resultMessage ? `: ${item.resultMessage}` : ""}</p>
-                )}
-                {item.status === "rejected" && (
-                    <p className="text-xs text-zinc-500 font-medium">✗ Rejected</p>
-                )}
-                {item.status === "error" && (
-                    <p className="text-xs text-red-600 font-medium">✗ Failed{item.resultMessage ? `: ${item.resultMessage}` : ""}</p>
-                )}
-            </div>
-        </div>
-    );
-}
-
 /* ── Typing indicator (three bouncing dots + optional status text) ── */
 function TypingIndicator({ statusMessage }: { statusMessage?: string | null }) {
     return (
@@ -95,19 +39,6 @@ type Message = {
     id: string;
 };
 
-type PendingActionItem = {
-    role: "pending_action";
-    id: string;
-    actionId: string;
-    tool: string;
-    eventId: string;
-    preview: string;
-    status: "pending" | "confirmed" | "rejected" | "success" | "error";
-    resultMessage?: string;
-};
-
-type ChatItem = Message | PendingActionItem;
-
 interface IntelligenceChatProps {
     eventId?: string;
 }
@@ -118,7 +49,7 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
-    const [messages, setMessages] = useState<ChatItem[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isConnected, setIsConnected] = useState(false);
     const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
@@ -272,55 +203,6 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             setError(data.message);
                             setIsWaitingForResponse(false);
                             setStatusMessage(null);
-                        } else if (data.type === "pending_action") {
-                            const actionItem: PendingActionItem = {
-                                role: "pending_action",
-                                id: `action-${data.actionId}`,
-                                actionId: data.actionId,
-                                tool: data.tool,
-                                eventId: data.eventId,
-                                preview: data.preview,
-                                status: "pending",
-                            };
-                            setMessages((prev) => [...prev, actionItem]);
-                        } else if (data.type === "action_result") {
-                            // Single setMessages call — reads tool from `prev` (always current state,
-                            // no stale-closure risk) and conditionally appends the ROI nav link
-                            // in the same update.
-                            setMessages((prev) => {
-                                // Find the matching action to capture its tool name
-                                const matched = prev.find(
-                                    (m) => m.role === "pending_action" && (m as PendingActionItem).actionId === data.actionId
-                                ) as PendingActionItem | undefined;
-
-                                const updated = prev.map((item) => {
-                                    if (item.role !== "pending_action") return item;
-                                    const pItem = item as PendingActionItem;
-                                    if (pItem.actionId !== data.actionId) return item;
-                                    if (data.rejected) {
-                                        return { ...pItem, status: "rejected" } as PendingActionItem;
-                                    } else if (data.success) {
-                                        return { ...pItem, status: "success" } as PendingActionItem;
-                                    } else {
-                                        return { ...pItem, status: "error", resultMessage: data.data?.error || "Unknown error" } as PendingActionItem;
-                                    }
-                                });
-
-                                // Inject ROI navigation link for successful updateROITargets actions
-                                // eventId is the prop received by IntelligenceChat — do NOT call useSearchParams() here
-                                if (data.success && matched?.tool === "updateROITargets" && eventId) {
-                                    return [
-                                        ...updated,
-                                        {
-                                            role: "assistant" as const,
-                                            content: `**[View ROI Targets →](/events/${eventId}/roi)**`,
-                                            id: `roi-nav-${data.actionId}`,
-                                        },
-                                    ];
-                                }
-
-                                return updated;
-                            });
                         }
                     } catch (err) {
                         console.error("Failed to parse message:", err);
@@ -387,31 +269,6 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
         setIsWaitingForResponse(true);
         setStatusMessage("Fetching history…");
         wsRef.current.send(JSON.stringify({ type: "message", content: "/history" }));
-    };
-
-    const handleConfirmAction = (actionId: string) => {
-        if (!wsRef.current || !isConnected) return;
-        // Update card status to confirmed
-        setMessages((prev) =>
-            prev.map((item) =>
-                item.role === "pending_action" && (item as PendingActionItem).actionId === actionId
-                    ? { ...item, status: "confirmed" } as PendingActionItem
-                    : item
-            )
-        );
-        wsRef.current.send(JSON.stringify({ type: "confirm_action", actionId }));
-    };
-
-    const handleRejectAction = (actionId: string) => {
-        if (!wsRef.current || !isConnected) return;
-        wsRef.current.send(JSON.stringify({ type: "reject_action", actionId }));
-        setMessages((prev) =>
-            prev.map((item) =>
-                item.role === "pending_action" && (item as PendingActionItem).actionId === actionId
-                    ? { ...item, status: "rejected" } as PendingActionItem
-                    : item
-            )
-        );
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -488,17 +345,6 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                     )}
 
                     {messages.map((msg) => {
-                        if (msg.role === "pending_action") {
-                            const pItem = msg as PendingActionItem;
-                            return (
-                                <ActionConfirmCard
-                                    key={pItem.id}
-                                    item={pItem}
-                                    onConfirm={handleConfirmAction}
-                                    onReject={handleRejectAction}
-                                />
-                            );
-                        }
                         return (
                         <div
                             key={msg.id}
