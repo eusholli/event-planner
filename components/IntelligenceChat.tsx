@@ -6,7 +6,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell } from "lucide-react";
+import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell, History } from "lucide-react";
 import clsx from "clsx";
 import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
 
@@ -381,6 +381,11 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
         wsRef.current.send(JSON.stringify({ type: "new-session" }));
     };
 
+    const handleGetHistory = () => {
+        if (!wsRef.current || !isConnected || isWaitingForResponse) return;
+        wsRef.current.send(JSON.stringify({ type: "message", content: "/history" }));
+    };
+
     const handleConfirmAction = (actionId: string) => {
         if (!wsRef.current || !isConnected) return;
         // Update card status to confirmed
@@ -449,6 +454,20 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                         >
                             <RotateCcw size={13} />
                             New Session
+                        </button>
+                        <button
+                            onClick={handleGetHistory}
+                            disabled={!isConnected || isWaitingForResponse}
+                            title="Get History"
+                            className={clsx(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                                !isConnected || isWaitingForResponse
+                                    ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                                    : "bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 shadow-sm"
+                            )}
+                        >
+                            <History size={13} />
+                            Get History
                         </button>
                         <span className="text-sm text-zinc-400">
                             {user?.primaryEmailAddress?.emailAddress}
