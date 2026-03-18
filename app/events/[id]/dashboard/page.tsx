@@ -12,6 +12,19 @@ import MeetingCard from '@/components/MeetingCard'
 import MeetingDetailsModal from '@/components/MeetingDetailsModal'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
+import useFilterParams from '@/hooks/useFilterParams'
+
+const DASHBOARD_FILTER_DEFAULTS = {
+    search: '',
+    statuses: ['PIPELINE', 'CONFIRMED', 'OCCURRED', 'CANCELED'] as string[],
+    tags: [] as string[],
+    attendees: [] as string[],
+    date: '',
+    roomId: '',
+    meetingTypes: [] as string[],
+    approved: false,
+    inviteSent: false,
+}
 
 interface Room {
     id: string
@@ -55,16 +68,9 @@ function DashboardContent({ eventId }: { eventId: string }) {
     const pathname = usePathname()
     const meetingIdParam = searchParams.get('meetingId')
 
-    // Filters
-    const [searchQuery, setSearchQuery] = useState('')
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PIPELINE', 'CONFIRMED', 'OCCURRED', 'CANCELED'])
-    const [selectedTags, setSelectedTags] = useState<string[]>([])
-    const [selectedAttendees, setSelectedAttendees] = useState<string[]>([])
-    const [selectedDate, setSelectedDate] = useState('')
-    const [selectedRoomId, setSelectedRoomId] = useState('')
-    const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
-    const [filterApproved, setFilterApproved] = useState(false)
-    const [filterInviteSent, setFilterInviteSent] = useState(false)
+    // Filters — persisted in URL
+    const { filters: dashFilters, setFilter, isFiltered, resetFilters } = useFilterParams(DASHBOARD_FILTER_DEFAULTS)
+    // UI state — not persisted
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
     // Modal State
@@ -82,12 +88,12 @@ function DashboardContent({ eventId }: { eventId: string }) {
             fetchMeetings()
         }, 300)
         return () => clearTimeout(timer)
-    }, [searchQuery])
+    }, [dashFilters.search])
 
     // Immediate Fetch for other filters
     useEffect(() => {
         fetchMeetings()
-    }, [selectedStatuses, selectedTags, selectedAttendees, selectedDate, selectedRoomId, selectedMeetingTypes, filterApproved, filterInviteSent])
+    }, [dashFilters.statuses, dashFilters.tags, dashFilters.attendees, dashFilters.date, dashFilters.roomId, dashFilters.meetingTypes, dashFilters.approved, dashFilters.inviteSent])
 
     // Initial Load
     useEffect(() => {
@@ -181,15 +187,15 @@ function DashboardContent({ eventId }: { eventId: string }) {
         try {
             const params = new URLSearchParams()
             params.append('eventId', eventId)
-            if (selectedDate) params.append('date', selectedDate)
-            if (selectedRoomId) params.append('roomId', selectedRoomId)
-            if (searchQuery) params.append('search', searchQuery)
-            if (selectedStatuses.length > 0) params.append('status', selectedStatuses.join(','))
-            if (selectedTags.length > 0) params.append('tags', selectedTags.join(','))
-            if (selectedMeetingTypes.length > 0) params.append('meetingType', selectedMeetingTypes.join(','))
-            if (selectedAttendees.length > 0) params.append('attendeeIds', selectedAttendees.join(','))
-            if (filterApproved) params.append('isApproved', 'true')
-            if (filterInviteSent) params.append('calendarInviteSent', 'true')
+            if (dashFilters.date) params.append('date', dashFilters.date as string)
+            if (dashFilters.roomId) params.append('roomId', dashFilters.roomId as string)
+            if (dashFilters.search) params.append('search', dashFilters.search as string)
+            if ((dashFilters.statuses as string[]).length > 0) params.append('status', (dashFilters.statuses as string[]).join(','))
+            if ((dashFilters.tags as string[]).length > 0) params.append('tags', (dashFilters.tags as string[]).join(','))
+            if ((dashFilters.meetingTypes as string[]).length > 0) params.append('meetingType', (dashFilters.meetingTypes as string[]).join(','))
+            if ((dashFilters.attendees as string[]).length > 0) params.append('attendeeIds', (dashFilters.attendees as string[]).join(','))
+            if (dashFilters.approved) params.append('isApproved', 'true')
+            if (dashFilters.inviteSent) params.append('calendarInviteSent', 'true')
 
             const res = await fetch(`/api/meetings?${params.toString()}`, { cache: 'no-store' })
             const meetingsData = await res.json()
@@ -632,22 +638,14 @@ function DashboardContent({ eventId }: { eventId: string }) {
                     <p className="mt-2 text-zinc-500">Overview of your scheduled events.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button
-                        onClick={() => {
-                            setSearchQuery('')
-                            setSelectedStatuses(['PIPELINE', 'CONFIRMED', 'OCCURRED', 'CANCELED'])
-                            setSelectedTags([])
-                            setSelectedAttendees([])
-                            setSelectedDate('')
-                            setSelectedRoomId('')
-                            setSelectedMeetingTypes([])
-                            setFilterApproved(false)
-                            setFilterInviteSent(false)
-                        }}
-                        className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
-                    >
-                        Clear Filters
-                    </button>
+                    {isFiltered && (
+                        <button
+                            onClick={resetFilters}
+                            className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
+                        >
+                            Clear Filters
+                        </button>
+                    )}
                     <button
                         onClick={handleExportCalendarView}
                         className="px-4 py-2 bg-white text-zinc-700 border border-zinc-200 rounded-lg font-medium hover:bg-zinc-50 transition-colors shadow-sm"
@@ -721,12 +719,12 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                         <label key={status} className="flex items-center space-x-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedStatuses.includes(status)}
+                                                checked={(dashFilters.statuses as string[]).includes(status)}
                                                 onChange={(e) => {
                                                     if (e.target.checked) {
-                                                        setSelectedStatuses(prev => [...prev, status])
+                                                        setFilter('statuses', [...(dashFilters.statuses as string[]), status])
                                                     } else {
-                                                        setSelectedStatuses(prev => prev.filter(s => s !== status))
+                                                        setFilter('statuses', (dashFilters.statuses as string[]).filter(s => s !== status))
                                                     }
                                                 }}
                                                 className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
@@ -744,8 +742,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                     type="text"
                                     placeholder="Search requester, creator, text, room, attendees, other details..."
                                     className="input-field text-sm"
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
+                                    value={dashFilters.search as string}
+                                    onChange={e => setFilter('search', e.target.value)}
                                 />
                             </div>
 
@@ -755,10 +753,10 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                 <input
                                     type="date"
                                     className="input-field text-sm"
-                                    value={selectedDate}
+                                    value={dashFilters.date as string}
                                     min={eventSettings?.startDate}
                                     max={eventSettings?.endDate}
-                                    onChange={e => setSelectedDate(e.target.value)}
+                                    onChange={e => setFilter('date', e.target.value)}
                                 />
                             </div>
 
@@ -767,8 +765,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                 <label className="block text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wider">Room</label>
                                 <select
                                     className="input-field text-sm"
-                                    value={selectedRoomId}
-                                    onChange={e => setSelectedRoomId(e.target.value)}
+                                    value={dashFilters.roomId as string}
+                                    onChange={e => setFilter('roomId', e.target.value)}
                                 >
                                     <option value="">All Rooms</option>
                                     {rooms.map(room => (
@@ -785,11 +783,10 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                         <button
                                             key={type}
                                             onClick={() => {
-                                                setSelectedMeetingTypes(prev =>
-                                                    prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-                                                )
+                                                const cur = dashFilters.meetingTypes as string[]
+                                                setFilter('meetingTypes', cur.includes(type) ? cur.filter(t => t !== type) : [...cur, type])
                                             }}
-                                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedMeetingTypes.includes(type)
+                                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${(dashFilters.meetingTypes as string[]).includes(type)
                                                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                                 : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
                                                 }`}
@@ -807,8 +804,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={filterApproved}
-                                            onChange={(e) => setFilterApproved(e.target.checked)}
+                                            checked={dashFilters.approved as boolean}
+                                            onChange={(e) => setFilter('approved', e.target.checked)}
                                             className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
                                         />
                                         <span className="text-sm text-zinc-600">Approved</span>
@@ -816,8 +813,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={filterInviteSent}
-                                            onChange={(e) => setFilterInviteSent(e.target.checked)}
+                                            checked={dashFilters.inviteSent as boolean}
+                                            onChange={(e) => setFilter('inviteSent', e.target.checked)}
                                             className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
                                         />
                                         <span className="text-sm text-zinc-600">Invite Sent</span>
@@ -834,11 +831,10 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                             <button
                                                 key={tag}
                                                 onClick={() => {
-                                                    setSelectedTags(prev =>
-                                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-                                                    )
+                                                    const cur = dashFilters.tags as string[]
+                                                    setFilter('tags', cur.includes(tag) ? cur.filter(t => t !== tag) : [...cur, tag])
                                                 }}
-                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedTags.includes(tag)
+                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${(dashFilters.tags as string[]).includes(tag)
                                                     ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                                     : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
                                                     }`}
@@ -859,12 +855,13 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                             <input
                                                 type="checkbox"
                                                 className="w-3.5 h-3.5 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
-                                                checked={selectedAttendees.includes(attendee.id)}
+                                                checked={(dashFilters.attendees as string[]).includes(attendee.id)}
                                                 onChange={(e) => {
+                                                    const cur = dashFilters.attendees as string[]
                                                     if (e.target.checked) {
-                                                        setSelectedAttendees(prev => [...prev, attendee.id])
+                                                        setFilter('attendees', [...cur, attendee.id])
                                                     } else {
-                                                        setSelectedAttendees(prev => prev.filter(id => id !== attendee.id))
+                                                        setFilter('attendees', cur.filter(id => id !== attendee.id))
                                                     }
                                                 }}
                                             />

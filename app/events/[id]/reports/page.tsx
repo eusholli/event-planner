@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import useFilterParams from '@/hooks/useFilterParams'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import moment from 'moment'
@@ -38,6 +39,15 @@ interface AttendeeStats {
     total: number
 }
 
+const REPORTS_FILTER_DEFAULTS = {
+    attendeeTypes: [] as string[],
+    meetingTypes: [] as string[],
+    tags: [] as string[],
+    external: 'all',
+    sortCol: 'total',
+    sortDir: 'desc',
+}
+
 export default function ReportsPage() {
     const params = require('next/navigation').useParams()
     const id = params?.id as string
@@ -56,15 +66,8 @@ function ReportsContent({ eventId }: { eventId: string }) {
     })
     const [loading, setLoading] = useState(true)
 
-    // Filter State
-    const [selectedAttendeeTypes, setSelectedAttendeeTypes] = useState<string[]>([])
-    const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<string[]>([])
-    const [selectedTags, setSelectedTags] = useState<string[]>([])
-    const [externalFilter, setExternalFilter] = useState<'all' | 'internal' | 'external'>('all')
-
-    // Sort State
-    const [sortColumn, setSortColumn] = useState<keyof AttendeeStats>('total')
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+    // Filter + Sort State — persisted in URL
+    const { filters: reportFilters, setFilter: setReportFilter, setFilters: setReportFilters, resetFilters: resetReportFilters } = useFilterParams(REPORTS_FILTER_DEFAULTS)
 
     // Fetch Data
     // Fetch Initial Data
@@ -94,8 +97,8 @@ function ReportsContent({ eventId }: { eventId: string }) {
             try {
                 const params = new URLSearchParams()
                 params.append('eventId', eventId)
-                if (selectedMeetingTypes.length > 0) params.append('meetingType', selectedMeetingTypes.join(','))
-                if (selectedTags.length > 0) params.append('tags', selectedTags.join(','))
+                if ((reportFilters.meetingTypes as string[]).length > 0) params.append('meetingType', (reportFilters.meetingTypes as string[]).join(','))
+                if ((reportFilters.tags as string[]).length > 0) params.append('tags', (reportFilters.tags as string[]).join(','))
 
                 // For reports, we typically want all statuses to calculate stats properly
                 // unless we want to filter specific statuses. The code currently calculates
@@ -112,19 +115,19 @@ function ReportsContent({ eventId }: { eventId: string }) {
         }
 
         fetchMeetings()
-    }, [selectedMeetingTypes, selectedTags, eventId])
+    }, [reportFilters.meetingTypes, reportFilters.tags, eventId])
 
     // Process Data
     const tableData = useMemo(() => {
         // 1. Filter Attendees
         const filteredAttendees = attendees.filter(a => {
-            if (selectedAttendeeTypes.length > 0 && (!a.type || !selectedAttendeeTypes.includes(a.type))) {
+            if ((reportFilters.attendeeTypes as string[]).length > 0 && (!a.type || !(reportFilters.attendeeTypes as string[]).includes(a.type))) {
                 return false
             }
 
             // External Filter
-            if (externalFilter === 'internal' && a.isExternal) return false
-            if (externalFilter === 'external' && !a.isExternal) return false
+            if ((reportFilters.external as string) === 'internal' && a.isExternal) return false
+            if ((reportFilters.external as string) === 'external' && !a.isExternal) return false
 
             return true
         })
@@ -158,26 +161,25 @@ function ReportsContent({ eventId }: { eventId: string }) {
 
         // 3. Sort
         return stats.sort((a, b) => {
-            const valA = a[sortColumn]
-            const valB = b[sortColumn]
+            const valA = a[reportFilters.sortCol as keyof AttendeeStats]
+            const valB = b[reportFilters.sortCol as keyof AttendeeStats]
 
             if (typeof valA === 'string' && typeof valB === 'string') {
-                return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+                return (reportFilters.sortDir as 'asc' | 'desc') === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
             }
 
-            if (valA < valB) return sortDirection === 'asc' ? -1 : 1
-            if (valA > valB) return sortDirection === 'asc' ? 1 : -1
+            if (valA < valB) return (reportFilters.sortDir as 'asc' | 'desc') === 'asc' ? -1 : 1
+            if (valA > valB) return (reportFilters.sortDir as 'asc' | 'desc') === 'asc' ? 1 : -1
             return 0
         })
 
-    }, [meetings, attendees, selectedAttendeeTypes, selectedMeetingTypes, selectedTags, externalFilter, sortColumn, sortDirection])
+    }, [meetings, attendees, reportFilters.attendeeTypes, reportFilters.meetingTypes, reportFilters.tags, reportFilters.external, reportFilters.sortCol, reportFilters.sortDir])
 
     const handleSort = (column: keyof AttendeeStats) => {
-        if (sortColumn === column) {
-            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+        if (reportFilters.sortCol === column) {
+            setReportFilter('sortDir', reportFilters.sortDir === 'asc' ? 'desc' : 'asc')
         } else {
-            setSortColumn(column)
-            setSortDirection('desc')
+            setReportFilters({ sortCol: column as string, sortDir: 'desc' })
         }
     }
 
@@ -280,8 +282,8 @@ function ReportsContent({ eventId }: { eventId: string }) {
                                 ].map(option => (
                                     <button
                                         key={option.id}
-                                        onClick={() => setExternalFilter(option.id as any)}
-                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${externalFilter === option.id
+                                        onClick={() => setReportFilter('external', option.id)}
+                                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${reportFilters.external === option.id
                                             ? 'bg-white text-indigo-600 shadow-sm'
                                             : 'text-zinc-500 hover:text-zinc-700'
                                             }`}
@@ -300,12 +302,12 @@ function ReportsContent({ eventId }: { eventId: string }) {
                                     <label key={type} className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={selectedAttendeeTypes.includes(type)}
+                                            checked={(reportFilters.attendeeTypes as string[]).includes(type)}
                                             onChange={(e) => {
                                                 if (e.target.checked) {
-                                                    setSelectedAttendeeTypes(prev => [...prev, type])
+                                                    setReportFilter('attendeeTypes', [...(reportFilters.attendeeTypes as string[]), type])
                                                 } else {
-                                                    setSelectedAttendeeTypes(prev => prev.filter(t => t !== type))
+                                                    setReportFilter('attendeeTypes', (reportFilters.attendeeTypes as string[]).filter(t => t !== type))
                                                 }
                                             }}
                                             className="w-4 h-4 text-indigo-600 border-zinc-300 rounded focus:ring-indigo-500"
@@ -324,11 +326,10 @@ function ReportsContent({ eventId }: { eventId: string }) {
                                     <button
                                         key={type}
                                         onClick={() => {
-                                            setSelectedMeetingTypes(prev =>
-                                                prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-                                            )
+                                            const cur = reportFilters.meetingTypes as string[]
+                                            setReportFilter('meetingTypes', cur.includes(type) ? cur.filter(t => t !== type) : [...cur, type])
                                         }}
-                                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedMeetingTypes.includes(type)
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${(reportFilters.meetingTypes as string[]).includes(type)
                                             ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                             : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
                                             }`}
@@ -347,11 +348,10 @@ function ReportsContent({ eventId }: { eventId: string }) {
                                     <button
                                         key={tag}
                                         onClick={() => {
-                                            setSelectedTags(prev =>
-                                                prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-                                            )
+                                            const cur = reportFilters.tags as string[]
+                                            setReportFilter('tags', cur.includes(tag) ? cur.filter(t => t !== tag) : [...cur, tag])
                                         }}
-                                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedTags.includes(tag)
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${(reportFilters.tags as string[]).includes(tag)
                                             ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                             : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
                                             }`}
@@ -363,12 +363,7 @@ function ReportsContent({ eventId }: { eventId: string }) {
                         </div>
 
                         <button
-                            onClick={() => {
-                                setSelectedAttendeeTypes([])
-                                setSelectedMeetingTypes([])
-                                setSelectedTags([])
-                                setExternalFilter('all')
-                            }}
+                            onClick={resetReportFilters}
                             className="w-full px-4 py-2 mt-4 text-sm text-zinc-600 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
                         >
                             Clear Filters
@@ -398,9 +393,9 @@ function ReportsContent({ eventId }: { eventId: string }) {
                                         >
                                             <div className="flex items-center space-x-1">
                                                 <span>{column.label}</span>
-                                                {sortColumn === column.id && (
+                                                {reportFilters.sortCol === column.id && (
                                                     <span className="text-indigo-500">
-                                                        {sortDirection === 'asc' ? '↑' : '↓'}
+                                                        {(reportFilters.sortDir as 'asc' | 'desc') === 'asc' ? '↑' : '↓'}
                                                     </span>
                                                 )}
                                             </div>
