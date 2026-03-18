@@ -10,6 +10,7 @@ import { useUser } from '@/components/auth'
 import { canManageEvents } from '@/lib/role-utils'
 import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 import { Sparkles } from 'lucide-react'
+import useFilterParams from '@/hooks/useFilterParams'
 interface Event {
     id: string
     name: string
@@ -116,19 +117,23 @@ function buildMarketingPrompt(e: EventDetail): string {
     return lines.join('\n')
 }
 
+const EVENTS_FILTER_DEFAULTS = {
+    search: '',
+    statuses: [...STATUS_DISPLAY_ORDER] as string[],
+    regions: [] as string[],
+    years: [] as string[],
+    view: 'list',
+}
+
 export default function EventsPage() {
     const [events, setEvents] = useState<Event[]>([])
     const [loading, setLoading] = useState(true)
-    const [view, setView] = useState<'list' | 'calendar' | 'map'>('list')
     const router = useRouter()
     const { user } = useUser()
     const canManage = canManageEvents(user?.publicMetadata?.role as string)
 
-    // Filter State
-    const [searchQuery, setSearchQuery] = useState('')
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...STATUS_DISPLAY_ORDER])
-    const [selectedRegions, setSelectedRegions] = useState<string[]>([])
-    const [selectedYears, setSelectedYears] = useState<string[]>([])
+    // Filter + View State — persisted in URL
+    const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams(EVENTS_FILTER_DEFAULTS)
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
     const [sparkleLoadingId, setSparkleLoadingId] = useState<string | null>(null)
@@ -231,8 +236,8 @@ export default function EventsPage() {
 
     const filteredEvents = events.filter(event => {
         // Search Filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase()
+        if (eventFilters.search) {
+            const query = (eventFilters.search as string).toLowerCase()
             const matchName = event.name.toLowerCase().includes(query)
             const matchLocation = event.location?.toLowerCase().includes(query) || false
             const matchAddress = event.address?.toLowerCase().includes(query) || false
@@ -241,20 +246,20 @@ export default function EventsPage() {
         }
 
         // Status Filter
-        if (!selectedStatuses.includes(event.status)) {
+        if (!(eventFilters.statuses as string[]).includes(event.status)) {
             return false
         }
 
         // Region Filter
-        if (selectedRegions.length > 0) {
-            if (!event.region || !selectedRegions.includes(event.region)) return false
+        if ((eventFilters.regions as string[]).length > 0) {
+            if (!event.region || !(eventFilters.regions as string[]).includes(event.region)) return false
         }
 
         // Year Filter
-        if (selectedYears.length > 0) {
+        if ((eventFilters.years as string[]).length > 0) {
             if (!event.startDate) return false
             const year = new Date(event.startDate).getFullYear().toString()
-            if (!selectedYears.includes(year)) return false
+            if (!(eventFilters.years as string[]).includes(year)) return false
         }
 
         return true
@@ -273,36 +278,33 @@ export default function EventsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         {/* Clear Filters Button (Mobile/Desktop) */}
-                        <button
-                            onClick={() => {
-                                setSearchQuery('')
-                                setSelectedStatuses([...STATUS_DISPLAY_ORDER])
-                                setSelectedRegions([])
-                                setSelectedYears([])
-                            }}
-                            className="bg-white border border-neutral-200 text-neutral-600 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors shadow-sm"
-                        >
-                            Clear Filters
-                        </button>
+                        {isFiltered && (
+                            <button
+                                onClick={resetFilters}
+                                className="bg-white border border-neutral-200 text-neutral-600 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors shadow-sm"
+                            >
+                                Clear Filters
+                            </button>
+                        )}
 
                         <div className="bg-white border border-neutral-200 rounded-lg p-1 flex items-center">
                             <button
-                                onClick={() => setView('list')}
-                                className={`p-2 rounded-md transition-all ${view === 'list' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                onClick={() => setFilter('view', 'list')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'list' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
                                 title="List View"
                             >
                                 <LayoutGrid className="w-5 h-5" />
                             </button>
                             <button
-                                onClick={() => setView('calendar')}
-                                className={`p-2 rounded-md transition-all ${view === 'calendar' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                onClick={() => setFilter('view', 'calendar')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'calendar' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
                                 title="Calendar View"
                             >
                                 <CalendarIcon className="w-5 h-5" />
                             </button>
                             <button
-                                onClick={() => setView('map')}
-                                className={`p-2 rounded-md transition-all ${view === 'map' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                onClick={() => setFilter('view', 'map')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'map' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
                                 title="Map View"
                             >
                                 <MapIcon className="w-5 h-5" />
@@ -334,8 +336,8 @@ export default function EventsPage() {
                                     type="text"
                                     placeholder="Search events..."
                                     className="input-field text-sm"
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
+                                    value={eventFilters.search as string}
+                                    onChange={e => setFilter('search', e.target.value)}
                                 />
                             </div>
 
@@ -347,13 +349,13 @@ export default function EventsPage() {
                                         <label key={status} className="flex items-center space-x-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedStatuses.includes(status)}
+                                                checked={(eventFilters.statuses as string[]).includes(status)}
                                                 onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedStatuses(prev => [...prev, status])
-                                                    } else {
-                                                        setSelectedStatuses(prev => prev.filter(s => s !== status))
-                                                    }
+                                                    const current = eventFilters.statuses as string[]
+                                                    setFilter('statuses', e.target.checked
+                                                        ? [...current, status]
+                                                        : current.filter(s => s !== status)
+                                                    )
                                                 }}
                                                 className="w-4 h-4 text-blue-600 border-neutral-300 rounded focus:ring-blue-500"
                                             />
@@ -372,13 +374,13 @@ export default function EventsPage() {
                                             <label key={region} className="flex items-center space-x-2 cursor-pointer">
                                                 <input
                                                     type="checkbox"
-                                                    checked={selectedRegions.includes(region)}
+                                                    checked={(eventFilters.regions as string[]).includes(region)}
                                                     onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedRegions(prev => [...prev, region])
-                                                        } else {
-                                                            setSelectedRegions(prev => prev.filter(r => r !== region))
-                                                        }
+                                                        const current = eventFilters.regions as string[]
+                                                        setFilter('regions', e.target.checked
+                                                            ? [...current, region]
+                                                            : current.filter(r => r !== region)
+                                                        )
                                                     }}
                                                     className="w-4 h-4 text-blue-600 border-neutral-300 rounded focus:ring-blue-500"
                                                 />
@@ -398,11 +400,13 @@ export default function EventsPage() {
                                             <button
                                                 key={year}
                                                 onClick={() => {
-                                                    setSelectedYears(prev =>
-                                                        prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]
+                                                    const current = eventFilters.years as string[]
+                                                    setFilter('years', current.includes(year)
+                                                        ? current.filter(y => y !== year)
+                                                        : [...current, year]
                                                     )
                                                 }}
-                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${selectedYears.includes(year)
+                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${(eventFilters.years as string[]).includes(year)
                                                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                                                     : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300'
                                                     }`}
@@ -418,7 +422,7 @@ export default function EventsPage() {
 
                     {/* Content Views */}
                     <div className="lg:col-span-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {view === 'list' && (
+                        {eventFilters.view === 'list' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {filteredEvents.map((event) => (
                                     <div
@@ -536,14 +540,14 @@ export default function EventsPage() {
                             </div>
                         )}
 
-                        {view === 'calendar' && (
+                        {eventFilters.view === 'calendar' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
                                 <EventCalendar events={filteredEvents} onEventClick={handleEventClick} />
                             </div>
                         )}
 
-                        {view === 'map' && (
+                        {eventFilters.view === 'map' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Global Event Footprint</h2>
                                 <EventMap events={filteredEvents} onEventClick={handleEventClick} />
