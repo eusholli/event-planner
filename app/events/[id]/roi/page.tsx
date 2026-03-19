@@ -395,9 +395,29 @@ function ROIPage() {
                 <div className="space-y-8">
                     {/* Financials */}
                     <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                             Financial Targets
+                            {canEdit && !isLocked && (
+                                <button
+                                    onClick={async () => {
+                                        const draft = await runExtraction('financial')
+                                        if (draft) setConfirmPanel({ section: 'financial', draft })
+                                    }}
+                                    disabled={sparkleLoading === 'financial'}
+                                    title="Fill empty financial fields from marketing plan"
+                                    className="ml-auto p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                >
+                                    {sparkleLoading === 'financial' ? (
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                        </svg>
+                                    ) : (
+                                        <Sparkles className="w-4 h-4" />
+                                    )}
+                                </button>
+                            )}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
@@ -451,6 +471,43 @@ function ROIPage() {
                                 <p className="text-xs text-zinc-400 mt-1">Pipeline × Win Rate</p>
                             </div>
                         </div>
+                        {confirmPanel?.section === 'financial' && (() => {
+                            const draft = confirmPanel.draft
+                            const toFill = [
+                                !targets.budget && draft.budget != null,
+                                !targets.expectedPipeline && draft.expectedPipeline != null,
+                                !targets.winRate && draft.winRate != null,
+                            ].filter(Boolean).length
+                            const toSkip = [
+                                !!targets.budget,
+                                !!targets.expectedPipeline,
+                                !!targets.winRate,
+                            ].filter(Boolean).length
+                            return (
+                                <div className="mt-4 p-4 bg-white/70 backdrop-blur-sm border border-amber-200 rounded-2xl shadow-sm flex items-center justify-between gap-4">
+                                    <div className="text-sm text-zinc-700">
+                                        <span className="font-medium text-amber-600">✦ {toFill} field{toFill !== 1 ? 's' : ''} will be filled</span>
+                                        {toSkip > 0 && <span className="text-zinc-500"> · {toSkip} already ha{toSkip !== 1 ? 've' : 's'} a value and will be skipped</span>}
+                                    </div>
+                                    <div className="flex gap-2 shrink-0">
+                                        <button onClick={() => setConfirmPanel(null)}
+                                            className="px-3 py-1.5 text-sm text-zinc-600 hover:text-zinc-900 rounded-lg border border-zinc-200 hover:border-zinc-300 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button onClick={() => {
+                                            if (draft.budget != null && !targets.budget) setTargets(prev => ({ ...prev, budget: draft.budget }))
+                                            if (draft.expectedPipeline != null && !targets.expectedPipeline) setTargets(prev => ({ ...prev, expectedPipeline: draft.expectedPipeline }))
+                                            if (draft.winRate != null && !targets.winRate) setTargets(prev => ({ ...prev, winRate: draft.winRate }))
+                                            setConfirmPanel(null)
+                                            setMessage('Financial targets updated — remember to save.')
+                                        }}
+                                            className="px-3 py-1.5 text-sm bg-amber-500 text-white hover:bg-amber-600 rounded-lg transition-colors font-medium">
+                                            Apply
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        })()}
                     </section>
 
                     {/* Event Targets */}
