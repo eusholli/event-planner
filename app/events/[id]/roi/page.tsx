@@ -707,48 +707,61 @@ function ROIPage() {
                                         disabled={companySaving || companyChecklist.every(c => !c.checked)}
                                         onClick={async () => {
                                             setCompanySaving(true)
-                                            const selected = companyChecklist.filter(c => c.checked)
-                                            const resolved: Array<{ id: string; name: string }> = []
+                                            try {
+                                                const selected = companyChecklist.filter(c => c.checked)
+                                                const resolved: Array<{ id: string; name: string }> = []
+                                                let skipped = 0
 
-                                            for (const item of selected) {
-                                                if (item.existingId) {
-                                                    resolved.push({ id: item.existingId, name: item.name })
-                                                } else {
-                                                    // Try to create the company
-                                                    const res = await fetch('/api/companies', {
-                                                        method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({ name: item.name, description: item.description }),
-                                                    })
-                                                    if (res.ok) {
-                                                        const created = await res.json()
-                                                        resolved.push({ id: created.id, name: created.name })
-                                                        setAvailableCompanies(prev => [...prev, created])
-                                                    } else if (res.status === 409) {
-                                                        // Already exists — fetch it
-                                                        const listRes = await fetch(`/api/companies?query=${encodeURIComponent(item.name)}`)
-                                                        if (listRes.ok) {
-                                                            const list = await listRes.json()
-                                                            const match = list.find((c: { name: string; id: string }) =>
-                                                                c.name.toLowerCase() === item.name.toLowerCase()
-                                                            )
-                                                            if (match) resolved.push({ id: match.id, name: match.name })
+                                                for (const item of selected) {
+                                                    if (item.existingId) {
+                                                        resolved.push({ id: item.existingId, name: item.name })
+                                                    } else {
+                                                        // Try to create the company
+                                                        const res = await fetch('/api/companies', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ name: item.name, description: item.description }),
+                                                        })
+                                                        if (res.ok) {
+                                                            const created = await res.json()
+                                                            resolved.push({ id: created.id, name: created.name })
+                                                            setAvailableCompanies(prev => [...prev, created])
+                                                        } else if (res.status === 409) {
+                                                            // Already exists — fetch it
+                                                            const listRes = await fetch(`/api/companies?query=${encodeURIComponent(item.name)}`)
+                                                            if (listRes.ok) {
+                                                                const list = await listRes.json()
+                                                                const match = list.find((c: { name: string; id: string }) =>
+                                                                    c.name.toLowerCase() === item.name.toLowerCase()
+                                                                )
+                                                                if (match) {
+                                                                    resolved.push({ id: match.id, name: match.name })
+                                                                    setAvailableCompanies(prev => [...prev, match])
+                                                                } else {
+                                                                    skipped++
+                                                                }
+                                                            } else {
+                                                                skipped++
+                                                            }
+                                                        } else {
+                                                            // Non-200, non-409 — skip and track
+                                                            skipped++
                                                         }
                                                     }
-                                                    // If all else fails, skip this company silently
                                                 }
-                                            }
 
-                                            setTargets(prev => ({
-                                                ...prev,
-                                                targetCompanies: [
-                                                    ...prev.targetCompanies,
-                                                    ...resolved.filter(r => !prev.targetCompanies.some(tc => tc.id === r.id)),
-                                                ],
-                                            }))
-                                            setCompanyChecklist(null)
-                                            setCompanySaving(false)
-                                            setMessage(`${resolved.length} compan${resolved.length !== 1 ? 'ies' : 'y'} added — remember to save.`)
+                                                setTargets(prev => ({
+                                                    ...prev,
+                                                    targetCompanies: [
+                                                        ...prev.targetCompanies,
+                                                        ...resolved.filter(r => !prev.targetCompanies.some(tc => tc.id === r.id)),
+                                                    ],
+                                                }))
+                                                setCompanyChecklist(null)
+                                                setMessage(`${resolved.length} compan${resolved.length !== 1 ? 'ies' : 'y'} added${skipped > 0 ? `, ${skipped} could not be created` : ''} — remember to save.`)
+                                            } finally {
+                                                setCompanySaving(false)
+                                            }
                                         }}
                                         className="px-3 py-1.5 text-sm bg-teal-600 text-white hover:bg-teal-700 rounded-lg transition-colors font-medium disabled:opacity-50">
                                         {companySaving ? 'Adding…' : 'Add Selected'}
