@@ -292,7 +292,7 @@ function ROIPage() {
         targets.targetMediaPR !== null && targets.targetMediaPR !== undefined
 
     // Runs Phase 1 (if no plan) then Phase 2, returns the draft or null on error
-    const runExtraction = async (section: 'financial' | 'events' | 'companies') => {
+    const runExtraction = async (section: 'financial' | 'events' | 'companies'): Promise<import('@/lib/actions/roi-generate').ROIDraft | null> => {
         setSparkleLoading(section)
         setMessage('')
         try {
