@@ -515,6 +515,26 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-violet-500 rounded-full" />
                             Event Targets
+                            {canEdit && !isLocked && (
+                                <button
+                                    onClick={async () => {
+                                        const draft = await runExtraction('events')
+                                        if (draft) setConfirmPanel({ section: 'events', draft })
+                                    }}
+                                    disabled={sparkleLoading === 'events'}
+                                    title="Fill empty event target fields from marketing plan"
+                                    className="ml-auto p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                >
+                                    {sparkleLoading === 'events' ? (
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                        </svg>
+                                    ) : (
+                                        <Sparkles className="w-4 h-4" />
+                                    )}
+                                </button>
+                            )}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
@@ -559,6 +579,46 @@ function ROIPage() {
                                 />
                             </div>
                         </div>
+                        {confirmPanel?.section === 'events' && (() => {
+                            const draft = confirmPanel.draft
+                            const toFill = [
+                                !targets.targetCustomerMeetings && draft.targetCustomerMeetings != null,
+                                !targets.targetErta && draft.targetErta != null,
+                                !targets.targetSpeaking && draft.targetSpeaking != null,
+                                !targets.targetMediaPR && draft.targetMediaPR != null,
+                            ].filter(Boolean).length
+                            const toSkip = [
+                                !!targets.targetCustomerMeetings,
+                                !!targets.targetErta,
+                                !!targets.targetSpeaking,
+                                !!targets.targetMediaPR,
+                            ].filter(Boolean).length
+                            return (
+                                <div className="mt-4 p-4 bg-white/70 backdrop-blur-sm border border-amber-200 rounded-2xl shadow-sm flex items-center justify-between gap-4">
+                                    <div className="text-sm text-zinc-700">
+                                        <span className="font-medium text-amber-600">✦ {toFill} field{toFill !== 1 ? 's' : ''} will be filled</span>
+                                        {toSkip > 0 && <span className="text-zinc-500"> · {toSkip} already ha{toSkip !== 1 ? 've' : 's'} a value and will be skipped</span>}
+                                    </div>
+                                    <div className="flex gap-2 shrink-0">
+                                        <button onClick={() => setConfirmPanel(null)}
+                                            className="px-3 py-1.5 text-sm text-zinc-600 hover:text-zinc-900 rounded-lg border border-zinc-200 hover:border-zinc-300 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button onClick={() => {
+                                            if (draft.targetCustomerMeetings != null && !targets.targetCustomerMeetings) setTargets(prev => ({ ...prev, targetCustomerMeetings: draft.targetCustomerMeetings }))
+                                            if (draft.targetErta != null && !targets.targetErta) setTargets(prev => ({ ...prev, targetErta: draft.targetErta }))
+                                            if (draft.targetSpeaking != null && !targets.targetSpeaking) setTargets(prev => ({ ...prev, targetSpeaking: draft.targetSpeaking }))
+                                            if (draft.targetMediaPR != null && !targets.targetMediaPR) setTargets(prev => ({ ...prev, targetMediaPR: draft.targetMediaPR }))
+                                            setConfirmPanel(null)
+                                            setMessage('Event targets updated — remember to save.')
+                                        }}
+                                            className="px-3 py-1.5 text-sm bg-amber-500 text-white hover:bg-amber-600 rounded-lg transition-colors font-medium">
+                                            Apply
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        })()}
                     </section>
 
                     {/* Target Companies */}
