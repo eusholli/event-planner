@@ -1,8 +1,8 @@
 'use client'
 
-import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles } from 'lucide-react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
 import MetricCard from '@/components/roi/MetricCard'
 import ProgressBar from '@/components/roi/ProgressBar'
@@ -73,7 +73,7 @@ const emptyTargets: ROITargets = {
 
 const currency = (v: number) => `$${v.toLocaleString()}`
 
-export default function ROIPage() {
+function ROIPage() {
     const params = useParams()
     const eventId = params?.id as string
 
@@ -84,10 +84,19 @@ export default function ROIPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
+    const searchParams = useSearchParams()
+    const router = useRouter()
     const [companyInput, setCompanyInput] = useState('')
     const [availableCompanies, setAvailableCompanies] = useState<Company[]>([])
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
     const companyDropdownRef = useRef<HTMLDivElement>(null)
+
+    // Sparkle state
+    const [sparkleLoading, setSparkleLoading] = useState<'financial' | 'events' | 'companies' | null>(null)
+    const [confirmPanel, setConfirmPanel] = useState<{
+        section: 'financial' | 'events' | 'companies'
+        draft: import('@/lib/actions/roi-generate').ROIDraft
+    } | null>(null)
 
     const role = user?.publicMetadata?.role as string
     const canEdit = role === 'root' || role === 'marketing'
@@ -135,6 +144,20 @@ export default function ROIPage() {
             setTargets(prev => ({ ...prev, expectedRevenue: rev }))
         }
     }, [targets.expectedPipeline, targets.winRate])
+
+    // Read planWarning / planError from URL on mount, show message, clear params
+    useEffect(() => {
+        const warning = searchParams.get('planWarning')
+        const error = searchParams.get('planError')
+        if (warning) {
+            setMessage('An existing marketing plan was found — no new plan was generated.')
+            router.replace(window.location.pathname)
+        } else if (error) {
+            setMessage('Failed to generate marketing plan. Please try again or type one manually.')
+            router.replace(window.location.pathname)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleSaveTargets = async () => {
         setSaving(true)
@@ -260,6 +283,39 @@ export default function ROIPage() {
         targets.targetErta !== null && targets.targetErta !== undefined &&
         targets.targetSpeaking !== null && targets.targetSpeaking !== undefined &&
         targets.targetMediaPR !== null && targets.targetMediaPR !== undefined
+
+    // Runs Phase 1 (if no plan) then Phase 2, returns the draft or null on error
+    const runExtraction = async (section: 'financial' | 'events' | 'companies') => {
+        setSparkleLoading(section)
+        setMessage('')
+        try {
+            // If no marketing plan yet, generate one first
+            if (!targets.marketingPlan) {
+                const genRes = await fetch(`/api/events/${eventId}/roi/generate-plan`, { method: 'POST' })
+                if (!genRes.ok) {
+                    const err = await genRes.json()
+                    setMessage(err.error || 'Failed to generate marketing plan.')
+                    return null
+                }
+                const genData = await genRes.json()
+                setTargets(prev => ({ ...prev, marketingPlan: genData.marketingPlan }))
+            }
+
+            // Extract ROI values from the plan
+            const extractRes = await fetch(`/api/events/${eventId}/roi/extract-roi`, { method: 'POST' })
+            if (!extractRes.ok) {
+                const err = await extractRes.json()
+                setMessage(err.error || 'Failed to extract ROI values from marketing plan.')
+                return null
+            }
+            return await extractRes.json()
+        } catch {
+            setMessage('An unexpected error occurred. Please try again.')
+            return null
+        } finally {
+            setSparkleLoading(null)
+        }
+    }
 
     if (loading) {
         return (
@@ -683,5 +739,13 @@ export default function ROIPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function ROIPageWrapper() {
+    return (
+        <Suspense fallback={null}>
+            <ROIPage />
+        </Suspense>
     )
 }
