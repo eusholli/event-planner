@@ -76,6 +76,9 @@ function buildEventContext(event: {
 // -----------------------------------------------------------------------
 
 export async function generateMarketingPlan(eventId: string): Promise<string> {
+    const { canWrite } = await import('@/lib/roles')
+    if (!await canWrite()) throw new Error('Forbidden')
+
     const [event, settings] = await Promise.all([
         prisma.event.findUnique({
             where: { id: eventId },
@@ -151,6 +154,9 @@ Suggest realistic draft values for each of the following metrics, with a brief r
 // -----------------------------------------------------------------------
 
 export async function extractROIValues(eventId: string): Promise<ROIDraft> {
+    const { canWrite } = await import('@/lib/roles')
+    if (!await canWrite()) throw new Error('Forbidden')
+
     const [roiRecord, settings] = await Promise.all([
         prisma.eventROITargets.findUnique({
             where: { eventId },
