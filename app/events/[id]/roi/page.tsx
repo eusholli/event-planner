@@ -382,7 +382,7 @@ function ROIPage() {
 
             {/* Message */}
             {message && (
-                <div className={`px-4 py-3 rounded-xl text-sm font-medium animate-in fade-in ${message.includes('success') || message.includes('approved') || message.includes('Submitted')
+                <div className={`px-4 py-3 rounded-xl text-sm font-medium animate-in fade-in ${message.includes('success') || message.includes('approved') || message.includes('Submitted') || message.includes('updated') || message.includes('added')
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     : 'bg-red-50 text-red-700 border border-red-200'
                     }`}>
@@ -395,7 +395,7 @@ function ROIPage() {
                 <div className="space-y-8">
                     {/* Financials */}
                     <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                             Financial Targets
                             {canEdit && !isLocked && (
