@@ -28,12 +28,13 @@ const POSTHandler = withAuth(async (request, ctx) => {
         const marketingPlan = await generateMarketingPlan(id)
         return NextResponse.json({ marketingPlan, skipped: false })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error generating marketing plan:', error)
-        const msg = error.message || 'Failed to generate marketing plan'
+        const msg = error instanceof Error ? error.message : 'Failed to generate marketing plan'
         const status = msg.includes('not configured') ? 400 : 500
         return NextResponse.json({ error: msg }, { status })
     }
 }, { requireRole: 'write', requireEventAccess: true })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const POST = POSTHandler as any
