@@ -98,7 +98,7 @@ export async function generateMarketingPlan(eventId: string): Promise<string> {
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-pro-preview-05-06',
+        model: 'gemini-3-flash-preview',
         // @ts-expect-error — googleSearch tool typing not yet in SDK types
         tools: [{ googleSearch: {} }],
     })
