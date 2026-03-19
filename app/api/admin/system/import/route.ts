@@ -315,6 +315,7 @@ async function importV5(json: any): Promise<{ warnings: string[] }> {
                     targetErta: roi.targetErta ?? null,
                     targetSpeaking: roi.targetSpeaking ?? null,
                     targetMediaPR: roi.targetMediaPR ?? null,
+                    marketingPlan: roi.marketingPlan ?? null,
                     actualErta: roi.actualErta ?? null,
                     actualSpeaking: roi.actualSpeaking ?? null,
                     actualMediaPR: roi.actualMediaPR ?? null,
@@ -517,7 +518,7 @@ async function importV4(json: any): Promise<void> {
                     targetCompanyConnect = companyIds.map(id => ({ id }))
                 }
 
-                const roiData = { expectedPipeline: roi.expectedPipeline, winRate: roi.winRate, expectedRevenue: roi.expectedRevenue, targetCustomerMeetings, targetErta, targetSpeaking, targetMediaPR: roi.targetMediaPR, targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined, actualErta, actualSpeaking, actualMediaPR: roi.actualMediaPR, status: roi.status || 'DRAFT', approvedBy: roi.approvedBy ?? null, approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null, submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null, rejectedBy: roi.rejectedBy ?? null, rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null }
+                const roiData = { expectedPipeline: roi.expectedPipeline, winRate: roi.winRate, expectedRevenue: roi.expectedRevenue, targetCustomerMeetings, targetErta, targetSpeaking, targetMediaPR: roi.targetMediaPR, marketingPlan: roi.marketingPlan ?? null, targetCompanies: targetCompanyConnect ? { connect: targetCompanyConnect } : undefined, actualErta, actualSpeaking, actualMediaPR: roi.actualMediaPR, status: roi.status || 'DRAFT', approvedBy: roi.approvedBy ?? null, approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null, submittedAt: roi.submittedAt ? new Date(roi.submittedAt) : null, rejectedBy: roi.rejectedBy ?? null, rejectedAt: roi.rejectedAt ? new Date(roi.rejectedAt) : null }
 
                 await prisma.eventROITargets.upsert({
                     where: { eventId },

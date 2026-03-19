@@ -316,6 +316,7 @@ const postHandler = withAuth(async (request) => {
                         targetErta: roi.targetErta ?? null,
                         targetSpeaking: roi.targetSpeaking ?? null,
                         targetMediaPR: roi.targetMediaPR ?? null,
+                        marketingPlan: roi.marketingPlan ?? null,
                         actualErta: roi.actualErta ?? null,
                         actualSpeaking: roi.actualSpeaking ?? null,
                         actualMediaPR: roi.actualMediaPR ?? null,
