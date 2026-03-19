@@ -26,96 +26,6 @@ interface Event {
     longitude?: number | null
 }
 
-interface EventDetail {
-    id: string
-    name: string
-    slug: string
-    status: string
-    startDate: string | null
-    endDate: string | null
-    timezone: string | null
-    region: string | null
-    address: string | null
-    url: string | null
-    boothLocation: string | null
-    description: string | null
-    tags: string[]
-    targetCustomers: string | null
-    budget: number | null
-}
-
-function buildMarketingPrompt(e: EventDetail): string {
-    const lines: string[] = [
-        'You are a B2B event marketing strategist helping Rakuten Symphony plan their attendance at the following event.',
-        '',
-        '## Event Details',
-        '',
-    ]
-
-    const add = (label: string, value: string | null | undefined) => {
-        if (value != null && value !== '') lines.push(`- **${label}:** ${value}`)
-    }
-
-    add('Name', e.name)
-    add('Status', e.status)
-
-    // Dates
-    if (e.startDate || e.endDate) {
-        const start = e.startDate ?? 'TBD'
-        const end = e.endDate ?? 'TBD'
-        const tz = e.timezone ? ` (${e.timezone})` : ''
-        lines.push(`- **Dates:** ${start} – ${end}${tz}`)
-    }
-
-    add('Region', e.region)
-    add('Location', e.address)
-    add('Website', e.url)
-    add('Booth', e.boothLocation)
-    add('Description', e.description)
-
-    if (e.tags && e.tags.length > 0) {
-        lines.push(`- **Themes/Tags:** ${e.tags.join(', ')}`)
-    }
-
-    add('Target Customers', e.targetCustomers)
-
-    if (e.budget != null) {
-        lines.push(`- **Budget:** $${Math.round(e.budget).toLocaleString('en-US')}`)
-    }
-
-    lines.push(
-        '',
-        '## Your Task',
-        '',
-        'Using your web search tools to research this event, produce three deliverables:',
-        '',
-        '### 1. Marketing Plan',
-        'A complete, best-practice marketing plan covering the 30 days before the event through 15 days after.',
-        'Structure it in phases: Pre-Event, At-Event, Post-Event. Include specific activities, messaging angles,',
-        'speaking/PR opportunities, and engagement tactics tied to the event\'s themes.',
-        '',
-        '### 2. Target Companies',
-        'A prioritized list of companies most likely to attend this event that Rakuten Symphony should engage.',
-        'For each: company name, why they\'re a strategic target, and recommended engagement approach.',
-        '',
-        '### 3. Draft ROI Targets',
-        'Realistic draft values for all ROI metrics based on the event scale and your research:',
-        '- Expected Pipeline (USD)',
-        '- Win Rate (%)',
-        '- Expected Revenue (USD)',
-        '- Target Customer Meetings (count)',
-        '- Target ERTA — Engagement Rate for Targeted Accounts (%)',
-        '- Target Speaking Engagements (count)',
-        '- Target Media/PR Mentions (count)',
-        '- Suggested Budget (USD)',
-        '- Target Companies list (the companies from deliverable 2, with a brief description of each)',
-        '',
-        "Ground these numbers in the event's scale, typical industry attendance, and Rakuten Symphony's",
-        'position in the Open RAN / telecom space.',
-    )
-
-    return lines.join('\n')
-}
 
 const EVENTS_FILTER_DEFAULTS = {
     search: '',
@@ -451,15 +361,29 @@ export default function EventsPage() {
                                                                 e.stopPropagation()
                                                                 setSparkleLoadingId(event.id)
                                                                 try {
-                                                                    const res = await fetch(`/api/events/${event.id}`)
-                                                                    if (res.ok) {
-                                                                        const fullEvent: EventDetail = await res.json()
-                                                                        const prompt = buildMarketingPrompt(fullEvent)
-                                                                        sessionStorage.setItem('intelligenceAutoQuery', prompt)
+                                                                    // Check if a marketing plan already exists for this event
+                                                                    const roiRes = await fetch(`/api/events/${event.id}/roi`)
+                                                                    const roiData = roiRes.ok ? await roiRes.json() : {}
+                                                                    const hasPlan = !!(roiData.targets?.marketingPlan)
+
+                                                                    if (hasPlan) {
+                                                                        // Navigate to ROI page — warn that existing plan was preserved
+                                                                        router.push(`/events/${event.slug || event.id}/roi?planWarning=1`)
+                                                                    } else {
+                                                                        // Generate the plan, then navigate to ROI page
+                                                                        const genRes = await fetch(`/api/events/${event.id}/roi/generate-plan`, {
+                                                                            method: 'POST',
+                                                                        })
+                                                                        if (genRes.ok) {
+                                                                            router.push(`/events/${event.slug || event.id}/roi`)
+                                                                        } else {
+                                                                            router.push(`/events/${event.slug || event.id}/roi?planError=1`)
+                                                                        }
                                                                     }
+                                                                } catch {
+                                                                    router.push(`/events/${event.slug || event.id}/roi?planError=1`)
                                                                 } finally {
                                                                     setSparkleLoadingId(null)
-                                                                    router.push(`/intelligence?eventId=${event.slug || event.id}`)
                                                                 }
                                                             }}
                                                             disabled={sparkleLoadingId === event.id}
