@@ -97,6 +97,13 @@ function ROIPage() {
         section: 'financial' | 'events' | 'companies'
         draft: import('@/lib/actions/roi-generate').ROIDraft
     } | null>(null)
+    const [companyChecklist, setCompanyChecklist] = useState<Array<{
+        name: string
+        description: string
+        checked: boolean
+        existingId: string | null  // null = will be created
+    }> | null>(null)
+    const [companySaving, setCompanySaving] = useState(false)
 
     const role = user?.publicMetadata?.role as string
     const canEdit = role === 'root' || role === 'marketing'
@@ -626,7 +633,129 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-teal-500 rounded-full" />
                             Target Companies
+                            {canEdit && !isLocked && (
+                                <button
+                                    onClick={async () => {
+                                        const draft = await runExtraction('companies')
+                                        if (!draft) return
+                                        const suggested = (draft.targetCompanies || [])
+                                            .filter(c => !targets.targetCompanies.some(tc => tc.name.toLowerCase() === c.name.toLowerCase()))
+                                            .map(c => ({
+                                                name: c.name,
+                                                description: c.description,
+                                                checked: true,
+                                                existingId: availableCompanies.find(ac => ac.name.toLowerCase() === c.name.toLowerCase())?.id ?? null,
+                                            }))
+                                        if (suggested.length === 0) {
+                                            setMessage('All suggested companies are already in your target list.')
+                                            return
+                                        }
+                                        setCompanyChecklist(suggested)
+                                    }}
+                                    disabled={sparkleLoading === 'companies'}
+                                    title="Add suggested target companies from marketing plan"
+                                    className="ml-auto p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                >
+                                    {sparkleLoading === 'companies' ? (
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                        </svg>
+                                    ) : (
+                                        <Sparkles className="w-4 h-4" />
+                                    )}
+                                </button>
+                            )}
                         </h3>
+                        {companyChecklist && (
+                            <div className="mb-4 p-4 bg-white/70 backdrop-blur-sm border border-amber-200 rounded-2xl shadow-sm">
+                                <p className="text-sm font-medium text-zinc-700 mb-3">
+                                    <span className="text-amber-600 font-semibold">✦ {companyChecklist.length} companies suggested</span>
+                                    {targets.targetCompanies.length > 0 && (
+                                        <span className="text-zinc-500"> · {targets.targetCompanies.length} already in your targets</span>
+                                    )}
+                                </p>
+                                <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                                    {companyChecklist.map((item, i) => (
+                                        <label key={i} className="flex items-start gap-3 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={item.checked}
+                                                onChange={() => setCompanyChecklist(prev => prev!.map((c, j) =>
+                                                    j === i ? { ...c, checked: !c.checked } : c
+                                                ))}
+                                                className="mt-0.5 rounded border-zinc-300 text-teal-600 focus:ring-teal-500"
+                                            />
+                                            <div>
+                                                <span className="text-sm font-medium text-zinc-900 group-hover:text-teal-700">{item.name}</span>
+                                                {item.existingId === null && (
+                                                    <span className="ml-2 text-xs text-amber-600 font-medium">new</span>
+                                                )}
+                                                {item.description && (
+                                                    <p className="text-xs text-zinc-500 mt-0.5">{item.description}</p>
+                                                )}
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setCompanyChecklist(null)}
+                                        className="px-3 py-1.5 text-sm text-zinc-600 hover:text-zinc-900 rounded-lg border border-zinc-200 hover:border-zinc-300 transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button
+                                        disabled={companySaving || companyChecklist.every(c => !c.checked)}
+                                        onClick={async () => {
+                                            setCompanySaving(true)
+                                            const selected = companyChecklist.filter(c => c.checked)
+                                            const resolved: Array<{ id: string; name: string }> = []
+
+                                            for (const item of selected) {
+                                                if (item.existingId) {
+                                                    resolved.push({ id: item.existingId, name: item.name })
+                                                } else {
+                                                    // Try to create the company
+                                                    const res = await fetch('/api/companies', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ name: item.name, description: item.description }),
+                                                    })
+                                                    if (res.ok) {
+                                                        const created = await res.json()
+                                                        resolved.push({ id: created.id, name: created.name })
+                                                        setAvailableCompanies(prev => [...prev, created])
+                                                    } else if (res.status === 409) {
+                                                        // Already exists — fetch it
+                                                        const listRes = await fetch(`/api/companies?query=${encodeURIComponent(item.name)}`)
+                                                        if (listRes.ok) {
+                                                            const list = await listRes.json()
+                                                            const match = list.find((c: { name: string; id: string }) =>
+                                                                c.name.toLowerCase() === item.name.toLowerCase()
+                                                            )
+                                                            if (match) resolved.push({ id: match.id, name: match.name })
+                                                        }
+                                                    }
+                                                    // If all else fails, skip this company silently
+                                                }
+                                            }
+
+                                            setTargets(prev => ({
+                                                ...prev,
+                                                targetCompanies: [
+                                                    ...prev.targetCompanies,
+                                                    ...resolved.filter(r => !prev.targetCompanies.some(tc => tc.id === r.id)),
+                                                ],
+                                            }))
+                                            setCompanyChecklist(null)
+                                            setCompanySaving(false)
+                                            setMessage(`${resolved.length} compan${resolved.length !== 1 ? 'ies' : 'y'} added — remember to save.`)
+                                        }}
+                                        className="px-3 py-1.5 text-sm bg-teal-600 text-white hover:bg-teal-700 rounded-lg transition-colors font-medium disabled:opacity-50">
+                                        {companySaving ? 'Adding…' : 'Add Selected'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {!(isLocked || !canEdit) && (
                             <div ref={companyDropdownRef} className="relative mb-4">
                                 <div className="flex gap-2">
