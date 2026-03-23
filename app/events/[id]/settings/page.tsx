@@ -55,6 +55,9 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     const [availableUsers, setAvailableUsers] = useState<User[]>([])
     const [userSearch, setUserSearch] = useState('')
     const [loadingUsers, setLoadingUsers] = useState(false)
+    const [userPage, setUserPage] = useState(1)
+    const [userTotalCount, setUserTotalCount] = useState(0)
+    const userLimit = 10
 
     // Local state for list inputs to allow free typing
     const [tagsInput, setTagsInput] = useState('')
@@ -108,27 +111,46 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     }, [id])
 
     // Fetch users if privileged
-    useEffect(() => {
+    const fetchUsers = (pageNum: number, searchTerm: string) => {
         const role = currentUser?.publicMetadata?.role as string
-        const canManageAccess = canManageEvents(role)
+        if (!canManageEvents(role)) return
+        setLoadingUsers(true)
+        const params = new URLSearchParams({
+            page: pageNum.toString(),
+            limit: userLimit.toString(),
+            search: searchTerm,
+        })
+        fetch(`/api/admin/users?${params}`)
+            .then(res => {
+                if (res.ok) return res.json()
+                throw new Error('Failed to fetch users')
+            })
+            .then(data => {
+                setAvailableUsers(data.data || [])
+                setUserTotalCount(data.totalCount || 0)
+                setLoadingUsers(false)
+            })
+            .catch(err => {
+                console.error('Failed to load users for access control', err)
+                setLoadingUsers(false)
+            })
+    }
 
-        if (canManageAccess) {
-            setLoadingUsers(true)
-            fetch('/api/admin/users')
-                .then(res => {
-                    if (res.ok) return res.json()
-                    throw new Error('Failed to fetch users')
-                })
-                .then(data => {
-                    setAvailableUsers(data.data || data)
-                    setLoadingUsers(false)
-                })
-                .catch(err => {
-                    console.error('Failed to load users for access control', err)
-                    setLoadingUsers(false)
-                })
-        }
-    }, [currentUser])
+    // Initial load and page changes
+    useEffect(() => {
+        fetchUsers(userPage, userSearch)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser, userPage])
+
+    // Debounced search — resets to page 1
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setUserPage(1)
+            fetchUsers(1, userSearch)
+        }, 500)
+        return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userSearch])
 
     // DIRTY CHECK & WARNING
     useEffect(() => {
@@ -164,17 +186,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
 
     }, [event, initialEvent, tagsInput, meetingTypesInput, attendeeTypesInput])
 
-    const filteredUsers = availableUsers.filter(u => {
-        const term = userSearch.toLowerCase()
-        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase()
-        const email = u.emailAddresses[0]?.emailAddress.toLowerCase() || ''
-        const role = (u.publicMetadata?.role || Roles.User).toLowerCase()
-        // Only show admins and users (root/marketing implies global access, no need to assign usually, 
-        // but we show them effectively. Actually, wait. 
-        // If I assign a Marketing user, it's redundant but harmless.
-        // Let's filtered based on search only for now.
-        return fullName.includes(term) || email.includes(term) || role.includes(term)
-    })
+    const filteredUsers = availableUsers
 
     const handleSelectAllFiltered = () => {
         if (!event) return
@@ -617,8 +629,31 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                         })
                                     )}
                                 </div>
-                                <div className="mt-2 text-xs text-neutral-500 text-right">
-                                    {event?.authorizedUserIds.length || 0} users selected
+                                <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
+                                    <span>{event?.authorizedUserIds.length || 0} users selected</span>
+                                    {userTotalCount > userLimit && (
+                                        <div className="flex items-center gap-2">
+                                            <span>
+                                                {Math.min((userPage - 1) * userLimit + 1, userTotalCount)}–{Math.min(userPage * userLimit, userTotalCount)} of {userTotalCount}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setUserPage(p => p - 1)}
+                                                disabled={userPage === 1}
+                                                className="px-2 py-1 rounded border border-neutral-300 hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                Previous
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setUserPage(p => p + 1)}
+                                                disabled={userPage * userLimit >= userTotalCount}
+                                                className="px-2 py-1 rounded border border-neutral-300 hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </section>
