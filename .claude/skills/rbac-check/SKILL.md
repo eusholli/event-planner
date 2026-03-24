@@ -28,6 +28,8 @@ Run this skill after any change to API routes or auth helpers to verify RBAC cor
 | /api/events | auth | manageEvents | — | — |
 | /api/events/[id] | eventAccess | — | manageEvents | manageEvents |
 | /api/events/[id]/roi | eventAccess | write+eventAccess | write+eventAccess | — |
+| /api/events/[id]/roi/extract-roi | — | write+eventAccess | — | — |
+| /api/events/[id]/roi/generate-plan | — | write+eventAccess | — | — |
 | /api/events/[id]/export | write+eventAccess | — | — | — |
 | /api/events/[id]/import | — | write+eventAccess | — | — |
 | /api/events/[id]/reset | — | write+eventAccess | — | — |
@@ -55,6 +57,16 @@ Run this skill after any change to API routes or auth helpers to verify RBAC cor
 | /api/image-proxy | auth | — | — | — |
 | /api/user/init | — | auth | — | — |
 
+**Custom-auth routes** (no `withAuth` wrapper — intentional):
+
+| Route | Method | Auth mechanism |
+|-------|--------|----------------|
+| /api/intelligence/actions | POST | `verifyActionToken()` — signed action JWT (OpenClaw tool calls) |
+| /api/intelligence/session | POST | `CRON_SECRET_KEY` bearer — token exchange for ws-proxy |
+| /api/intelligence/targets | GET | `CRON_SECRET_KEY` bearer — cron-triggered target list |
+| /api/intelligence/unsubscribe | GET | opaque `unsubscribeToken` query param — email-link unsubscribe (public) |
+| /api/webhooks/intel-report | POST | `CRON_SECRET_KEY` bearer — OpenClaw webhook |
+
 **Legend:**
 - `auth` = any authenticated user (`requireAuth: true`)
 - `eventAccess` = auth + `hasEventAccess` check (via wrapper or manual in handler)
@@ -69,7 +81,7 @@ Run this skill after any change to API routes or auth helpers to verify RBAC cor
 Run these checks in order and report pass/fail for each.
 
 ### Step 1: withAuth Coverage
-Search all route files in `app/api/**/*.ts` for files that export HTTP handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) but do NOT import from `@/lib/with-auth`. Flag any such file — it is missing the withAuth wrapper.
+Search all route files in `app/api/**/*.ts` for files that export HTTP handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) but do NOT import from `@/lib/with-auth`. Flag any such file that is NOT in the known custom-auth list below.
 
 ```
 Grep: pattern "export (const|async function) (GET|POST|PUT|PATCH|DELETE)"
@@ -77,7 +89,14 @@ Grep: pattern "export (const|async function) (GET|POST|PUT|PATCH|DELETE)"
       that do NOT contain: import.*from '@/lib/with-auth'
 ```
 
-Flag any result as a coverage gap.
+**Known intentional gaps** (custom auth — do NOT flag these):
+- `app/api/intelligence/actions/route.ts` — `verifyActionToken()`
+- `app/api/intelligence/session/route.ts` — `CRON_SECRET_KEY` bearer
+- `app/api/intelligence/targets/route.ts` — `CRON_SECRET_KEY` bearer
+- `app/api/intelligence/unsubscribe/route.ts` — unsubscribe token (public)
+- `app/api/webhooks/intel-report/route.ts` — `CRON_SECRET_KEY` bearer
+
+Flag any file NOT in this list as a coverage gap.
 
 ### Step 2: `canCreate` includes `marketing`
 Read `lib/role-utils.ts`. Verify `hasCreateAccess` function includes `Roles.Marketing`.
