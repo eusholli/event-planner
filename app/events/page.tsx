@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { EventMap } from '@/components/reports/EventMap'
 import { EventCalendar } from '@/components/reports/EventCalendar'
 import { useUser } from '@/components/auth'
-import { canManageEvents } from '@/lib/role-utils'
+import { canManageEvents, hasWriteAccess } from '@/lib/role-utils'
 import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 import { Sparkles } from 'lucide-react'
 import useFilterParams from '@/hooks/useFilterParams'
@@ -41,6 +41,7 @@ export default function EventsPage() {
     const router = useRouter()
     const { user } = useUser()
     const canManage = canManageEvents(user?.publicMetadata?.role as string)
+    const canWrite = hasWriteAccess(user?.publicMetadata?.role as string)
 
     // Filter + View State — persisted in URL
     const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams('events', EVENTS_FILTER_DEFAULTS)
@@ -131,7 +132,7 @@ export default function EventsPage() {
 
     // Modal Action
     const handleViewDashboard = (event: Event) => {
-        if (canManage || event.status === 'COMMITTED' || event.status === 'OCCURRED' || event.status === 'AWARENESS') {
+        if (canManage || canWrite || event.status === 'COMMITTED' || event.status === 'OCCURRED' || event.status === 'AWARENESS') {
             router.push(`/events/${event.slug || event.id}/dashboard`)
         } else {
             alert('This event must be in Committed, Occurred, or Awareness status to access the management dashboard.')
@@ -552,7 +553,7 @@ export default function EventsPage() {
                             >
                                 Close
                             </button>
-                            {(canManage || selectedEvent.status === 'COMMITTED' || selectedEvent.status === 'OCCURRED' || selectedEvent.status === 'AWARENESS') && (
+                            {(canManage || canWrite || selectedEvent.status === 'COMMITTED' || selectedEvent.status === 'OCCURRED' || selectedEvent.status === 'AWARENESS') && (
                                 <button
                                     onClick={() => handleViewDashboard(selectedEvent)}
                                     className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
