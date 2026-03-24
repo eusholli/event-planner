@@ -1,6 +1,8 @@
 ---
 name: rbac-check
-description: Audit API routes for RBAC correctness after any code change. Checks coverage, policy conformance, and helper correctness. Use after modifying any file in app/api/, lib/with-auth.ts, lib/role-utils.ts, or lib/access.ts.
+description: Audit API routes for RBAC correctness after any change to app/api/, lib/with-auth.ts, lib/role-utils.ts, or lib/access.ts. Checks withAuth coverage, permission helper correctness, and per-route policy conformance. Reports pass/fail per check.
+user-invocable: true
+allowed-tools: Read, Grep
 ---
 
 # RBAC Verification Checklist

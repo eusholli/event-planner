@@ -1,0 +1,17 @@
+services:
+  event-planner-dev-db:
+    image: postgres:15-alpine
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: event_planner_dev
+    volumes:
+      - event-planner-dev-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  event-planner-dev-postgres:
