@@ -56,7 +56,7 @@ Events are color-coded by status:
 ### Creating & Managing Events (Root/Marketing Only)
 - **New Event**: Click the **"+"** button. Enter a name to create a new event in Pipeline status.
 - **Edit/Delete**: Use the icons on event cards.
-- **AI Marketing Plan**: Click the Sparkles icon on any event card to generate a comprehensive, target-audience-focused marketing plan using OpenClaw Insights.
+- **AI Marketing Plan**: Click the Sparkles (✦) icon on any event card to generate a comprehensive marketing plan for the event using Google Gemini. The plan is saved to the event's ROI record and you are navigated to the ROI page. If a plan already exists a warning banner is shown — use the ROI page to regenerate or edit it manually.
 - **Deleting an Event**: Triggers an automatic backup before permanent deletion. Meetings and rooms are cascade-deleted; attendees are preserved (they are system-level entities).
 
 ### Navigation
@@ -100,6 +100,23 @@ The ROI workflow follows three stages:
 1. **Before the event** — Set financial targets, meeting KPIs, engagement goals, and a list of target companies you want to meet. Submit targets for management approval.
 2. **During the event** — The system automatically tracks actuals as you log meetings and attendees. Pipeline value, C-level meetings, and target company hits update in real time.
 3. **After the event** — Enter manual engagement metrics (social reach, keynotes, etc.) and review the full Target vs. Actual comparison.
+
+### AI Auto-Fill (Sparkle Buttons)
+
+Three sparkle (✦) buttons on the Targets & Approval tab let you auto-populate empty fields using Google Gemini. Each button reads the event's marketing plan (generating one automatically if it doesn't exist yet) and extracts relevant values.
+
+| Button | Fields Filled |
+| :--- | :--- |
+| **Financial Targets ✦** | Budget, Expected Pipeline, Win Rate |
+| **Event Targets ✦** | Booth Meetings, C-Level range, Other Meetings, ERTA, Speaking, Media/PR |
+| **Target Companies ✦** | Suggests 10–15 companies; creates new records or links to existing ones |
+
+**How it works**:
+1. Click a sparkle button. A confirmation panel appears listing fields that will be filled and any already-populated fields that will be skipped.
+2. Review the list, then click **Apply** to accept or **Cancel** to dismiss.
+3. Only empty fields are modified — existing values are never overwritten.
+
+> **Note**: Sparkle buttons require a configured Gemini API Key in System Administration.
 
 ### Tab 1: Targets & Approval
 
@@ -344,7 +361,9 @@ Navigate to **Settings** within an event (`/events/[id]/settings`) to configure:
 
 ### Authorized Users
 - Grant or revoke access for individual Admin and User accounts.
-- Search and filter users; select/deselect individually or in bulk.
+- **Search**: Type in the search box to filter by name or email. Results update after a short delay.
+- **Pagination**: Use the Previous/Next buttons to browse through users. The search automatically resets to page 1.
+- Select/deselect users individually or in bulk.
 
 ### AI Event Scraper
 - Enter a URL and let AI auto-populate event details (name, dates, description, address, etc.).

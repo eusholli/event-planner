@@ -34,8 +34,9 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 
 ### AI Systems
 - **AI Chat Assistant** (`/events/[id]/chat`): Built-in conversational AI using Vercel AI SDK 5.0 and Google Gemini. Context-aware of event data with tool-calling for searching meetings, attendees, rooms, and generating navigation links. Persistent chat history per event.
-- **OpenClaw Insights** (`/events/[id]/intelligence`): Market intelligence agent powered by OpenClaw via WebSocket proxy (`ws-proxy`). Features real-time streaming responses, thinking/status indicators, session management, and PDF download for each response.
-- **AI Marketing Plan Generation**: Generate a tailored event marketing plan targeting specific audiences and maximizing ROI, powered by OpenClaw. Accessible via the Sparkles icon directly from event cards in the portfolio.
+- **OpenClaw Insights** (`/intelligence`): Market intelligence agent powered by OpenClaw via WebSocket proxy (`ws-proxy`). Features real-time streaming responses, thinking/status indicators, session management, and PDF download for each response.
+- **AI Marketing Plan Generation**: Generate a tailored event marketing plan via Gemini directly from the Sparkles icon on event cards in the portfolio. The plan is saved to the event's ROI record and can be used to auto-populate ROI targets.
+- **ROI Auto-Fill (Sparkle Buttons)**: Three Gemini-powered sparkle buttons on the ROI page auto-extract and populate Financial Targets, Event KPI Targets, and Target Companies from the event's marketing plan. Each button shows a confirmation panel before applying changes and only fills empty fields.
 
 ### Rooms
 - **Room Management**: Create and manage rooms with capacity tracking.
@@ -51,7 +52,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 ### Event Settings (Per-Event)
 - **Configuration**: Event name, dates, timezone, region, address, booth location, URL, description, and password.
 - **Tags, Meeting Types, Attendee Types**: Per-event customization (inherited from system defaults).
-- **Authorized Users**: Grant access to specific Admin/User accounts.
+- **Authorized Users**: Grant or revoke access for individual Admin/User accounts with server-side paginated search.
 - **AI Scraper**: Auto-fill event details from a URL using AI.
 - **Event Import/Export**: Per-event JSON data import and export with auto-backup before destructive operations.
 

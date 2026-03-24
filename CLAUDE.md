@@ -96,9 +96,38 @@ const resolvedEventId = event.id
 **OpenClaw Intelligence Chat** (`/intelligence`):
 - WebSocket connection to `ws-proxy` → OpenClaw agent "Kenji"; system-wide, not event-scoped
 - `eventId` is passed as a breadcrumb only (helps Kenji orient to context); does not scope tools
-- Accessed from event cards via the sparkle icon (Generate Event Marketing Plan): the button is **async** — it pre-fetches the event's current ROI values from `/api/events/[id]/roi`, injects them into the prompt as a `Current ROI values:` block, then sets `sessionStorage.intelligenceAutoQuery` and navigates to `/intelligence?eventId=<slug>`. A spinner replaces the sparkle icon while the fetch is in progress.
 - History persisted server-side in ws-proxy per userId
 - See `OPENCLAW_INTEGRATION.md` for full architecture details
+
+### ROI Sparkle Intelligence
+
+The ROI page (`/events/[id]/roi`) has three Gemini-powered sparkle buttons that auto-populate empty form fields:
+
+1. **Financial Targets sparkle**: Extracts budget, expectedPipeline, and winRate from the marketing plan via `/api/events/[id]/roi/extract-roi`. Only fills empty fields.
+2. **Event Targets sparkle**: Extracts meeting KPIs and engagement targets (ERTA, speaking, media/PR). Only fills empty fields.
+3. **Target Companies sparkle**: Extracts 10–15 target company names; creates new Company records or links to existing ones; shows a confirmation panel listing matched vs. new companies before applying.
+
+**Flow**: Each sparkle button first calls `generate-plan` if no marketing plan exists yet, then calls `extract-roi` to parse structured values from the plan. A confirmation panel lists which fields will be filled vs. skipped (already populated). Skipped-company counts are reported in the success message.
+
+**Event card sparkle** (`/events` portfolio page): The sparkle icon (✦) on each event card now calls `/api/events/[id]/roi/generate-plan` directly via Gemini (no longer routes through OpenClaw). Navigation behavior:
+- Plan generated successfully → navigates to `/events/{id}/roi`
+- Plan already exists → navigates to `/events/{id}/roi?planWarning=1`
+- Generation error → navigates to `/events/{id}/roi?planError=1`
+
+The ROI page reads `planWarning`/`planError` query params on mount, displays transient banner messages, and clears the params via `router.replace()`.
+
+### Filter State Persistence
+
+**`hooks/useFilterParams.ts`**: Generic hook that syncs filter state to localStorage. Used on the events portfolio, attendees, and companies pages.
+
+```typescript
+const { filters, setFilter, setFilters, isFiltered, resetFilters } = useFilterParams('myKey', defaults)
+```
+
+- Reads defaults from localStorage on mount (lazy initializer avoids hydration race).
+- Persists every state change immediately.
+- `isFiltered` is `true` when any filter differs from its default — use it to conditionally render a "Clear Filters" button.
+- SSR-safe: gracefully handles `localStorage` being unavailable.
 
 ### External Integrations
 
@@ -111,11 +140,11 @@ const resolvedEventId = event.id
 **Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
 
 **OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent with two modes — real-time chat and scheduled intelligence reports. Runs as a 3-container Docker stack (see `OPENCLAW_INTEGRATION.md`):
-- `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw, orchestrates the write-action confirmation protocol
+- `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw
 - `sales-recon-openclaw` (OpenClaw + Python + Crawl4AI, port 50045): Hosts agent "Kenji"; MCP tools include web search (Brave/Tavily), Crawl4AI web scraping, and event-planner DB operations via `/api/intelligence/actions`; runs scheduled cron cycles
 - `event-planner` (this app): Provides target list and webhook endpoints, stores reports, dispatches emails
 
-**Action confirmation**: When Kenji proposes a write operation (create/update/cancel meeting, update ROI targets, update company), ws-proxy sends a `pending_action` WebSocket frame. `IntelligenceChat.tsx` renders an `ActionConfirmCard`; the user must click Confirm before the action executes. See `OPENCLAW_INTEGRATION.md §4a` for the full protocol.
+**Note**: The action confirmation UI (`ActionConfirmCard`) has been removed. OpenClaw write actions (create/update/cancel meeting, update ROI targets, update company) now execute without an in-app confirmation step.
 
 **WebSocket URL**: Browser connects to `NEXT_PUBLIC_WS_URL` (ws-proxy), not directly to OpenClaw. Falls back to `ws://localhost:8080/` when env var is unset.
 
@@ -146,6 +175,8 @@ if (!await canWrite()) {
 - `/api/meetings/[id]/email` - Send meeting invite email
 - `/api/meetings/[id]/invite` - Generate ICS invite
 - `/api/events/[id]/roi` - ROI targets and actuals
+- `/api/events/[id]/roi/generate-plan` - POST: Gemini-powered marketing plan generation (idempotent — skips if plan exists, returns `{skipped: true}`); 120s timeout; requires Gemini API key
+- `/api/events/[id]/roi/extract-roi` - POST: Parses existing marketing plan via Gemini and returns structured ROI field values; returns 400 if no plan exists
 - `/api/companies` - Company CRUD
 - `/api/admin/system` - System admin operations (export/import/reset)
 - `/api/image-proxy` - Proxies external images to avoid CORS
@@ -240,3 +271,6 @@ CRON_SECRET_KEY            # Bearer token for machine-to-machine intelligence AP
 5. **AI chat scope**: Switching events starts a new conversation context.
 6. **`lib/enrichment.ts`**: This is a mock service (returns dummy data). The real enrichment is done by the Gemini call in `/api/attendees/autocomplete`.
 7. **Role init**: New Clerk users have no role until `RoleSynchronizer` runs `/api/user/init`.
+8. **ROI sparkle idempotency**: `generate-plan` returns `{skipped: true}` (not an error) if a marketing plan already exists. The event card sparkle uses this to show a `planWarning` banner instead of regenerating.
+9. **Import/export preserves `marketingPlan`**: Both V5 and V4 import paths include `marketingPlan` in the ROI upsert. Ensure any new ROI fields are added to both import handlers.
+10. **Event settings user list**: Uses server-side pagination (`/api/admin/users?page=X&limit=10&search=term`) with 500ms debounced search — not a single full fetch. The first page may not contain the user you expect; use search.
