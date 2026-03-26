@@ -9,8 +9,8 @@ import { EventCalendar } from '@/components/reports/EventCalendar'
 import { useUser } from '@/components/auth'
 import { canManageEvents, hasWriteAccess } from '@/lib/role-utils'
 import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
-import { Sparkles } from 'lucide-react'
 import useFilterParams from '@/hooks/useFilterParams'
+import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
 interface Event {
     id: string
     name: string
@@ -47,7 +47,6 @@ export default function EventsPage() {
     const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams('events', EVENTS_FILTER_DEFAULTS)
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-    const [sparkleLoadingId, setSparkleLoadingId] = useState<string | null>(null)
 
     const fetchEvents = () => {
         setLoading(true)
@@ -357,49 +356,12 @@ export default function EventsPage() {
                                                 </span>
                                                 {canManage && (
                                                     <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation()
-                                                                setSparkleLoadingId(event.id)
-                                                                try {
-                                                                    // Check if a marketing plan already exists for this event
-                                                                    const roiRes = await fetch(`/api/events/${event.id}/roi`)
-                                                                    const roiData = roiRes.ok ? await roiRes.json() : {}
-                                                                    const hasPlan = !!(roiData.targets?.marketingPlan)
-
-                                                                    if (hasPlan) {
-                                                                        // Navigate to ROI page — warn that existing plan was preserved
-                                                                        router.push(`/events/${event.slug || event.id}/roi?planWarning=1`)
-                                                                    } else {
-                                                                        // Generate the plan, then navigate to ROI page
-                                                                        const genRes = await fetch(`/api/events/${event.id}/roi/generate-plan`, {
-                                                                            method: 'POST',
-                                                                        })
-                                                                        if (genRes.ok) {
-                                                                            router.push(`/events/${event.slug || event.id}/roi`)
-                                                                        } else {
-                                                                            router.push(`/events/${event.slug || event.id}/roi?planError=1`)
-                                                                        }
-                                                                    }
-                                                                } catch {
-                                                                    router.push(`/events/${event.slug || event.id}/roi?planError=1`)
-                                                                } finally {
-                                                                    setSparkleLoadingId(null)
-                                                                }
-                                                            }}
-                                                            disabled={sparkleLoadingId === event.id}
-                                                            className="p-1.5 text-neutral-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
-                                                            title="Generate Event Marketing Plan"
-                                                        >
-                                                            {sparkleLoadingId === event.id ? (
-                                                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                                                </svg>
-                                                            ) : (
-                                                                <Sparkles className="w-4 h-4" />
-                                                            )}
-                                                        </button>
+                                                        <SparkleMarketingPlanButton
+                                                            eventId={event.id}
+                                                            onHasPlan={() => router.push(`/events/${event.slug || event.id}/roi?planWarning=1`)}
+                                                            onGenerated={() => router.push(`/events/${event.slug || event.id}/roi`)}
+                                                            onError={() => router.push(`/events/${event.slug || event.id}/roi?planError=1`)}
+                                                        />
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation()

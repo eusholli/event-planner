@@ -9,6 +9,7 @@ import ProgressBar from '@/components/roi/ProgressBar'
 import CompanyChecklist from '@/components/roi/CompanyChecklist'
 import Tooltip from '@/components/roi/Tooltip'
 import FormattedInput from '@/components/roi/FormattedInput'
+import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
 
 interface Company {
     id: string
@@ -820,6 +821,20 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
                             <span className="w-1 h-5 bg-amber-500 rounded-full" />
                             Marketing Plan
+                            {canEdit && !isLocked && (
+                                <SparkleMarketingPlanButton
+                                    eventId={eventId}
+                                    hasPlan={!!targets.marketingPlan}
+                                    onHasPlan={() => setMessage('An existing marketing plan was found — no new plan was generated.')}
+                                    onGenerated={(plan) => {
+                                        setTargets(prev => ({ ...prev, marketingPlan: plan }))
+                                        setMessage('Marketing plan generated — review and save.')
+                                    }}
+                                    onError={() => setMessage('Failed to generate marketing plan. Please try again or type one manually.')}
+                                    className="ml-auto p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                    title="Generate Event Marketing Plan"
+                                />
+                            )}
                         </h3>
                         <p className="text-sm text-zinc-500 mb-4">
                             AI-generated plan from the sparkle icon on the Events page. Editable — saved with &quot;Save Targets&quot;.
@@ -829,7 +844,7 @@ function ROIPage() {
                             readOnly={isLocked || !canEdit}
                             onChange={e => setTargets(prev => ({ ...prev, marketingPlan: e.target.value }))}
                             rows={12}
-                            placeholder="Use the ✦ sparkle icon on an event card to generate a marketing plan, or type one here."
+                            placeholder="Use the ✦ sparkle icon above to generate a marketing plan, or type one here."
                             className={`w-full px-3 py-2.5 rounded-xl border text-sm resize-y ${
                                 (isLocked || !canEdit)
                                     ? 'bg-zinc-50 border-zinc-100 text-zinc-600'
