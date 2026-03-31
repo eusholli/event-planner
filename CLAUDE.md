@@ -257,6 +257,7 @@ MAPBOX_ACCESS_TOKEN        # Geocoding/maps
 SENTRY_AUTH_TOKEN          # Error tracking
 NEXT_PUBLIC_APP_URL        # Public app URL used in intelligence email unsubscribe links (e.g. https://www.aieventplanner.work)
 NEXT_PUBLIC_WS_URL         # WebSocket URL for OpenClaw Insights (e.g. ws://localhost:8080/)
+NEXT_PUBLIC_LI_ARTICLE_API_URL  # URL of the li-article-agent API server (default: http://localhost:8000)
 CRON_SECRET_KEY            # Bearer token for machine-to-machine intelligence API routes (/api/intelligence/targets, /api/webhooks/intel-report, /api/intelligence/session)
 ```
 
