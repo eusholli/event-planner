@@ -5,7 +5,7 @@ import { resolveEventId } from '@/lib/events'
 import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 const POSTHandler = withAuth(async (request, ctx) => {
     try {
@@ -19,6 +19,10 @@ const POSTHandler = withAuth(async (request, ctx) => {
         if (!Array.isArray(companyNames) || companyNames.length === 0) {
             return NextResponse.json({ error: 'companyNames is required' }, { status: 400 })
         }
+        if (companyNames.length > 20 || !companyNames.every((n: unknown) => typeof n === 'string')) {
+            return NextResponse.json({ error: 'companyNames must be an array of up to 20 strings' }, { status: 400 })
+        }
+        const sanitizedNames = companyNames.map((n: string) => n.slice(0, 200))
 
         const [event, roiRecord, settings] = await Promise.all([
             prisma.event.findUnique({ where: { id: eventId }, select: { name: true } }),
@@ -37,7 +41,7 @@ const POSTHandler = withAuth(async (request, ctx) => {
 
         const marketingPlan = roiRecord?.marketingPlan ?? null
         const hadMarketingPlan = !!marketingPlan
-        const companyList = companyNames.join(', ')
+        const companyList = sanitizedNames.join(', ')
 
         const genAI = new GoogleGenerativeAI(apiKey)
         const model = genAI.getGenerativeModel({
