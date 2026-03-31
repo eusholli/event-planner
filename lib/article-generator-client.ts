@@ -66,6 +66,13 @@ export type ArticleGeneratorEvent =
   | CompleteEvent
   | ErrorEvent
 
+// ── Health ───────────────────────────────────────────────────────────────────
+
+export interface HealthResponse {
+  status: 'ok'
+  timestamp: string // ISO 8601
+}
+
 // ── Callbacks ────────────────────────────────────────────────────────────────
 
 export interface GenerationCallbacks {
@@ -77,6 +84,23 @@ export interface GenerationCallbacks {
 
 // ── Client ───────────────────────────────────────────────────────────────────
 
+/**
+ * Generate a LinkedIn article by streaming SSE events from the API.
+ *
+ * Returns an AbortController — call controller.abort() to cancel.
+ *
+ * @example
+ * const ctrl = generateArticle(
+ *   'http://localhost:8000',
+ *   { draft: 'AI is changing everything...' },
+ *   {
+ *     onProgress: (stage, message) => console.log(`[${stage}] ${message}`),
+ *     onComplete: (event) => setArticle(event.article.humanized),
+ *     onError: (msg) => setError(msg),
+ *   }
+ * )
+ * // To cancel: ctrl.abort()
+ */
 export function generateArticle(
   baseUrl: string,
   request: GenerateRequest,
@@ -109,7 +133,11 @@ export function generateArticle(
       return
     }
 
-    const reader = response.body!.getReader()
+    if (!response.body) {
+      callbacks.onError('Response has no body')
+      return
+    }
+    const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
 
