@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { X, Linkedin } from 'lucide-react'
 import { generateArticle } from '@/lib/article-generator-client'
 import type { CompleteEvent } from '@/lib/article-generator-client'
@@ -54,6 +55,7 @@ export default function LinkedInModal({
     const logEndRef = useRef<HTMLDivElement>(null)
     const startTimeRef = useRef<number>(0)
     const heartbeatCountRef = useRef(0)
+    const companyKey = companies.map(c => c.id).join(',')
 
     // Fetch brief when modal opens
     useEffect(() => {
@@ -69,10 +71,13 @@ export default function LinkedInModal({
         setGenError(null)
         heartbeatCountRef.current = 0
 
+        const ac = new AbortController()
+
         fetch(`/api/events/${eventId}/linkedin-campaigns/generate-brief`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ companyNames: companies.map(c => c.name) }),
+            signal: ac.signal,
         })
             .then(res => res.json())
             .then(data => {
@@ -85,12 +90,16 @@ export default function LinkedInModal({
                 }
                 setPhase('params')
             })
-            .catch(() => {
+            .catch(err => {
+                if (err.name === 'AbortError') return
                 setBrief(FALLBACK_BRIEF(companies.map(c => c.name)))
                 setBriefError(true)
                 setPhase('params')
             })
-    }, [isOpen, eventId, companies])
+
+        return () => ac.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, eventId, companyKey])
 
     // Auto-scroll progress log
     useEffect(() => {
@@ -101,6 +110,10 @@ export default function LinkedInModal({
 
     const handleGenerate = useCallback(() => {
         if (!brief.trim()) return
+        if (wordCountMin >= wordCountMax) {
+            setGenError('Min words must be less than max words')
+            return
+        }
         setPhase('generating')
         setGenError(null)
         setLogEntries([])
@@ -169,6 +182,9 @@ export default function LinkedInModal({
             if (res.ok) {
                 const saved = await res.json()
                 setSavedId(saved.id)
+            } else {
+                const err = await res.json().catch(() => ({}))
+                setGenError(err.error ?? 'Failed to save draft')
             }
         } finally {
             setSaving(false)
@@ -183,7 +199,7 @@ export default function LinkedInModal({
 
     if (!isOpen) return null
 
-    const tierColor = (tier: string) => {
+    const tierColor = (tier: 'World-class' | 'Strong' | 'Needs restructuring' | 'Rework') => {
         if (tier === 'World-class') return 'text-teal-700'
         if (tier === 'Strong') return 'text-blue-700'
         return 'text-amber-700'
@@ -365,9 +381,9 @@ export default function LinkedInModal({
                             {savedId ? (
                                 <div className="rounded-lg bg-teal-50 border border-teal-200 px-4 py-3 text-sm text-teal-700 flex items-center justify-between">
                                     <span>✓ Saved to campaigns</span>
-                                    <a href={`/events/${eventSlug}/linkedin-campaigns`} className="text-blue-600 hover:text-blue-800 text-xs">
+                                    <Link href={`/events/${eventSlug}/linkedin-campaigns`} className="text-blue-600 hover:text-blue-800 text-xs">
                                         View all campaigns →
-                                    </a>
+                                    </Link>
                                 </div>
                             ) : null}
                         </>
