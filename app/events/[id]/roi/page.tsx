@@ -10,6 +10,7 @@ import CompanyChecklist from '@/components/roi/CompanyChecklist'
 import Tooltip from '@/components/roi/Tooltip'
 import FormattedInput from '@/components/roi/FormattedInput'
 import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
+import LinkedInModal from '@/components/roi/LinkedInModal'
 
 interface Company {
     id: string
@@ -105,6 +106,10 @@ function ROIPage() {
         existingId: string | null  // null = will be created
     }> | null>(null)
     const [companySaving, setCompanySaving] = useState(false)
+
+    // LinkedIn multi-company selection
+    const [selectedForLinkedIn, setSelectedForLinkedIn] = useState<Set<string>>(new Set())
+    const [linkedInModalOpen, setLinkedInModalOpen] = useState(false)
 
     const role = user?.publicMetadata?.role as string
     const canEdit = role === 'root' || role === 'marketing'
@@ -275,6 +280,19 @@ function ROIPage() {
 
     const removeCompany = (companyId: string) => {
         setTargets(prev => ({ ...prev, targetCompanies: prev.targetCompanies.filter(c => c.id !== companyId) }))
+        setSelectedForLinkedIn(prev => { const next = new Set(prev); next.delete(companyId); return next })
+    }
+
+    const toggleLinkedInSelection = (companyId: string) => {
+        setSelectedForLinkedIn(prev => {
+            const next = new Set(prev)
+            if (next.has(companyId)) {
+                next.delete(companyId)
+            } else if (next.size < 5) {
+                next.add(companyId)
+            }
+            return next
+        })
     }
 
     const filteredAvailableCompanies = availableCompanies.filter(
@@ -799,22 +817,81 @@ function ROIPage() {
                             </div>
                         )}
                         <div className="flex flex-wrap gap-2">
-                            {targets.targetCompanies.map(company => (
-                                <span key={company.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-800 rounded-lg text-sm font-medium border border-teal-200">
-                                    {company.name}
-                                    {company.pipelineValue && <span className="text-xs text-teal-500">(${company.pipelineValue.toLocaleString()})</span>}
-                                    {!(isLocked || !canEdit) && (
-                                        <button onClick={() => removeCompany(company.id)} className="hover:text-teal-900">
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
-                                </span>
-                            ))}
+                            {targets.targetCompanies.map(company => {
+                                const isSelected = selectedForLinkedIn.has(company.id)
+                                return (
+                                    <span
+                                        key={company.id}
+                                        onClick={!(isLocked || !canEdit) ? () => toggleLinkedInSelection(company.id) : undefined}
+                                        className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                                            !(isLocked || !canEdit) ? 'cursor-pointer' : ''
+                                        } ${
+                                            isSelected
+                                                ? 'bg-blue-50 text-blue-800 border-blue-400 ring-2 ring-blue-200'
+                                                : 'bg-teal-50 text-teal-800 border-teal-200 hover:border-teal-400'
+                                        }`}
+                                    >
+                                        {isSelected && (
+                                            <span className="w-3 h-3 rounded-sm bg-blue-600 flex items-center justify-center text-white" style={{ fontSize: '8px' }}>✓</span>
+                                        )}
+                                        {company.name}
+                                        {company.pipelineValue && <span className="text-xs opacity-60">(${company.pipelineValue.toLocaleString()})</span>}
+                                        {!(isLocked || !canEdit) && (
+                                            <button
+                                                onClick={e => { e.stopPropagation(); removeCompany(company.id) }}
+                                                className="hover:text-red-600 ml-0.5"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </span>
+                                )
+                            })}
                             {targets.targetCompanies.length === 0 && (
                                 <p className="text-sm text-zinc-400 italic">No target companies added yet.</p>
                             )}
                         </div>
+                        {/* LinkedIn multi-company draft trigger */}
+                        {canEdit && !isLocked && targets.targetCompanies.length > 0 && (
+                            <div className="mt-3 flex items-center gap-3 flex-wrap">
+                                {selectedForLinkedIn.size > 0 ? (
+                                    <>
+                                        <button
+                                            onClick={() => setLinkedInModalOpen(true)}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                                            </svg>
+                                            Draft LinkedIn Posts ({selectedForLinkedIn.size})
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedForLinkedIn(new Set())}
+                                            className="text-xs text-zinc-400 hover:text-zinc-600"
+                                        >
+                                            Clear selection
+                                        </button>
+                                        {selectedForLinkedIn.size === 5 && (
+                                            <span className="text-xs text-amber-600">Maximum 5 selected</span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-xs text-zinc-400">Click companies to select for LinkedIn drafting (up to 5)</p>
+                                )}
+                            </div>
+                        )}
                     </section>
+
+                    {/* LinkedIn Campaigns Modal */}
+                    {linkedInModalOpen && (
+                        <LinkedInModal
+                            isOpen={linkedInModalOpen}
+                            onClose={() => { setLinkedInModalOpen(false); setSelectedForLinkedIn(new Set()) }}
+                            companies={targets.targetCompanies.filter(c => selectedForLinkedIn.has(c.id))}
+                            eventId={eventId}
+                            eventSlug={eventId}
+                        />
+                    )}
 
                     {/* Marketing Plan */}
                     <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
