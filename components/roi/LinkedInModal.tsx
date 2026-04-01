@@ -47,6 +47,8 @@ export default function LinkedInModal({
     const [logEntries, setLogEntries] = useState<LogEntry[]>([])
     const [result, setResult] = useState<CompleteEvent | null>(null)
     const [activeTab, setActiveTab] = useState<'humanized' | 'original'>('humanized')
+    const [editedHumanized, setEditedHumanized] = useState('')
+    const [editedOriginal, setEditedOriginal] = useState('')
     const [savedId, setSavedId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [genError, setGenError] = useState<string | null>(null)
@@ -100,6 +102,14 @@ export default function LinkedInModal({
         return () => ac.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, eventId, companyKey])
+
+    // Seed editable state when result arrives
+    useEffect(() => {
+        if (result) {
+            setEditedHumanized(result.article.humanized)
+            setEditedOriginal(result.article.original)
+        }
+    }, [result])
 
     // Auto-scroll progress log
     useEffect(() => {
@@ -165,7 +175,6 @@ export default function LinkedInModal({
     const handleSave = useCallback(async () => {
         if (!result) return
         setSaving(true)
-        const content = activeTab === 'humanized' ? result.article.humanized : result.article.original
         try {
             const res = await fetch('/api/social/drafts', {
                 method: 'POST',
@@ -174,7 +183,8 @@ export default function LinkedInModal({
                     eventId,
                     companyIds: companies.map(c => c.id),
                     companyNames: companies.map(c => c.name),
-                    content,
+                    content: editedHumanized,
+                    originalContent: editedOriginal,
                     angle: 'Campaign Article',
                     tone: `${wordCountMin}–${wordCountMax} words`,
                 }),
@@ -189,7 +199,7 @@ export default function LinkedInModal({
         } finally {
             setSaving(false)
         }
-    }, [result, activeTab, eventId, companies, wordCountMin, wordCountMax])
+    }, [editedHumanized, editedOriginal, eventId, companies, wordCountMin, wordCountMax])
 
     const handleCopy = useCallback(() => {
         if (!result) return
@@ -373,9 +383,15 @@ export default function LinkedInModal({
 
                             {/* Article content */}
                             <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-5 py-4 max-h-[40vh] overflow-y-auto">
-                                <pre className="text-sm text-zinc-800 whitespace-pre-wrap font-sans leading-relaxed">
-                                    {activeTab === 'humanized' ? result.article.humanized : result.article.original}
-                                </pre>
+                                <textarea
+                                    className="w-full text-sm text-zinc-800 font-sans leading-relaxed resize-y bg-transparent focus:outline-none min-h-[200px]"
+                                    value={activeTab === 'humanized' ? editedHumanized : editedOriginal}
+                                    onChange={e =>
+                                        activeTab === 'humanized'
+                                            ? setEditedHumanized(e.target.value)
+                                            : setEditedOriginal(e.target.value)
+                                    }
+                                />
                             </div>
 
                             {savedId ? (
