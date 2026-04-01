@@ -1,29 +1,27 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import prisma from '@/lib/prisma'
-import { canManageEvents } from '@/lib/roles'
+import { canManageEvents, isRootUser } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
-async function putHandler(
+export async function PUT(
     request: Request,
-    { params }: { params: Promise<Record<string, string>> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const id = (await params).id
     try {
-        if (!await canManageEvents()) {
+        const { userId } = await auth()
+        if (!userId || !await canManageEvents()) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const draft = await prisma.linkedInDraft.findUnique({
-            where: { id },
-        })
+        const { id } = await params
+        const body = await request.json()
 
-        if (!draft) {
+        const existing = await prisma.linkedInDraft.findUnique({ where: { id } })
+        if (!existing) {
             return NextResponse.json({ error: 'Draft not found' }, { status: 404 })
         }
-
-        const body = await request.json()
 
         const updated = await prisma.linkedInDraft.update({
             where: { id },
@@ -52,34 +50,31 @@ async function putHandler(
     }
 }
 
-async function deleteHandler(
+export async function DELETE(
     request: Request,
-    { params }: { params: Promise<Record<string, string>> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const id = (await params).id
     try {
-        if (!await canManageEvents()) {
+        const { userId } = await auth()
+        if (!userId || !await canManageEvents()) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const draft = await prisma.linkedInDraft.findUnique({
-            where: { id },
-        })
-
-        if (!draft) {
+        const { id } = await params
+        const existing = await prisma.linkedInDraft.findUnique({ where: { id } })
+        if (!existing) {
             return NextResponse.json({ error: 'Draft not found' }, { status: 404 })
         }
 
-        await prisma.linkedInDraft.delete({
-            where: { id },
-        })
+        const rootUser = await isRootUser()
+        if (existing.createdBy !== userId && !rootUser) {
+            return NextResponse.json({ error: 'Forbidden: can only delete your own drafts' }, { status: 403 })
+        }
 
+        await prisma.linkedInDraft.delete({ where: { id } })
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error('Error deleting LinkedIn draft:', error)
         return NextResponse.json({ error: 'Failed to delete draft' }, { status: 500 })
     }
 }
-
-export const PUT = putHandler
-export const DELETE = deleteHandler
