@@ -11,5 +11,12 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "../sales-recon",
+      "../../.openclaw",
+      "../li-article-agent"
+    ]
   }
 }

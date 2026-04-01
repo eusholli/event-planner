@@ -338,6 +338,50 @@ async function importV5(json: any): Promise<{ warnings: string[] }> {
         }
     }
 
+    // 8. LinkedIn Drafts — nested per event
+    if (json.events && Array.isArray(json.events)) {
+        for (const evt of json.events) {
+            if (!evt.linkedInDrafts || !Array.isArray(evt.linkedInDrafts)) continue
+            const eventId = eventNameToId.get(evt.name)
+            if (!eventId) continue
+            for (const draft of evt.linkedInDrafts) {
+                try {
+                    const draftData = {
+                        companyIds: draft.companyIds ?? [],
+                        companyNames: draft.companyNames ?? [],
+                        content: draft.content ?? '',
+                        angle: draft.angle ?? '',
+                        tone: draft.tone ?? '',
+                        status: draft.status ?? 'DRAFT',
+                        createdBy: draft.createdBy ?? '',
+                        datePosted: draft.datePosted ? new Date(draft.datePosted) : null,
+                        postUrl: draft.postUrl ?? null,
+                        impressions: draft.impressions ?? null,
+                        uniqueViews: draft.uniqueViews ?? null,
+                        clicks: draft.clicks ?? null,
+                        reactions: draft.reactions ?? null,
+                        comments: draft.comments ?? null,
+                        reposts: draft.reposts ?? null,
+                        engagementRate: draft.engagementRate ?? null,
+                        followsGained: draft.followsGained ?? null,
+                        profileVisits: draft.profileVisits ?? null,
+                    }
+                    if (draft.id) {
+                        await prisma.linkedInDraft.upsert({
+                            where: { id: draft.id },
+                            create: { id: draft.id, eventId, ...draftData, ...(draft.createdAt ? { createdAt: new Date(draft.createdAt) } : {}) },
+                            update: { ...draftData },
+                        })
+                    } else {
+                        await prisma.linkedInDraft.create({ data: { eventId, ...draftData } })
+                    }
+                } catch (e) {
+                    warnings.push(`LinkedIn draft for event '${evt.name}': import failed — ${(e as Error).message}`)
+                }
+            }
+        }
+    }
+
     return { warnings }
 }
 
@@ -525,6 +569,41 @@ async function importV4(json: any): Promise<void> {
                     create: { event: { connect: { id: eventId } }, ...roiData },
                     update: { ...roiData, targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined },
                 }).catch(e => console.warn('ROI targets import skip', e))
+            }
+
+            if (evt.linkedInDrafts && Array.isArray(evt.linkedInDrafts)) {
+                for (const draft of evt.linkedInDrafts) {
+                    const draftData = {
+                        companyIds: draft.companyIds ?? [],
+                        companyNames: draft.companyNames ?? [],
+                        content: draft.content ?? '',
+                        angle: draft.angle ?? '',
+                        tone: draft.tone ?? '',
+                        status: draft.status ?? 'DRAFT',
+                        createdBy: draft.createdBy ?? '',
+                        datePosted: draft.datePosted ? new Date(draft.datePosted) : null,
+                        postUrl: draft.postUrl ?? null,
+                        impressions: draft.impressions ?? null,
+                        uniqueViews: draft.uniqueViews ?? null,
+                        clicks: draft.clicks ?? null,
+                        reactions: draft.reactions ?? null,
+                        comments: draft.comments ?? null,
+                        reposts: draft.reposts ?? null,
+                        engagementRate: draft.engagementRate ?? null,
+                        followsGained: draft.followsGained ?? null,
+                        profileVisits: draft.profileVisits ?? null,
+                    }
+                    if (draft.id) {
+                        await prisma.linkedInDraft.upsert({
+                            where: { id: draft.id },
+                            create: { id: draft.id, eventId, ...draftData, ...(draft.createdAt ? { createdAt: new Date(draft.createdAt) } : {}) },
+                            update: { ...draftData },
+                        }).catch(e => console.warn('LinkedIn draft import skip', e))
+                    } else {
+                        await prisma.linkedInDraft.create({ data: { eventId, ...draftData } })
+                            .catch(e => console.warn('LinkedIn draft import skip', e))
+                    }
+                }
             }
         }
     }

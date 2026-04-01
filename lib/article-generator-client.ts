@@ -22,7 +22,9 @@ export type ProgressStage =
   | 'init' | 'start' | 'rag_search' | 'rag_queries' | 'rag_complete'
   | 'context' | 'generating' | 'scoring' | 'scored' | 'fact_checking'
   | 'fact_check_results' | 'fact_check_passed' | 'fact_check_failed'
-  | 'citation_issues' | 'humanizing' | 'humanized' | 'complete_version' | 'info'
+  | 'citation_issues' | 'humanizing' | 'humanized'
+  | 'humanizing_api' | 'humanizing_api_progress' | 'humanizing_api_done'
+  | 'complete_version' | 'info'
 
 export interface ProgressEvent {
   type: 'progress'
@@ -76,7 +78,7 @@ export interface HealthResponse {
 // ── Callbacks ────────────────────────────────────────────────────────────────
 
 export interface GenerationCallbacks {
-  onProgress?: (stage: string, message: string) => void
+  onProgress?: (stage: ProgressStage, message: string) => void
   onHeartbeat?: () => void
   onComplete: (event: CompleteEvent) => void
   onError: (message: string) => void
@@ -104,20 +106,26 @@ export interface GenerationCallbacks {
 export function generateArticle(
   baseUrl: string,
   request: GenerateRequest,
-  callbacks: GenerationCallbacks
+  callbacks: GenerationCallbacks,
+  clerkToken?: string
 ): AbortController {
   const controller = new AbortController()
 
   ;(async () => {
     let response: Response
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    }
+    if (clerkToken) {
+      headers['Authorization'] = `Bearer ${clerkToken}`
+    }
+
     try {
       response = await fetch(`${baseUrl}/articles/generate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
-        },
+        headers,
         body: JSON.stringify(request),
         signal: controller.signal,
       })
@@ -147,7 +155,7 @@ export function generateArticle(
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        const parts = buffer.split('\n\n')
+        const parts = buffer.split(/\r?\n\r?\n/)
         buffer = parts.pop() ?? ''
 
         for (const part of parts) {
@@ -164,7 +172,7 @@ export function generateArticle(
           if (event.type === 'heartbeat') {
             callbacks.onHeartbeat?.()
           } else if (event.type === 'progress') {
-            callbacks.onProgress?.(event.stage, event.message)
+            callbacks.onProgress?.(event.stage as ProgressStage, event.message)
           } else if (event.type === 'complete') {
             callbacks.onComplete(event)
             return

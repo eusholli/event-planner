@@ -83,6 +83,7 @@ export default function Navigation() {
                 { href: `/events/${eventId}/dashboard`, label: 'Dashboard' },
                 { href: `/events/${eventId}/roi`, label: 'ROI' },
                 { href: `/events/${eventId}/reports`, label: 'Reports' },
+                { href: `/events/${eventId}/linkedin-campaigns`, label: 'LinkedIn Campaigns', roles: [Roles.Root, Roles.Marketing] },
             ]
         },
         {

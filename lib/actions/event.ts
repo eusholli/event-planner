@@ -129,7 +129,8 @@ export async function exportEventData(eventId: string) {
             attendees: { include: { company: true } },
             rooms: true,
             meetings: { include: { attendees: true, room: true } },
-            roiTargets: { include: { targetCompanies: true } }
+            roiTargets: { include: { targetCompanies: true } },
+            linkedInDrafts: true
         }
     })
     if (!event) throw new Error('Event not found')
@@ -188,6 +189,9 @@ export async function exportEventData(eventId: string) {
         return { ...roiRest, targetCompanyNames: (targetCompanies ?? []).map((c: any) => c.name) }
     })() : null
 
+    // LinkedIn drafts: strip id/eventId (no ID translation needed — companyNames is denormalized)
+    const linkedInDraftsOut = event.linkedInDrafts.map(({ id: _id, eventId: _eid, ...rest }) => rest)
+
     // Intelligence subscriptions (already event-scoped — translate IDs to names)
     const eventAttendeeIds = event.attendees.map(a => a.id)
     const relatedSubs = await prisma.intelligenceSubscription.findMany({
@@ -225,9 +229,10 @@ export async function exportEventData(eventId: string) {
         rooms: roomsOut,
         meetings: meetingsOut,
         roiTargets: roiOut,
+        linkedInDrafts: linkedInDraftsOut,
         intelligenceSubscriptions,
         exportedAt: new Date().toISOString(),
-        version: '5.0',
+        version: '5.1',
     }
 }
 
@@ -477,7 +482,41 @@ export async function importEventData(eventId: string, data: any) {
         }
     }
 
-    // 7. Intelligence subscriptions
+    // 7. LinkedIn Drafts
+    if (data.linkedInDrafts && Array.isArray(data.linkedInDrafts)) {
+        for (const draft of data.linkedInDrafts) {
+            try {
+                await prisma.linkedInDraft.create({
+                    data: {
+                        eventId,
+                        companyIds: draft.companyIds ?? [],
+                        companyNames: draft.companyNames ?? [],
+                        content: draft.content ?? '',
+                        angle: draft.angle ?? '',
+                        tone: draft.tone ?? '',
+                        status: draft.status ?? 'DRAFT',
+                        createdBy: draft.createdBy ?? '',
+                        ...(draft.createdAt ? { createdAt: new Date(draft.createdAt) } : {}),
+                        datePosted: draft.datePosted ? new Date(draft.datePosted) : null,
+                        postUrl: draft.postUrl ?? null,
+                        impressions: draft.impressions ?? null,
+                        uniqueViews: draft.uniqueViews ?? null,
+                        clicks: draft.clicks ?? null,
+                        reactions: draft.reactions ?? null,
+                        comments: draft.comments ?? null,
+                        reposts: draft.reposts ?? null,
+                        engagementRate: draft.engagementRate ?? null,
+                        followsGained: draft.followsGained ?? null,
+                        profileVisits: draft.profileVisits ?? null,
+                    }
+                })
+            } catch (e) {
+                warnings.push(`LinkedIn draft: import failed — ${(e as Error).message}`)
+            }
+        }
+    }
+
+    // 8. Intelligence subscriptions
     if (data.intelligenceSubscriptions && Array.isArray(data.intelligenceSubscriptions)) {
         for (const s of data.intelligenceSubscriptions) {
             try {

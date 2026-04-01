@@ -16,7 +16,8 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
                 attendees: { include: { meetings: true } },
                 rooms: true,
                 meetings: { include: { attendees: true, room: true } },
-                roiTargets: { include: { targetCompanies: true } }
+                roiTargets: { include: { targetCompanies: true } },
+                linkedInDrafts: true
             }
         })
 
@@ -58,7 +59,8 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
                 attendees: undefined, // Remove full object array
                 attendeeIds,          // Add ID reference array
                 meetings: normalizedMeetings,
-                roiTargets
+                roiTargets,
+                linkedInDrafts: (event.linkedInDrafts ?? []).map(({ eventId: _eid, ...rest }) => rest)
             }
         })
 

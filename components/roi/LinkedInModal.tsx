@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { X, Linkedin } from 'lucide-react'
 import { generateArticle } from '@/lib/article-generator-client'
 import type { CompleteEvent } from '@/lib/article-generator-client'
+import { useAuth } from '@/components/auth'
 
 interface Company {
     id: string
@@ -38,6 +39,7 @@ export default function LinkedInModal({
     eventId,
     eventSlug,
 }: LinkedInModalProps) {
+    const { getToken } = useAuth()
     const [phase, setPhase] = useState<Phase>('brief-loading')
     const [brief, setBrief] = useState('')
     const [briefWarning, setBriefWarning] = useState(false)
@@ -108,7 +110,7 @@ export default function LinkedInModal({
 
     const elapsedSec = (ms: number) => (ms / 1000).toFixed(1)
 
-    const handleGenerate = useCallback(() => {
+    const handleGenerate = useCallback(async () => {
         if (!brief.trim()) return
         if (wordCountMin >= wordCountMax) {
             setGenError('Min words must be less than max words')
@@ -121,6 +123,7 @@ export default function LinkedInModal({
         heartbeatCountRef.current = 0
 
         const baseUrl = process.env.NEXT_PUBLIC_LI_ARTICLE_API_URL ?? 'http://localhost:8000'
+        const token = await getToken()
 
         controllerRef.current = generateArticle(
             baseUrl,
@@ -146,9 +149,10 @@ export default function LinkedInModal({
                     setGenError(msg)
                     setPhase('params')
                 },
-            }
+            },
+            token ?? undefined
         )
-    }, [brief, wordCountMin, wordCountMax])
+    }, [brief, wordCountMin, wordCountMax, getToken])
 
     const handleCancel = useCallback(() => {
         controllerRef.current?.abort()
@@ -198,12 +202,6 @@ export default function LinkedInModal({
     }, [result, activeTab])
 
     if (!isOpen) return null
-
-    const tierColor = (tier: 'World-class' | 'Strong' | 'Needs restructuring' | 'Rework') => {
-        if (tier === 'World-class') return 'text-teal-700'
-        if (tier === 'Strong') return 'text-blue-700'
-        return 'text-amber-700'
-    }
 
     return (
         <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-sm flex items-center justify-center p-4">
@@ -336,23 +334,27 @@ export default function LinkedInModal({
                     {/* PHASE: review */}
                     {phase === 'review' && result && (
                         <>
-                            {/* Score banner */}
-                            <div className={`rounded-xl border px-4 py-3 ${result.target_achieved ? 'bg-teal-50 border-teal-200' : 'bg-amber-50 border-amber-200'}`}>
-                                <div className="flex items-center gap-2 flex-wrap text-sm">
-                                    <span className={`font-semibold ${tierColor(result.score.performance_tier)}`}>
-                                        {result.score.percentage.toFixed(1)}% · {result.score.performance_tier}
-                                    </span>
-                                    <span className="text-zinc-400">·</span>
-                                    <span className="text-zinc-600">{result.score.word_count.toLocaleString()} words</span>
-                                    <span className="text-zinc-400">·</span>
-                                    <span className="text-zinc-600">{result.iterations_used} iteration{result.iterations_used !== 1 ? 's' : ''}</span>
+                            {/* Article meta */}
+                            <div className="flex items-center gap-2 text-sm text-zinc-500">
+                                <span>{result.score.word_count.toLocaleString()} words</span>
+                                <span>·</span>
+                                <span>{result.iterations_used} iteration{result.iterations_used !== 1 ? 's' : ''}</span>
+                            </div>
+
+                            {/* GPTZero verification nudge */}
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex items-start justify-between gap-3">
+                                <div className="text-sm text-blue-800">
+                                    <p className="font-medium">Verify before publishing</p>
+                                    <p className="text-xs text-blue-600 mt-0.5">Copy the humanized article, then check it with GPTZero to confirm AI detection is low.</p>
                                 </div>
-                                {!result.target_achieved && (
-                                    <p className="text-xs text-amber-600 mt-1">Target score not reached — best version returned</p>
-                                )}
-                                {result.score.overall_feedback && (
-                                    <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{result.score.overall_feedback}</p>
-                                )}
+                                <a
+                                    href="https://gptzero.me"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    GPTZero →
+                                </a>
                             </div>
 
                             {/* Tab bar */}

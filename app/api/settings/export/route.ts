@@ -10,7 +10,7 @@ async function exportData(): Promise<Response> {
         const settings = await prisma.systemSettings.findFirst()
         const companies = await prisma.company.findMany()
         const events = await prisma.event.findMany({
-            include: { roiTargets: { include: { targetCompanies: true } } }
+            include: { roiTargets: { include: { targetCompanies: true } }, linkedInDrafts: true }
         })
         const attendees = await prisma.attendee.findMany({
             include: { events: { select: { name: true } } }
@@ -42,7 +42,7 @@ async function exportData(): Promise<Response> {
         // Events: strip id, translate authorizedUserIds → authorizedEmails, targetCompanyIds → targetCompanyNames
         const eventsOut: any[] = []
         for (const event of events) {
-            const { id, roiTargets, authorizedUserIds, password: _pw, subscriptionCount: _sc, ...eventRest } = event as any
+            const { id, roiTargets, linkedInDrafts, authorizedUserIds, password: _pw, subscriptionCount: _sc, ...eventRest } = event as any
 
             // Translate authorizedUserIds → authorizedEmails (throws on Clerk failure)
             const authorizedEmails = await userIdsToEmails(authorizedUserIds ?? [])
@@ -55,10 +55,13 @@ async function exportData(): Promise<Response> {
                 }
             })() : null
 
+            const linkedInDraftsOut = (linkedInDrafts ?? []).map(({ eventId: _eid, ...rest }: any) => rest)
+
             eventsOut.push({
                 ...eventRest,
                 authorizedEmails,
                 roiTargets: roiOut,
+                linkedInDrafts: linkedInDraftsOut,
             })
         }
 

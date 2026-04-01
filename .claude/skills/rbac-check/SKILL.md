@@ -56,6 +56,15 @@ Run this skill after any change to API routes or auth helpers to verify RBAC cor
 | /api/chat/status | auth | — | — | — |
 | /api/image-proxy | auth | — | — | — |
 | /api/user/init | — | auth | — | — |
+| /api/social/drafts | manageEvents | manageEvents | — | — |
+| /api/social/drafts/[id] | — | — | manageEvents | manageEvents (own) or root |
+
+**Direct-auth routes** (no `withAuth` wrapper — use direct Clerk `auth()` + `canManageEvents()`):
+
+| Route | Methods | Auth mechanism |
+|-------|---------|----------------|
+| /api/social/drafts | GET, POST | `auth()` + `canManageEvents()` — Root \| Marketing only |
+| /api/social/drafts/[id] | PUT, DELETE | `auth()` + `canManageEvents()` — Root \| Marketing only; DELETE also checks `createdBy === userId` or `isRootUser()` |
 
 **Custom-auth routes** (no `withAuth` wrapper — intentional):
 
@@ -95,6 +104,8 @@ Grep: pattern "export (const|async function) (GET|POST|PUT|PATCH|DELETE)"
 - `app/api/intelligence/targets/route.ts` — `CRON_SECRET_KEY` bearer
 - `app/api/intelligence/unsubscribe/route.ts` — unsubscribe token (public)
 - `app/api/webhooks/intel-report/route.ts` — `CRON_SECRET_KEY` bearer
+- `app/api/social/drafts/route.ts` — direct `auth()` + `canManageEvents()` (Root | Marketing)
+- `app/api/social/drafts/[id]/route.ts` — direct `auth()` + `canManageEvents()` (Root | Marketing)
 
 Flag any file NOT in this list as a coverage gap.
 
@@ -129,8 +140,22 @@ Check: each exported handler uses requireRole: 'root' or is the backup bypass
 Fail if: any handler uses a weaker requirement (requireAuth: true, requireRole: 'write', etc.)
 ```
 
-### Step 5: Report
+### Step 6: LinkedIn feature restricted to root + marketing
+Read `app/api/social/drafts/route.ts` and `app/api/social/drafts/[id]/route.ts`. Verify both use `canManageEvents()` (not `canWrite()` which also allows Admin). Read `components/Navigation.tsx` and verify the LinkedIn Campaigns entry has `roles: [Roles.Root, Roles.Marketing]`.
+
+```
+Read: app/api/social/drafts/route.ts
+      app/api/social/drafts/[id]/route.ts
+Check: canManageEvents() used for all handlers (not canWrite())
+Fail if: canWrite() is present — that would allow Admin access
+
+Read: components/Navigation.tsx
+Check: LinkedIn Campaigns nav entry includes roles: [Roles.Root, Roles.Marketing]
+Fail if: roles array is missing or includes Roles.Admin
+```
+
+### Step 7: Report
 Output:
 - ✅ PASS or ❌ FAIL for each step
 - For failures: file path and line number
-- Summary: "N/5 checks passed"
+- Summary: "N/7 checks passed"
