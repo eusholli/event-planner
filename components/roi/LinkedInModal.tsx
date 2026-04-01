@@ -6,6 +6,7 @@ import { X, Linkedin } from 'lucide-react'
 import { generateArticle } from '@/lib/article-generator-client'
 import type { CompleteEvent } from '@/lib/article-generator-client'
 import { useAuth } from '@/components/auth'
+import Tooltip from '@/components/roi/Tooltip'
 
 interface Company {
     id: string
@@ -44,8 +45,8 @@ export default function LinkedInModal({
     const [brief, setBrief] = useState('')
     const [briefWarning, setBriefWarning] = useState(false)
     const [briefError, setBriefError] = useState(false)
-    const [wordCountMin, setWordCountMin] = useState(2000)
-    const [wordCountMax, setWordCountMax] = useState(2500)
+    const [wordCountMin, setWordCountMin] = useState(150)
+    const [wordCountMax, setWordCountMax] = useState(300)
     const [logEntries, setLogEntries] = useState<LogEntry[]>([])
     const [result, setResult] = useState<CompleteEvent | null>(null)
     const [activeTab, setActiveTab] = useState<'humanized' | 'original'>('humanized')
@@ -305,7 +306,16 @@ export default function LinkedInModal({
                             {/* Word count */}
                             <div className="flex items-center gap-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-700 mb-1">Min Words</label>
+                                    <label className="block text-xs font-medium text-zinc-700 mb-1">
+                                        <Tooltip content={
+                                            <span>
+                                                <strong>Post:</strong> 150–300 words (optimal engagement)<br />
+                                                <strong>Article:</strong> 1,500–2,000 words (long-form)
+                                            </span>
+                                        }>
+                                            Min Words
+                                        </Tooltip>
+                                    </label>
                                     <input
                                         type="number"
                                         min={100}
@@ -315,7 +325,16 @@ export default function LinkedInModal({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-700 mb-1">Max Words</label>
+                                    <label className="block text-xs font-medium text-zinc-700 mb-1">
+                                        <Tooltip content={
+                                            <span>
+                                                <strong>Post:</strong> 150–300 words (optimal engagement)<br />
+                                                <strong>Article:</strong> 1,500–2,000 words (long-form)
+                                            </span>
+                                        }>
+                                            Max Words
+                                        </Tooltip>
+                                    </label>
                                     <input
                                         type="number"
                                         min={100}
