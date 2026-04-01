@@ -11,6 +11,7 @@ interface LinkedInDraft {
     tone: string
     status: string
     content: string
+    originalContent?: string | null
     createdAt: string
     datePosted: string | null
     postUrl: string | null
@@ -54,6 +55,8 @@ export default function LinkedInCampaignsPage() {
     const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set())
     const [expandedContent, setExpandedContent] = useState<Set<string>>(new Set())
     const [editingContent, setEditingContent] = useState<Record<string, string>>({})
+    const [editingTab, setEditingTab] = useState<Record<string, 'humanized' | 'original'>>({})
+    const [editingOriginalContent, setEditingOriginalContent] = useState<Record<string, string>>({})
     const [metricDrafts, setMetricDrafts] = useState<Record<string, Record<string, string>>>({})
     const [saving, setSaving] = useState<string | null>(null)
     const [message, setMessage] = useState('')
@@ -107,18 +110,68 @@ export default function LinkedInCampaignsPage() {
         })
     }
 
+    const handleCancel = (id: string) => {
+        setExpandedContent(prev => {
+            const next = new Set(prev)
+            next.delete(id)
+            return next
+        })
+        setEditingContent(prev => {
+            const next = { ...prev }
+            delete next[id]
+            return next
+        })
+        setEditingOriginalContent(prev => {
+            const next = { ...prev }
+            delete next[id]
+            return next
+        })
+        setEditingTab(prev => {
+            const next = { ...prev }
+            delete next[id]
+            return next
+        })
+    }
+
     const saveContent = async (id: string) => {
         setSaving(id)
+        const draft = drafts.find(d => d.id === id)
         try {
             const res = await fetch(`/api/social/drafts/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: editingContent[id] }),
+                body: JSON.stringify({
+                    content: editingContent[id] ?? draft?.content,
+                    originalContent: editingOriginalContent[id] ?? draft?.originalContent ?? null,
+                }),
             })
             if (res.ok) {
                 const updated = await res.json()
-                setDrafts(prev => prev.map(d => d.id === id ? { ...d, content: updated.content } : d))
-                setExpandedContent(prev => { const next = new Set(prev); next.delete(id); return next })
+                setDrafts(prev => prev.map(d =>
+                    d.id === id
+                        ? { ...d, content: updated.content, originalContent: updated.originalContent }
+                        : d
+                ))
+                setExpandedContent(prev => {
+                    const next = new Set(prev)
+                    next.delete(id)
+                    return next
+                })
+                setEditingContent(prev => {
+                    const next = { ...prev }
+                    delete next[id]
+                    return next
+                })
+                setEditingOriginalContent(prev => {
+                    const next = { ...prev }
+                    delete next[id]
+                    return next
+                })
+                setEditingTab(prev => {
+                    const next = { ...prev }
+                    delete next[id]
+                    return next
+                })
                 setMessage('Draft updated.')
                 setTimeout(() => setMessage(''), 3000)
             }
@@ -272,20 +325,67 @@ export default function LinkedInCampaignsPage() {
                             {/* Draft content editor */}
                             {expandedContent.has(draft.id) && (
                                 <div className="px-6 pb-4 border-t border-zinc-100 pt-4 space-y-3">
-                                    <textarea
-                                        value={editingContent[draft.id] ?? draft.content}
-                                        onChange={e => setEditingContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
-                                        rows={10}
-                                        className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                    />
+                                    {/* Tab bar */}
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => setEditingTab(prev => ({ ...prev, [draft.id]: 'humanized' }))}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                (editingTab[draft.id] ?? 'humanized') === 'humanized'
+                                                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                                    : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
+                                            }`}
+                                        >
+                                            Humanized <span className="text-emerald-600 ml-1">Recommended</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setEditingTab(prev => ({ ...prev, [draft.id]: 'original' }))}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                (editingTab[draft.id] ?? 'humanized') === 'original'
+                                                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                                    : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
+                                            }`}
+                                        >
+                                            Original
+                                        </button>
+                                    </div>
+
+                                    {/* Textarea for active tab */}
+                                    {(editingTab[draft.id] ?? 'humanized') === 'humanized' ? (
+                                        <textarea
+                                            value={editingContent[draft.id] ?? draft.content}
+                                            onChange={e => setEditingContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
+                                            rows={10}
+                                            className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                        />
+                                    ) : (
+                                        <textarea
+                                            value={editingOriginalContent[draft.id] ?? (draft.originalContent ?? '')}
+                                            onChange={e => setEditingOriginalContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
+                                            rows={10}
+                                            placeholder="No original version stored for this draft."
+                                            className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                        />
+                                    )}
+
+                                    {/* Action buttons */}
                                     <div className="flex justify-end gap-3">
                                         <button
                                             onClick={() => {
-                                                navigator.clipboard.writeText(editingContent[draft.id] ?? draft.content)
+                                                const activeTab = editingTab[draft.id] ?? 'humanized'
+                                                const text = activeTab === 'humanized'
+                                                    ? (editingContent[draft.id] ?? draft.content)
+                                                    : (editingOriginalContent[draft.id] ?? (draft.originalContent ?? ''))
+                                                navigator.clipboard.writeText(text)
                                             }}
                                             className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:border-zinc-400 transition-colors"
                                         >
                                             Copy
+                                        </button>
+                                        <button
+                                            onClick={() => handleCancel(draft.id)}
+                                            className="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-700 rounded-lg hover:bg-zinc-100 transition-colors"
+                                        >
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={() => saveContent(draft.id)}

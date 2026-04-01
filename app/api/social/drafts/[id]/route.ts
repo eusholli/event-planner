@@ -27,6 +27,7 @@ export async function PUT(
             where: { id },
             data: {
                 ...(body.content !== undefined && { content: body.content }),
+                ...(body.originalContent !== undefined && { originalContent: body.originalContent }),
                 ...(body.status !== undefined && { status: body.status }),
                 ...(body.datePosted !== undefined && { datePosted: body.datePosted ? new Date(body.datePosted) : null }),
                 ...(body.postUrl !== undefined && { postUrl: body.postUrl }),
