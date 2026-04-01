@@ -43,6 +43,7 @@ model Event {
   longitude         Float?
   subscriptionCount Int        @default(0)
   intelligenceSubs  IntelligenceSubEvent[]
+  linkedInDrafts    LinkedInDraft[]
 }
 
 model Company {
@@ -223,4 +224,34 @@ model IntelligenceSubEvent {
   event          Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   @@id([subscriptionId, eventId])
   @@index([eventId])
+}
+
+model LinkedInDraft {
+  id              String    @id @default(cuid())
+  eventId         String
+  companyIds      String[]
+  companyNames    String[]
+  content         String    @db.Text
+  originalContent String?   @db.Text
+  angle           String
+  tone            String
+  status          String    @default("DRAFT")
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  datePosted      DateTime?
+  postUrl         String?
+  impressions     Int?
+  uniqueViews     Int?
+  clicks          Int?
+  reactions       Int?
+  comments        Int?
+  reposts         Int?
+  engagementRate  Float?
+  followsGained   Int?
+  profileVisits   Int?
+
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([createdBy])
 }
