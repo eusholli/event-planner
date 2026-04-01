@@ -73,6 +73,8 @@ export default function LinkedInModal({
         setResult(null)
         setSavedId(null)
         setGenError(null)
+        setEditedHumanized('')
+        setEditedOriginal('')
         heartbeatCountRef.current = 0
 
         const ac = new AbortController()
@@ -454,7 +456,7 @@ export default function LinkedInModal({
                                     disabled={saving}
                                     className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                                 >
-                                    {saving ? 'Saving…' : `Save ${activeTab === 'humanized' ? 'Humanized' : 'Original'} version`}
+                                    {saving ? 'Saving…' : 'Save to Campaigns'}
                                 </button>
                             )}
                         </>

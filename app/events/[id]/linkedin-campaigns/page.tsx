@@ -167,6 +167,11 @@ export default function LinkedInCampaignsPage() {
                     delete next[id]
                     return next
                 })
+                setEditingTab(prev => {
+                    const next = { ...prev }
+                    delete next[id]
+                    return next
+                })
                 setMessage('Draft updated.')
                 setTimeout(() => setMessage(''), 3000)
             }

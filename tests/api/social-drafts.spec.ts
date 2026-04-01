@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { createTestEvent, deleteTestEvent } from './helpers'
+import { deleteTestEvent } from './helpers'
 
 test.describe('Social Drafts API — originalContent', () => {
     let eventId: string
