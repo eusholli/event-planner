@@ -48,7 +48,7 @@ async function handlePOST(req: Request) {
         const companyIdMap = new Map<string, string>();
         if (companies && Array.isArray(companies)) {
             for (const comp of companies) {
-                const { _id, existingRecord, aiSuggestedFields, ...compData } = comp;
+                const { _id, existingRecord, aiSuggestedFields, id, createdAt, updatedAt, attendees, targetedByROI, intelligenceSubs, ...compData } = comp;
                 const existing = await prisma.company.findFirst({
                     where: { name: { equals: compData.name, mode: 'insensitive' } }
                 });
@@ -72,7 +72,7 @@ async function handlePOST(req: Request) {
         const personEmailToIdMap = new Map<string, string>();
         if (people && Array.isArray(people)) {
             for (const person of people) {
-                const { _id, existingRecord, aiSuggestedFields, companyName, isExternal, ...personData } = person;
+                const { _id, existingRecord, aiSuggestedFields, companyName, isExternal, id, createdAt, updatedAt, company, events, meetings, intelligenceSubs, ...personData } = person;
                 
                 // Get or create resolved companyId
                 let resolvedCompanyId = companyName ? companyIdMap.get(companyName.toLowerCase()) : null;
@@ -112,16 +112,49 @@ async function handlePOST(req: Request) {
         // 3. Save Meetings
         if (meetings && Array.isArray(meetings)) {
             for (const meet of meetings) {
-                const { _id, existingRecord, aiSuggestedFields, attendeeEmails, ...meetData } = meet;
+                const { _id, existingRecord, aiSuggestedFields, attendeeEmails, id, createdAt, updatedAt, event, room, attendees, ...meetData } = meet;
 
                 // Resolve Attendee connects
                 let attendeeConnects: { id: string }[] = [];
                 if (attendeeEmails && Array.isArray(attendeeEmails)) {
                     for (const email of attendeeEmails) {
-                        let attId = personEmailToIdMap.get(email);
+                        const cleanEmail = String(email).trim().toLowerCase();
+                        let attId = personEmailToIdMap.get(cleanEmail) || personEmailToIdMap.get(email);
                         if (!attId) {
-                            const dbAtt = await prisma.attendee.findUnique({ where: { email } });
-                            if (dbAtt) attId = dbAtt.id;
+                            const dbAtt = await prisma.attendee.findUnique({ where: { email: cleanEmail } });
+                            if (dbAtt) {
+                                attId = dbAtt.id;
+                            } else {
+                                // Auto-create missing attendee based on email
+                                const parts = cleanEmail.split('@');
+                                const namePart = parts[0] || 'Unknown';
+                                const domainPart = parts[1] || 'unknown.com';
+                                
+                                // Parse Name from local part (e.g., john.doe -> John Doe)
+                                const parsedName = namePart.split(/[\.\-_]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+                                
+                                // Parse CompanyName from domain (e.g., apple.com -> Apple)
+                                const domainPieces = domainPart.split('.');
+                                const companyNameRaw = domainPieces[0] ? domainPieces[0].charAt(0).toUpperCase() + domainPieces[0].slice(1) : 'Unknown';
+                                
+                                const resolvedCompanyId = await resolveCompanyId(companyNameRaw);
+                                
+                                if (resolvedCompanyId) {
+                                    const freshAtt = await prisma.attendee.create({
+                                        data: {
+                                            name: parsedName || 'Unknown',
+                                            email: cleanEmail,
+                                            companyId: resolvedCompanyId,
+                                            title: 'Unknown',
+                                            isExternal: true
+                                        }
+                                    });
+                                    attId = freshAtt.id;
+                                    personEmailToIdMap.set(cleanEmail, freshAtt.id);
+                                    personEmailToIdMap.set(email, freshAtt.id); // also cache original case
+                                    results.peopleCreated++;
+                                }
+                            }
                         }
                         if (attId) attendeeConnects.push({ id: attId });
                     }

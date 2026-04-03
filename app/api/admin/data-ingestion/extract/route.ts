@@ -4,58 +4,27 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { withAuth, type AuthContext } from '@/lib/with-auth';
 
-// Shim for pdf-parse in Node.js
-if (typeof global.DOMMatrix === 'undefined') {
-    (global as any).DOMMatrix = class DOMMatrix {};
+import os from 'os';
+import { LiteParse } from '@llamaindex/liteparse';
+
+// Handle LITEPARSE_TMPDIR fallback for edge/dynamic deployment
+if (!process.env.LITEPARSE_TMPDIR) {
+    process.env.LITEPARSE_TMPDIR = os.tmpdir();
 }
-if (typeof global.Path2D === 'undefined') {
-    (global as any).Path2D = class Path2D {};
-}
-const pdfParse = require('pdf-parse');
-import * as xlsx from 'xlsx';
 
 // Maximum execution time for extraction (in seconds)
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 async function extractTextFromBlob(blob: Blob, fileName: string): Promise<string> {
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    const lowerName = fileName.toLowerCase();
-
-    if (lowerName.endsWith('.pdf')) {
-        try {
-            const data = await pdfParse(buffer);
-            return data.text;
-        } catch (e) {
-            console.warn('PDF parsing failed, falling back to raw:', e);
-            return buffer.toString('utf-8');
-        }
-    } else if (lowerName.endsWith('.docx')) {
-        // dynamic import of mammoth to avoid issues on edge if any
-        try {
-            const mammoth = (await import('mammoth')).default;
-            const result = await mammoth.extractRawText({ buffer });
-            return result.value;
-        } catch (e) {
-            console.warn('DOCX parsing failed, falling back to raw:', e);
-            return buffer.toString('utf-8');
-        }
-    } else if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) {
-        try {
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            let text = '';
-            for (const sheetName of workbook.SheetNames) {
-                const sheet = workbook.Sheets[sheetName];
-                text += `\n--- Sheet: ${sheetName} ---\n`;
-                text += xlsx.utils.sheet_to_csv(sheet) + '\n';
-            }
-            return text;
-        } catch (e) {
-            console.warn('Spreadsheet parsing failed, falling back to raw:', e);
-            return buffer.toString('utf-8');
-        }
-    } else {
-        // Assume TXT or raw textual data
+    try {
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        const parser = new LiteParse({ ocrEnabled: true });
+        const result = await parser.parse(buffer);
+        return result.text;
+    } catch (e) {
+        console.warn('LiteParse parsing failed, falling back to raw:', e);
+        const buffer = Buffer.from(await blob.arrayBuffer());
         return buffer.toString('utf-8');
     }
 }
@@ -143,8 +112,20 @@ ${textData}
             const emailDomain = person.email.split('@')[1]?.toLowerCase();
             const isExternalFlag = emailDomain && internalDomains.has(emailDomain) ? false : true;
             
-            const existingMatch = await prisma.attendee.findUnique({ where: { email: person.email } });
+            const existingMatch = await prisma.attendee.findUnique({ 
+                where: { email: person.email },
+                include: { company: true }
+            }) as any;
+            
+            if (existingMatch && existingMatch.company) {
+                existingMatch.companyName = existingMatch.company.name;
+            }
+            
             applyFill(person, existingMatch);
+            
+            if (!person.title || person.title.trim() === '') {
+                person.title = 'Unknown';
+            }
             
             return {
                 ...person,

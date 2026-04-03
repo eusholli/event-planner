@@ -232,12 +232,13 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
         if (!formData.name || !selectedCompany) return
         setAutoCompleting(true)
         try {
-            const res = await fetch('/api/attendees/autocomplete', {
+            const res = await fetch('/api/intelligence/enhance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: formData.name,
-                    company: selectedCompany.name
+                    company: selectedCompany.name,
+                    type: 'attendees'
                 }),
             })
 
