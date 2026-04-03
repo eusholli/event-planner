@@ -38,8 +38,10 @@
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",
+    "mammoth": "^1.12.0",
     "moment": "^2.30.1",
     "next": "^16.1.4",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.17.2",
     "react": "^19.2.3",
     "react-big-calendar": "^1.19.4",
@@ -50,6 +52,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "uuid": "^13.0.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -60,6 +63,7 @@
     "@types/leaflet": "^1.9.21",
     "@types/node": "^24",
     "@types/nodemailer": "^7.0.4",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",

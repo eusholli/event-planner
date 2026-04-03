@@ -16,6 +16,7 @@ Welcome to the Executive Meeting Coordinator! This guide covers every feature of
 11. [Event Settings](#event-settings)
 12. [System Administration](#system-administration)
 13. [User Administration](#user-administration)
+14. [Data Ingestion](#data-ingestion)
 
 ---
 
@@ -408,3 +409,25 @@ Navigate to **Users** (`/admin/users`) from the top navigation.
 - **Pagination**: Navigate through user pages for large user bases.
 
 > **Note**: New users are automatically assigned the **User** (read-only) role upon first sign-in.
+
+---
+
+## Data Ingestion
+
+*Access: Root and Marketing users.*
+
+Navigate to **Data Ingestion** (`/admin/data-ingestion`) from the top navigation.
+
+The Data Ingestion system is an AI-powered document extraction protocol that seamlessly converts raw offline files (PDFs, DOCXs, CSVs, TXTs) into relational Companies, People, and Meetings schemas mapped directly to the active system database.
+
+### How It Works
+1. **Upload File**: Drag-and-drop or select an offline file holding your raw data logs, target lists, or unmapped intelligence.
+2. **AI Semantic Extraction**: Google Gemini structurally parses the contents against Event Planner's data schema, leveraging inference to format elements cleanly. 
+3. **Review & Compare**: The system maps returned elements into three interactive tabs (Companies, People, Meetings).
+4. **Commit Save**: Execute a strictly validated batch commit seamlessly mapping relational data into the active Prisma Database across all events.
+
+### Smart Operations & Diffing
+- **Conflict Resolution**: If the AI populates a field that disagrees with an existing entity in your Database (e.g., an altered Job Title or outdated Pipeline Value), the form natively displays a stacked "Diff View" showcasing the current database's data value underneath.
+- **Revert to DB**: Click `[Revert]` on any conflict discrepancy to instantaneously disregard the new extracted text and securely default back to your existing system data.
+- **Intelligent Pre-fills**: Any data parameters the AI couldn't parse that *are* already present locally in your Database are automatically retrofitted onto the uploaded form blocks, preventing "blank" fields from wiping secure database metrics.
+- **Remove Records**: Use the **Trash (Delete)** icon cleanly available on any ingested line-item to drop that entire schema from the saving queue instantly.

@@ -73,6 +73,7 @@ export default function Navigation() {
     const adminLinks = [
         { href: '/admin/users', label: 'Users', roles: [Roles.Root, Roles.Marketing] },
         { href: '/admin/system', label: 'System', roles: [Roles.Root] },
+        { href: '/admin/data-ingestion', label: 'Data Ingestion', roles: [Roles.Root, Roles.Marketing] },
     ]
 
     // Event Groups (Scoped)

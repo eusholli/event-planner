@@ -37,6 +37,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 - **OpenClaw Insights** (`/intelligence`): Market intelligence agent powered by OpenClaw via WebSocket proxy (`ws-proxy`). Features real-time streaming responses, thinking/status indicators, session management, and PDF download for each response.
 - **AI Marketing Plan Generation**: Generate a tailored event marketing plan via Gemini directly from the Sparkles icon on event cards in the portfolio. The plan is saved to the event's ROI record and can be used to auto-populate ROI targets.
 - **ROI Auto-Fill (Sparkle Buttons)**: Three Gemini-powered sparkle buttons on the ROI page auto-extract and populate Financial Targets, Event KPI Targets, and Target Companies from the event's marketing plan. Each button shows a confirmation panel before applying changes and only fills empty fields.
+- **Data Ingestion** (`/admin/data-ingestion`, Root/Marketing only): AI-powered document extractor. Securely upload native documents (PDF, DOCX, CSV, Excel) and have Google Gemini contextually parse structured Companies, Attendees, and Meetings. Includes inline manual Diffing against the database and intelligent conflict resolution.
 
 ### Rooms
 - **Room Management**: Create and manage rooms with capacity tracking.
