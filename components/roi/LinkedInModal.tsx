@@ -368,8 +368,6 @@ export default function LinkedInModal({
                             {/* Article meta */}
                             <div className="flex items-center gap-2 text-sm text-zinc-500">
                                 <span>{result.score.word_count.toLocaleString()} words</span>
-                                <span>·</span>
-                                <span>{result.iterations_used} iteration{result.iterations_used !== 1 ? 's' : ''}</span>
                             </div>
 
                             {/* GPTZero verification nudge */}

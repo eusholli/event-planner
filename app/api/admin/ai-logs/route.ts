@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { Roles } from '@/lib/constants'
 import { withAuth, type AuthContext } from '@/lib/with-auth'
 import prisma from '@/lib/prisma'
 
@@ -9,35 +8,35 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
     try {
         const { searchParams } = new URL(req.url)
         const functionName = searchParams.get('functionName')
-        const modelUsed = searchParams.get('modelUsed')
 
         const where: any = {}
         if (functionName) {
             where.functionName = { in: functionName.split(',') }
         }
-        if (modelUsed) {
-            where.modelUsed = { in: modelUsed.split(',') }
-        }
 
-        const logs = await prisma.aILog.findMany({
+        // Return aggregated usage counts grouped by user and function
+        const grouped = await prisma.aILog.groupBy({
+            by: ['userEmail', 'functionName'],
             where,
-            orderBy: { createdAt: 'desc' },
-            take: 1000 // Just to prevent blowing up response size if too many
+            _count: { _all: true },
+            orderBy: [{ userEmail: 'asc' }, { functionName: 'asc' }]
         })
 
-        // Also fetch unique models and functions for the filter sidebar
-        const uniqueTasksResult = await prisma.aILog.groupBy({
+        // Fetch unique function names for the filter sidebar (always unfiltered)
+        const uniqueFunctionsResult = await prisma.aILog.groupBy({
             by: ['functionName']
         })
-        const uniqueModelsResult = await prisma.aILog.groupBy({
-            by: ['modelUsed']
-        })
+
+        const usageRows = grouped.map((row: any) => ({
+            userEmail: row.userEmail,
+            functionName: row.functionName,
+            uses: row._count._all,
+        }))
 
         return NextResponse.json({
-            logs,
+            usage: usageRows,
             filters: {
-                functionNames: uniqueTasksResult.map((u: any) => u.functionName).filter(Boolean),
-                models: uniqueModelsResult.map((u: any) => u.modelUsed).filter(Boolean)
+                functionNames: uniqueFunctionsResult.map((u: any) => u.functionName).filter(Boolean),
             }
         })
     } catch (error) {

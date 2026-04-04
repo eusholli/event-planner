@@ -5,15 +5,14 @@
 export interface GenerateRequest {
   draft: string
   target_score?: number        // default 89.0
-  max_iterations?: number      // default 10
-  word_count_min?: number      // default 2000
-  word_count_max?: number      // default 2500
+  word_count_min?: number      // default 1500
+  word_count_max?: number      // default 2000
   model?: string
   generator_model?: string | null
   judge_model?: string | null
   rag_model?: string | null
-  humanizer_model?: string | null
-  recreate_ctx?: boolean
+  fact_check?: boolean         // default true
+  use_undetectable?: boolean   // default false
 }
 
 // ── SSE Events ───────────────────────────────────────────────────────────────
@@ -37,8 +36,8 @@ export interface HeartbeatEvent {
 }
 
 export interface ArticleScore {
-  percentage: number
-  performance_tier: 'World-class' | 'Strong' | 'Needs restructuring' | 'Rework'
+  percentage: number | null
+  performance_tier: 'World-class' | 'Strong' | 'Needs restructuring' | 'Rework' | null
   word_count: number
   meets_requirements: boolean
   overall_feedback: string | null
