@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithLog } from '@/lib/gemini';
 import prisma from '@/lib/prisma'
 import { withAuth } from '@/lib/with-auth'
 
@@ -17,17 +17,6 @@ async function postHandler(request: Request) {
         if (!targetRecord || Object.keys(targetRecord).length === 0) {
             return NextResponse.json({ error: 'Record details missing' }, { status: 400 })
         }
-
-        const settings = await prisma.systemSettings.findFirst()
-        if (!settings?.geminiApiKey) {
-            return NextResponse.json({ error: 'Gemini API Key not configured' }, { status: 400 })
-        }
-
-        const genAI = new GoogleGenerativeAI(settings.geminiApiKey)
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-3.1-flash-lite-preview',
-            tools: [{ googleSearch: {} }] as any
-        })
 
         let fieldsToFind = ''
         switch (targetType) {
@@ -57,7 +46,12 @@ async function postHandler(request: Request) {
         Do not include markdown formatting, backticks, or any explanation.
         `
 
-        const result = await model.generateContent(prompt)
+        const result = await generateContentWithLog(
+            'gemini-3.1-flash-lite-preview',
+            prompt,
+            { functionName: 'Intelligence-Enhance' },
+            { tools: [{ googleSearch: {} }] }
+        )
         const text = result.response.text()
 
         const firstOpen = text.indexOf('{')

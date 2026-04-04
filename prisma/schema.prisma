@@ -256,3 +256,15 @@ model IntelligenceSubEvent {
   @@id([subscriptionId, eventId])
   @@index([eventId])
 }
+
+model AILog {
+  id           String   @id @default(cuid())
+  userEmail    String
+  functionName String
+  prompt       String   @db.Text
+  modelUsed    String
+  createdAt    DateTime @default(now())
+
+  @@index([userEmail])
+  @@index([functionName])
+}

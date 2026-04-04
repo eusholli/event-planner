@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithLog } from '@/lib/gemini';
 import { withAuth } from '@/lib/with-auth'
 import { resolveEventId } from '@/lib/events'
 import prisma from '@/lib/prisma'
@@ -43,13 +43,6 @@ const POSTHandler = withAuth(async (request, ctx) => {
         const hadMarketingPlan = !!marketingPlan
         const companyList = sanitizedNames.join(', ')
 
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-3-flash-preview',
-            // @ts-expect-error — googleSearch tool typing not yet in SDK types
-            tools: [{ googleSearch: {} }],
-        })
-
         const contextSection = hadMarketingPlan
             ? `Event Marketing Plan (excerpt):\n${marketingPlan!.slice(0, 1500)}`
             : `Event name: "${event.name}"\nTarget companies: ${companyList}`
@@ -71,7 +64,12 @@ Based on this research, write a compelling 200–300 word article brief that:
 
 Return only the brief text. No preamble, no section labels, no explanation.`
 
-        const result = await model.generateContent(prompt)
+        const result = await generateContentWithLog(
+            'gemini-3-flash-preview',
+            prompt,
+            { functionName: 'LinkedInCampaign-GenerateBrief' },
+            { tools: [{ googleSearch: {} }] }
+        )
         const brief = result.response.text()
 
         return NextResponse.json({ brief, hadMarketingPlan })

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateContentWithLog } from '@/lib/gemini';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { withAuth, type AuthContext } from '@/lib/with-auth';
@@ -44,14 +44,6 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext }) {
             textData = await extractTextFromBlob(file, fileName);
         }
 
-        const settings = await prisma.systemSettings.findFirst();
-        if (!settings?.geminiApiKey) {
-            return NextResponse.json({ error: 'Gemini API constraint unmet in system settings' }, { status: 500 });
-        }
-
-        const genAI = new GoogleGenerativeAI(settings.geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
-
         const prompt = `
 You are a data extraction assistant. Extract Companies, People, and Meetings strictly adhering to the schema.
 You must find details from the following raw document text.
@@ -73,7 +65,7 @@ ${textData}
 ======================================
 `;
 
-        const result = await model.generateContent(prompt);
+        const result = await generateContentWithLog('gemini-3-flash-preview', prompt, { functionName: 'DataIngestion-Extract' });
         const textResponse = result.response.text();
         const cleanText = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
         

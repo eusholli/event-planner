@@ -74,6 +74,7 @@ export default function Navigation() {
         { href: '/admin/users', label: 'Users', roles: [Roles.Root, Roles.Marketing] },
         { href: '/admin/system', label: 'System', roles: [Roles.Root] },
         { href: '/admin/data-ingestion', label: 'Data Ingestion', roles: [Roles.Root, Roles.Marketing] },
+        { href: '/admin/ai-logs', label: 'AI Usage Report', roles: [Roles.Root] },
     ]
 
     // Event Groups (Scoped)

@@ -1,6 +1,6 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithLog } from '@/lib/gemini'
 import prisma from '@/lib/prisma'
 
 // -----------------------------------------------------------------------
@@ -93,15 +93,7 @@ export async function generateMarketingPlan(eventId: string): Promise<string> {
 
     if (!event) throw new Error('Event not found')
 
-    const apiKey = settings?.geminiApiKey
-    if (!apiKey) throw new Error('Gemini API key not configured in System Settings')
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
-        // @ts-expect-error — googleSearch tool typing not yet in SDK types
-        tools: [{ googleSearch: {} }],
-    })
+    // Removed direct initialization, moved to gemini helper
 
     // TODO: pull company name from SystemSettings once that field is added
     const companyName = 'Rakuten Symphony'
@@ -136,7 +128,12 @@ Suggest realistic draft values for each of the following metrics, with a brief r
 - **Target Speaking:** target number of speaking slots/panels to secure
 - **Target Media/PR:** target number of media interviews or press mentions`
 
-    const result = await model.generateContent(prompt)
+    const result = await generateContentWithLog(
+        'gemini-3-flash-preview',
+        prompt,
+        { functionName: 'ROIGenerate-MarketingPlan' },
+        { tools: [{ googleSearch: {} }] }
+    )
     const planText = result.response.text()
 
     // Save to DB — upsert so this works whether or not an ROI record exists yet
@@ -170,12 +167,7 @@ export async function extractROIValues(eventId: string): Promise<ROIDraft> {
         throw new Error('No marketing plan found for this event. Generate one first.')
     }
 
-    const apiKey = settings?.geminiApiKey
-    if (!apiKey) throw new Error('Gemini API key not configured in System Settings')
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    // No web search needed for extraction — just parsing the existing plan text
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    // Removed direct initialization, moved to gemini helper
 
     const prompt = `You are a data extraction assistant. Read the following event marketing plan and extract the specified values.
 
@@ -214,7 +206,11 @@ JSON format:
   ]
 }`
 
-    const result = await model.generateContent(prompt)
+    const result = await generateContentWithLog(
+        'gemini-2.0-flash',
+        prompt,
+        { functionName: 'ROIGenerate-ExtractPhase' }
+    )
     const text = result.response.text()
 
     // Robust JSON extraction — strip markdown if Gemini adds it

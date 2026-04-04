@@ -1,5 +1,5 @@
 // lib/intelligence-email.ts
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithLog } from '@/lib/gemini'
 import prisma from '@/lib/prisma'
 
 export type TargetUpdate = {
@@ -19,14 +19,7 @@ export type UpcomingEvent = {
   status: string
 }
 
-async function getGeminiModel() {
-  const settings = await prisma.systemSettings.findFirst()
-  if (!settings?.geminiApiKey) {
-    throw new Error('Gemini API key not configured in system settings')
-  }
-  const genAI = new GoogleGenerativeAI(settings.geminiApiKey)
-  return genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
-}
+
 
 function parseGeminiResponse(text: string): { subject: string; html: string } {
   const lines = text.trim().split('\n')
@@ -42,7 +35,7 @@ export async function composeIntelligenceEmail(
   matchedTargets: TargetUpdate[],
   upcomingEvents: UpcomingEvent[]
 ): Promise<{ subject: string; html: string }> {
-  const model = await getGeminiModel()
+
 
   const highlighted = matchedTargets.filter(t => t.highlighted)
   const eventLinked = matchedTargets.filter(t => !t.highlighted && t.linkedEventName)
@@ -96,7 +89,11 @@ Write a concise, professional HTML email. Rules:
 5. Tone: sharp, B2B sales, no fluff. Max 800 words.
 6. Do NOT wrap the HTML in markdown code fences.`
 
-  const result = await model.generateContent(prompt)
+  const result = await generateContentWithLog(
+    'gemini-3.1-flash-lite-preview',
+    prompt,
+    { functionName: 'IntelligenceEmail-ComposeRecipient' }
+  )
   return parseGeminiResponse(result.response.text())
 }
 
@@ -106,7 +103,7 @@ export async function composeAggregateEmail(
   upcomingEvents: UpcomingEvent[],
   runDate: string
 ): Promise<{ subject: string; html: string }> {
-  const model = await getGeminiModel()
+
 
   const byType = {
     company: allTargets.filter(t => t.type === 'company'),
@@ -153,6 +150,10 @@ Write a concise, professional HTML email. Rules:
 5. Tone: sharp, B2B, executive summary. Max 1200 words.
 6. Do NOT wrap the HTML in markdown code fences.`
 
-  const result = await model.generateContent(prompt)
+  const result = await generateContentWithLog(
+    'gemini-3.1-flash-lite-preview',
+    prompt,
+    { functionName: 'IntelligenceEmail-ComposeAggregate' }
+  )
   return parseGeminiResponse(result.response.text())
 }
