@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Linkedin, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { Linkedin, Trash2, ChevronDown, ChevronUp, ExternalLink, Check } from 'lucide-react'
+import LinkedInModal from '@/components/roi/LinkedInModal'
 
 interface LinkedInDraft {
     id: string
@@ -30,6 +31,12 @@ const STATUS_COLORS: Record<string, string> = {
     DRAFT: 'bg-amber-50 text-amber-700 border-amber-200',
     POSTED: 'bg-teal-50 text-teal-700 border-teal-200',
     ARCHIVED: 'bg-zinc-100 text-zinc-500 border-zinc-200',
+}
+
+interface Company {
+    id: string
+    name: string
+    pipelineValue?: number | null
 }
 
 const METRIC_FIELDS: Array<{ key: keyof LinkedInDraft; label: string; hint: string; isFloat?: boolean; isDate?: boolean; isUrl?: boolean }> = [
@@ -60,9 +67,13 @@ export default function LinkedInCampaignsPage() {
     const [metricDrafts, setMetricDrafts] = useState<Record<string, Record<string, string>>>({})
     const [saving, setSaving] = useState<string | null>(null)
     const [message, setMessage] = useState('')
+    const [targetCompanies, setTargetCompanies] = useState<Company[]>([])
+    const [selectedForLinkedIn, setSelectedForLinkedIn] = useState<Set<string>>(new Set())
+    const [linkedInModalOpen, setLinkedInModalOpen] = useState(false)
 
     useEffect(() => {
         if (!eventId) return
+
         fetch(`/api/social/drafts?eventId=${eventId}`)
             .then(res => res.json())
             .then(data => {
@@ -70,6 +81,15 @@ export default function LinkedInCampaignsPage() {
                 setLoading(false)
             })
             .catch(() => setLoading(false))
+
+        fetch(`/api/events/${eventId}/roi`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.targets?.targetCompanies) {
+                    setTargetCompanies(data.targets.targetCompanies)
+                }
+            })
+            .catch(() => {/* non-critical — section renders empty */})
     }, [eventId])
 
     const toggleMetrics = (id: string) => {
@@ -223,22 +243,80 @@ export default function LinkedInCampaignsPage() {
     const hasMetrics = (draft: LinkedInDraft) =>
         draft.impressions !== null || draft.clicks !== null || draft.engagementRate !== null
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-24">
-                <svg className="w-6 h-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-            </div>
-        )
-    }
-
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-3">
                 <Linkedin className="w-6 h-6 text-blue-600" />
                 <h2 className="text-2xl font-bold text-zinc-900">LinkedIn Campaigns</h2>
+            </div>
+
+            {/* Create Campaign */}
+            <div className="rounded-2xl border border-zinc-200/60 bg-white/70 backdrop-blur-sm shadow-sm p-6">
+                <h3 className="text-base font-semibold text-zinc-900 mb-4">Create Campaign</h3>
+
+                {targetCompanies.length > 0 ? (
+                    <div className="space-y-3">
+                        <p className="text-xs text-zinc-500">
+                            Select up to 5 target companies for your campaign (optional)
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {targetCompanies.map(company => {
+                                const selected = selectedForLinkedIn.has(company.id)
+                                const atMax = selectedForLinkedIn.size >= 5
+                                return (
+                                    <button
+                                        key={company.id}
+                                        onClick={() => {
+                                            setSelectedForLinkedIn(prev => {
+                                                const next = new Set(prev)
+                                                if (next.has(company.id)) next.delete(company.id)
+                                                else if (next.size < 5) next.add(company.id)
+                                                return next
+                                            })
+                                        }}
+                                        disabled={!selected && atMax}
+                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                                            selected
+                                                ? 'bg-blue-50 text-blue-800 border-blue-300'
+                                                : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-400'
+                                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                                    >
+                                        {selected && <Check className="w-3.5 h-3.5" />}
+                                        {company.name}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        {selectedForLinkedIn.size >= 5 && (
+                            <p className="text-xs text-amber-600">Maximum 5 companies selected.</p>
+                        )}
+                        {selectedForLinkedIn.size > 0 && (
+                            <button
+                                onClick={() => setSelectedForLinkedIn(new Set())}
+                                className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+                            >
+                                Clear selection
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <p className="text-sm text-zinc-400 mb-4">
+                        Add target companies on the ROI page to pre-fill your campaign.
+                    </p>
+                )}
+
+                <div className="mt-4">
+                    <button
+                        onClick={() => setLinkedInModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <Linkedin className="w-4 h-4" />
+                        {selectedForLinkedIn.size > 0
+                            ? `Draft LinkedIn Article (${selectedForLinkedIn.size} ${selectedForLinkedIn.size === 1 ? 'company' : 'companies'})`
+                            : 'Draft LinkedIn Article'
+                        }
+                    </button>
+                </div>
             </div>
 
             {message && (
@@ -247,12 +325,19 @@ export default function LinkedInCampaignsPage() {
                 </div>
             )}
 
-            {drafts.length === 0 ? (
+            {loading ? (
+                <div className="flex items-center justify-center py-24">
+                    <svg className="w-6 h-6 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                </div>
+            ) : drafts.length === 0 ? (
                 <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-12 text-center">
                     <Linkedin className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
                     <p className="text-zinc-500">No LinkedIn drafts yet.</p>
                     <p className="text-sm text-zinc-400 mt-1">
-                        Select companies on the ROI page and click &quot;Draft LinkedIn Posts&quot; to get started.
+                        Use the &quot;Draft LinkedIn Article&quot; button above to create your first campaign.
                     </p>
                 </div>
             ) : (
@@ -447,6 +532,23 @@ export default function LinkedInCampaignsPage() {
                     ))}
                 </div>
             )}
+            <LinkedInModal
+                isOpen={linkedInModalOpen}
+                onClose={() => {
+                    setLinkedInModalOpen(false)
+                    setSelectedForLinkedIn(new Set())
+                    // Refresh drafts list in case a new draft was saved
+                    fetch(`/api/social/drafts?eventId=${eventId}`)
+                        .then(res => res.json())
+                        .then(data => setDrafts(Array.isArray(data) ? data : []))
+                        .catch(() => {})
+                }}
+                companies={targetCompanies.filter(c => selectedForLinkedIn.has(c.id))}
+                eventId={eventId}
+                eventSlug={eventId}
+                initialPhase={selectedForLinkedIn.size === 0 ? 'params' : 'brief-loading'}
+                initialBrief={selectedForLinkedIn.size === 0 ? '' : undefined}
+            />
         </div>
     )
 }
