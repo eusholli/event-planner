@@ -257,7 +257,7 @@ export default function LinkedInCampaignsPage() {
                 {targetCompanies.length > 0 ? (
                     <div className="space-y-3">
                         <p className="text-xs text-zinc-500">
-                            Select up to 5 target companies for your campaign (optional)
+                            Select up to 5 target companies for your campaign or start with a blank prompt
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {targetCompanies.map(company => {
@@ -324,6 +324,9 @@ export default function LinkedInCampaignsPage() {
                     {message}
                 </div>
             )}
+
+            <div className="space-y-3">
+                <h3 className="text-base font-semibold text-zinc-900">Existing Campaigns</h3>
 
             {loading ? (
                 <div className="flex items-center justify-center py-24">
@@ -532,6 +535,7 @@ export default function LinkedInCampaignsPage() {
                     ))}
                 </div>
             )}
+            </div>
             <LinkedInModal
                 isOpen={linkedInModalOpen}
                 onClose={() => {
