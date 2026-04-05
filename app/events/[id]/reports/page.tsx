@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import useFilterParams from '@/hooks/useFilterParams'
+import { ChevronDown } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import moment from 'moment'
@@ -68,6 +69,8 @@ function ReportsContent({ eventId }: { eventId: string }) {
 
     // Filter + Sort State — persisted in URL
     const { filters: reportFilters, setFilter: setReportFilter, setFilters: setReportFilters, resetFilters: resetReportFilters } = useFilterParams('reports', REPORTS_FILTER_DEFAULTS)
+
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
     // Fetch Data
     // Fetch Initial Data
@@ -269,8 +272,15 @@ function ReportsContent({ eventId }: { eventId: string }) {
                 {/* Filters Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm space-y-6">
-                        <h3 className="font-semibold text-zinc-900">Filters</h3>
+                        <div
+                            className="flex items-center justify-between cursor-pointer lg:cursor-default"
+                            onClick={() => setIsFiltersExpanded(v => !v)}
+                        >
+                            <h3 className="font-semibold text-zinc-900">Filters</h3>
+                            <ChevronDown className={`lg:hidden h-4 w-4 transition-transform duration-200 ${isFiltersExpanded ? 'rotate-180' : ''}`} />
+                        </div>
 
+                        <div className={`space-y-6 ${isFiltersExpanded ? 'block' : 'hidden'} lg:block`}>
                         {/* Attendee Status */}
                         <div>
                             <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Status</label>
@@ -368,6 +378,7 @@ function ReportsContent({ eventId }: { eventId: string }) {
                         >
                             Clear Filters
                         </button>
+                        </div>
                     </div>
                 </div>
 

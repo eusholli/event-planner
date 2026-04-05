@@ -63,6 +63,18 @@ export default function Navigation() {
     const eventIdMatch = pathname?.match(/^\/events\/([^\/]+)/)
     const eventId = eventIdMatch ? eventIdMatch[1] : null
 
+    const [eventName, setEventName] = useState<string | null>(null)
+    useEffect(() => {
+        if (eventId) {
+            fetch(`/api/events/${eventId}`)
+                .then(res => res.json())
+                .then(data => setEventName(data.name || null))
+                .catch(() => setEventName(null))
+        } else {
+            setEventName(null)
+        }
+    }, [eventId])
+
     // Core Links (Global)
     const coreLinks = [
         { href: '/events', label: 'Events' },
@@ -101,6 +113,8 @@ export default function Navigation() {
                 { href: `/events/${eventId}/new-meeting`, label: 'New Meeting', roles: [Roles.Root, Roles.Admin, Roles.Marketing, Roles.User] },
                 { href: `/events/${eventId}/calendar`, label: 'Calendar' },
                 { href: `/events/${eventId}/rooms`, label: 'Rooms', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
+                { href: `/events/${eventId}/chat`, label: 'AI Chat' },
+                { href: `/events/${eventId}/settings`, label: 'Settings', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
             ]
         }
     ] : []
@@ -120,13 +134,19 @@ export default function Navigation() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex">
-                        <div className="flex-shrink-0 flex items-center">
+                        <div className="flex-shrink-0 flex items-center gap-3">
                             <Link href="/" className="relative text-xl font-bold tracking-tight text-zinc-900">
                                 AI Event Planner
                                 <sup className="absolute -top-2 -right-8 text-[10px] font-semibold tracking-wide text-zinc-400">
                                     Alpha
                                 </sup>
                             </Link>
+                            {eventName && (
+                                <span className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+                                    <span>/</span>
+                                    <span className="max-w-[160px] truncate text-zinc-600">{eventName}</span>
+                                </span>
+                            )}
                         </div>
                         <SignedIn>
                             <div className="hidden sm:ml-10 sm:flex sm:space-x-8">
@@ -156,18 +176,13 @@ export default function Navigation() {
                                     )
                                 })}
 
-                                {!eventId && adminLinks.filter(filterItem).map(link => (
-                                    <Link
-                                        key={link.href}
-                                        href={link.href}
-                                        className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${isActive(link.href)
-                                            ? 'border-zinc-900 text-zinc-900'
-                                            : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300'
-                                            }`}
-                                    >
-                                        {link.label}
-                                    </Link>
-                                ))}
+                                {!eventId && adminLinks.filter(filterItem).length > 0 && (
+                                    <NavDropdown
+                                        label="Admin"
+                                        items={adminLinks.filter(filterItem)}
+                                        isActive={adminLinks.some(link => isActive(link.href))}
+                                    />
+                                )}
                             </div>
                         </SignedIn>
                     </div>
@@ -222,6 +237,11 @@ export default function Navigation() {
             <SignedIn>
                 <div className={`${isOpen ? 'block' : 'hidden'} sm:hidden glass border-t border-zinc-100 max-h-[calc(100vh-4rem)] overflow-y-auto`} id="mobile-menu">
                     <div className="pt-2 pb-3 space-y-1 px-2">
+                        {eventName && (
+                            <div className="px-3 py-2 text-xs font-medium text-zinc-400 border-b border-zinc-100 mb-1">
+                                <span className="text-zinc-600 font-semibold truncate block">{eventName}</span>
+                            </div>
+                        )}
                         {coreLinks.map(link => (
                             <Link
                                 key={link.href}
@@ -258,7 +278,7 @@ export default function Navigation() {
                                                 <Link
                                                     key={item.href}
                                                     href={item.href}
-                                                    onClick={() => setIsOpen(false)}
+                                                    onClick={() => { setIsOpen(false); setOpenGroup(null) }}
                                                     className={`block pl-3 pr-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(item.href)
                                                         ? 'bg-zinc-50 text-zinc-900'
                                                         : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
@@ -273,19 +293,41 @@ export default function Navigation() {
                             )
                         })}
 
-                        {!eventId && adminLinks.filter(filterItem).map(link => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                onClick={() => setIsOpen(false)}
-                                className={`block pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${isActive(link.href)
-                                    ? 'bg-zinc-100 text-zinc-900'
-                                    : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
-                                    }`}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                        {!eventId && adminLinks.filter(filterItem).length > 0 && (() => {
+                            const filteredAdminLinks = adminLinks.filter(filterItem)
+                            const adminGroupExpanded = openGroup === 'Admin'
+                            return (
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => setOpenGroup(adminGroupExpanded ? null : 'Admin')}
+                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${filteredAdminLinks.some(l => isActive(l.href))
+                                            ? 'text-zinc-900'
+                                            : 'text-zinc-500'
+                                            }`}
+                                    >
+                                        Admin
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${adminGroupExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {adminGroupExpanded && (
+                                        <div className="pl-6 space-y-1">
+                                            {filteredAdminLinks.map(link => (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    onClick={() => { setIsOpen(false); setOpenGroup(null) }}
+                                                    className={`block pl-3 pr-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
+                                                        ? 'bg-zinc-50 text-zinc-900'
+                                                        : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                                        }`}
+                                                >
+                                                    {link.label}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })()}
                     </div>
                 </div>
             </SignedIn>

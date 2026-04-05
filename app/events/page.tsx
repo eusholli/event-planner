@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EventMap } from '@/components/reports/EventMap'
@@ -47,6 +47,7 @@ export default function EventsPage() {
     const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams('events', EVENTS_FILTER_DEFAULTS)
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
     const fetchEvents = () => {
         setLoading(true)
@@ -237,8 +238,15 @@ export default function EventsPage() {
                     {/* Filters Sidebar */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm space-y-6">
-                            <h3 className="font-semibold text-neutral-900">Filters</h3>
+                            <div
+                                className="flex items-center justify-between cursor-pointer lg:cursor-default"
+                                onClick={() => setIsFiltersExpanded(v => !v)}
+                            >
+                                <h3 className="font-semibold text-neutral-900">Filters</h3>
+                                <ChevronDown className={`lg:hidden h-4 w-4 transition-transform duration-200 ${isFiltersExpanded ? 'rotate-180' : ''}`} />
+                            </div>
 
+                            <div className={`space-y-6 ${isFiltersExpanded ? 'block' : 'hidden'} lg:block`}>
                             {/* Search */}
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Search</label>
@@ -327,6 +335,7 @@ export default function EventsPage() {
                                     </div>
                                 </div>
                             )}
+                            </div>
                         </div>
                     </div>
 
