@@ -1,7 +1,7 @@
 'use client'
 
 import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles } from 'lucide-react'
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
 import MetricCard from '@/components/roi/MetricCard'
@@ -75,6 +75,15 @@ const emptyTargets: ROITargets = {
 
 const currency = (v: number) => `$${v.toLocaleString()}`
 
+function UnsavedBadge() {
+    return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-800 text-xs font-semibold">
+            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+            Unsaved changes
+        </span>
+    )
+}
+
 function ROIPage() {
     const params = useParams()
     const eventId = params?.id as string
@@ -92,6 +101,41 @@ function ROIPage() {
     const [availableCompanies, setAvailableCompanies] = useState<Company[]>([])
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
     const companyDropdownRef = useRef<HTMLDivElement>(null)
+    const savedTargetsRef = useRef<ROITargets | null>(null)
+
+    const isFinancialDirty = useMemo(() => {
+        if (!savedTargetsRef.current) return false
+        const saved = savedTargetsRef.current
+        return (
+            saved.budget !== targets.budget ||
+            saved.requesterEmail !== targets.requesterEmail ||
+            saved.expectedPipeline !== targets.expectedPipeline ||
+            saved.winRate !== targets.winRate
+        )
+    }, [targets])
+
+    const isEventTargetsDirty = useMemo(() => {
+        if (!savedTargetsRef.current) return false
+        const saved = savedTargetsRef.current
+        return (
+            saved.targetCustomerMeetings !== targets.targetCustomerMeetings ||
+            saved.targetErta !== targets.targetErta ||
+            saved.targetSpeaking !== targets.targetSpeaking ||
+            saved.targetMediaPR !== targets.targetMediaPR
+        )
+    }, [targets])
+
+    const isCompaniesDirty = useMemo(() => {
+        if (!savedTargetsRef.current) return false
+        return JSON.stringify(savedTargetsRef.current.targetCompanies) !== JSON.stringify(targets.targetCompanies)
+    }, [targets])
+
+    const isMarketingPlanDirty = useMemo(() => {
+        if (!savedTargetsRef.current) return false
+        return savedTargetsRef.current.marketingPlan !== targets.marketingPlan
+    }, [targets])
+
+    const isDirty = isFinancialDirty || isEventTargetsDirty || isCompaniesDirty || isMarketingPlanDirty
 
     // Sparkle state
     const [sparkleLoading, setSparkleLoading] = useState<'financial' | 'events' | 'companies' | null>(null)
@@ -121,7 +165,10 @@ function ROIPage() {
         fetch(`/api/events/${eventId}/roi`)
             .then(res => res.json())
             .then(data => {
-                if (data.targets) setTargets(data.targets)
+                if (data.targets) {
+                    setTargets(data.targets)
+                    savedTargetsRef.current = data.targets
+                }
                 if (data.actuals) setActuals(data.actuals)
                 setLoading(false)
             })
@@ -158,6 +205,38 @@ function ROIPage() {
         }
     }, [targets.expectedPipeline, targets.winRate])
 
+    const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+
+    // Intercept in-app link clicks when dirty
+    useEffect(() => {
+        if (!isDirty) return
+        const handleClick = (e: MouseEvent) => {
+            const anchor = (e.target as Element).closest('a')
+            if (!anchor) return
+            const href = anchor.getAttribute('href')
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) return
+            e.preventDefault()
+            e.stopPropagation()
+            setPendingNavigation(href)
+        }
+        document.addEventListener('click', handleClick, true)
+        return () => document.removeEventListener('click', handleClick, true)
+    }, [isDirty])
+
+    // Warn before browser refresh / close
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            e.preventDefault()
+            e.returnValue = ''
+        }
+        if (isDirty) {
+            window.addEventListener('beforeunload', handleBeforeUnload)
+        }
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload)
+        }
+    }, [isDirty])
+
     // Read planWarning / planError from URL on mount, show message, clear params
     useEffect(() => {
         const warning = searchParams.get('planWarning')
@@ -189,6 +268,7 @@ function ROIPage() {
             if (!res.ok) throw new Error('Failed to save')
             const result = await res.json()
             setTargets(result)
+            savedTargetsRef.current = result
             setMessage('Targets saved successfully')
         } catch (err: any) {
             setMessage(err.message || 'Error saving targets')
@@ -198,6 +278,14 @@ function ROIPage() {
     }
 
     const handleSubmit = async () => {
+        if (!allFieldsFilled) {
+            setMessage('All fields must be completed before submitting for approval.')
+            return
+        }
+        if (isDirty) {
+            setMessage('Please save your changes before submitting for approval.')
+            return
+        }
         try {
             const res = await fetch(`/api/events/${eventId}/roi`, {
                 method: 'POST',
@@ -375,7 +463,10 @@ function ROIPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900">ROI Dashboard</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">ROI Dashboard</h1>
+                        {isDirty && <UnsavedBadge />}
+                    </div>
                     <p className="mt-1 text-zinc-500">Set targets, track performance, and measure event ROI.</p>
                 </div>
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border ${statusStyle.color}`}>
@@ -424,6 +515,7 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                             Financial Targets
+                            {isFinancialDirty && <UnsavedBadge />}
                             {canEdit && !isLocked && (
                                 <button
                                     onClick={async () => {
@@ -541,6 +633,7 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-violet-500 rounded-full" />
                             Event Targets
+                            {isEventTargetsDirty && <UnsavedBadge />}
                             {canEdit && !isLocked && (
                                 <button
                                     onClick={async () => {
@@ -652,6 +745,7 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-teal-500 rounded-full" />
                             Target Companies
+                            {isCompaniesDirty && <UnsavedBadge />}
                             {canEdit && !isLocked && (
                                 <button
                                     onClick={async () => {
@@ -898,6 +992,7 @@ function ROIPage() {
                         <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
                             <span className="w-1 h-5 bg-amber-500 rounded-full" />
                             Marketing Plan
+                            {isMarketingPlanDirty && <UnsavedBadge />}
                             {canEdit && !isLocked && (
                                 <SparkleMarketingPlanButton
                                     eventId={eventId}
@@ -933,7 +1028,7 @@ function ROIPage() {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3 pt-2">
                         {canEdit && !isLocked && (
-                            <button onClick={handleSaveTargets} disabled={saving || !allFieldsFilled}
+                            <button onClick={handleSaveTargets} disabled={saving}
                                 className="bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm">
                                 <Save className="w-4 h-4" />
                                 Save Targets
@@ -1086,6 +1181,41 @@ function ROIPage() {
                                 Save Actuals
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Unsaved changes navigation warning */}
+            {pendingNavigation && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl border border-zinc-200">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-amber-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                            </div>
+                            <div>
+                                <h3 className="text-base font-semibold text-zinc-900">Unsaved changes</h3>
+                                <p className="mt-1 text-sm text-zinc-500">You have unsaved changes that will be lost if you leave this page. Do you want to continue?</p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setPendingNavigation(null)}
+                                className="px-4 py-2 rounded-xl text-sm font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors"
+                            >
+                                Stay on page
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const dest = pendingNavigation
+                                    setPendingNavigation(null)
+                                    router.push(dest!)
+                                }}
+                                className="px-4 py-2 rounded-xl text-sm font-medium bg-zinc-900 text-white hover:bg-zinc-800 transition-colors"
+                            >
+                                Leave without saving
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
