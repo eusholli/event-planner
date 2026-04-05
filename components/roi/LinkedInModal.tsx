@@ -19,6 +19,8 @@ interface LinkedInModalProps {
     companies: Company[]
     eventId: string
     eventSlug: string
+    initialPhase?: Phase
+    initialBrief?: string
 }
 
 type Phase = 'brief-loading' | 'params' | 'generating' | 'review'
@@ -39,9 +41,11 @@ export default function LinkedInModal({
     companies,
     eventId,
     eventSlug,
+    initialPhase = 'brief-loading',
+    initialBrief = '',
 }: LinkedInModalProps) {
     const { getToken } = useAuth()
-    const [phase, setPhase] = useState<Phase>('brief-loading')
+    const [phase, setPhase] = useState<Phase>(initialPhase)
     const [brief, setBrief] = useState('')
     const [briefWarning, setBriefWarning] = useState(false)
     const [briefError, setBriefError] = useState(false)
@@ -64,12 +68,9 @@ export default function LinkedInModal({
 
     // Fetch brief when modal opens
     useEffect(() => {
-        if (!isOpen || companies.length === 0) return
+        if (!isOpen) return
 
-        setPhase('brief-loading')
-        setBrief('')
-        setBriefWarning(false)
-        setBriefError(false)
+        // Reset shared state regardless of companies
         setLogEntries([])
         setResult(null)
         setSavedId(null)
@@ -77,6 +78,20 @@ export default function LinkedInModal({
         setEditedHumanized('')
         setEditedOriginal('')
         heartbeatCountRef.current = 0
+
+        if (companies.length === 0) {
+            // No companies: skip brief fetch, open at initialPhase with initialBrief
+            setPhase(initialPhase)
+            setBrief(initialBrief)
+            setBriefWarning(false)
+            setBriefError(false)
+            return
+        }
+
+        setPhase('brief-loading')
+        setBrief('')
+        setBriefWarning(false)
+        setBriefError(false)
 
         const ac = new AbortController()
 
@@ -106,7 +121,7 @@ export default function LinkedInModal({
 
         return () => ac.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, eventId, companyKey])
+    }, [isOpen, eventId, companyKey, initialPhase, initialBrief])
 
     // Seed editable state when result arrives
     useEffect(() => {
@@ -260,17 +275,19 @@ export default function LinkedInModal({
                     {/* PHASE: params */}
                     {phase === 'params' && (
                         <>
-                            {/* Company badges */}
-                            <div>
-                                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Target companies</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {companies.map(c => (
-                                        <span key={c.id} className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-800 rounded-lg text-sm font-medium border border-blue-200">
-                                            {c.name}
-                                        </span>
-                                    ))}
+                            {/* Company badges — only shown when companies were selected */}
+                            {companies.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Target companies</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {companies.map(c => (
+                                            <span key={c.id} className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-800 rounded-lg text-sm font-medium border border-blue-200">
+                                                {c.name}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Warnings */}
                             {briefWarning && (
