@@ -42,6 +42,7 @@ services:
       args:
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_LI_ARTICLE_API_URL: ${NEXT_PUBLIC_LI_ARTICLE_API_URL:-}
         SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
     restart: unless-stopped
     environment:
