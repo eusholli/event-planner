@@ -18,6 +18,11 @@ npm run db:main          # Switch to main branch database (.env.main -> .env)
 npm run db:multi         # Switch to multi-event database (.env.multi -> .env)
 ```
 
+## Required Post-Change Checks
+
+- **After any database schema change** (`prisma/schema.prisma` or migrations): run `/sync-schema-exports` to audit all import/export surfaces and fix any misaligned fields or missing models.
+- **After adding any new feature or API route that may be role-restricted**: run `/rbac-check` to verify RBAC correctness — withAuth coverage, permission helper usage, and per-route policy conformance.
+
 **Database switching**: `npm run db:main/multi` copies the specified `.env.*` file to `.env` and regenerates the Prisma client. Use `db:main` on the `main` branch and `db:multi` on the `multi-event` branch.
 
 ## Branch & Database Strategy

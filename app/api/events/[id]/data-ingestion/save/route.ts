@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { withAuth } from '@/lib/with-auth';
+import { withAuth, type AuthContext } from '@/lib/with-auth';
 
 // Utility to resolve or create a company to get a valid companyId
 async function resolveCompanyId(companyName: string | null | undefined): Promise<string | null> {
@@ -15,8 +15,16 @@ async function resolveCompanyId(companyName: string | null | undefined): Promise
 
 export const dynamic = 'force-dynamic';
 
-async function handlePOST(req: Request) {
+async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Promise<{ id: string }> }) {
     try {
+        const { id: eventIdOrSlug } = await ctx.params;
+        const event = await prisma.event.findFirst({
+            where: { OR: [{ id: eventIdOrSlug }, { slug: eventIdOrSlug }] }
+        });
+        if (!event) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+        }
+        const eventId = event.id;
         const { companies, people, meetings } = await req.json();
 
         // Server-Side Mandatory Check
@@ -44,7 +52,7 @@ async function handlePOST(req: Request) {
             meetingsCreated: 0, meetingsUpdated: 0
         };
 
-        // 1. Save Companies
+        // 1. Save Companies (system-level, no event link needed)
         const companyIdMap = new Map<string, string>();
         if (companies && Array.isArray(companies)) {
             for (const comp of companies) {
@@ -52,7 +60,7 @@ async function handlePOST(req: Request) {
                 const existing = await prisma.company.findFirst({
                     where: { name: { equals: compData.name, mode: 'insensitive' } }
                 });
-                
+
                 if (existing) {
                     await prisma.company.update({
                         where: { id: existing.id },
@@ -68,12 +76,12 @@ async function handlePOST(req: Request) {
             }
         }
 
-        // 2. Save People (Attendees)
+        // 2. Save People (Attendees), linking to this event
         const personEmailToIdMap = new Map<string, string>();
         if (people && Array.isArray(people)) {
             for (const person of people) {
                 const { _id, existingRecord, aiSuggestedFields, companyName, isExternal, id, createdAt, updatedAt, company, events, meetings, intelligenceSubs, ...personData } = person;
-                
+
                 // Get or create resolved companyId
                 let resolvedCompanyId = companyName ? companyIdMap.get(companyName.toLowerCase()) : null;
                 if (!resolvedCompanyId && companyName) {
@@ -97,19 +105,27 @@ async function handlePOST(req: Request) {
                 if (existing) {
                     await prisma.attendee.update({
                         where: { id: existing.id },
-                        data: dataPayload
+                        data: {
+                            ...dataPayload,
+                            events: { connect: { id: eventId } }
+                        }
                     });
                     personEmailToIdMap.set(personData.email, existing.id);
                     results.peopleUpdated++;
                 } else {
-                    const fresh = await prisma.attendee.create({ data: dataPayload });
+                    const fresh = await prisma.attendee.create({
+                        data: {
+                            ...dataPayload,
+                            events: { connect: { id: eventId } }
+                        }
+                    });
                     personEmailToIdMap.set(personData.email, fresh.id);
                     results.peopleCreated++;
                 }
             }
         }
 
-        // 3. Save Meetings
+        // 3. Save Meetings, scoped to this event
         if (meetings && Array.isArray(meetings)) {
             for (const meet of meetings) {
                 const { _id, existingRecord, aiSuggestedFields, attendeeEmails, id, createdAt, updatedAt, event, room, attendees, ...meetData } = meet;
@@ -129,16 +145,16 @@ async function handlePOST(req: Request) {
                                 const parts = cleanEmail.split('@');
                                 const namePart = parts[0] || 'Unknown';
                                 const domainPart = parts[1] || 'unknown.com';
-                                
+
                                 // Parse Name from local part (e.g., john.doe -> John Doe)
                                 const parsedName = namePart.split(/[\.\-_]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-                                
+
                                 // Parse CompanyName from domain (e.g., apple.com -> Apple)
                                 const domainPieces = domainPart.split('.');
                                 const companyNameRaw = domainPieces[0] ? domainPieces[0].charAt(0).toUpperCase() + domainPieces[0].slice(1) : 'Unknown';
-                                
+
                                 const resolvedCompanyId = await resolveCompanyId(companyNameRaw);
-                                
+
                                 if (resolvedCompanyId) {
                                     const freshAtt = await prisma.attendee.create({
                                         data: {
@@ -146,12 +162,13 @@ async function handlePOST(req: Request) {
                                             email: cleanEmail,
                                             companyId: resolvedCompanyId,
                                             title: 'Unknown',
-                                            isExternal: true
+                                            isExternal: true,
+                                            events: { connect: { id: eventId } }
                                         }
                                     });
                                     attId = freshAtt.id;
                                     personEmailToIdMap.set(cleanEmail, freshAtt.id);
-                                    personEmailToIdMap.set(email, freshAtt.id); // also cache original case
+                                    personEmailToIdMap.set(email, freshAtt.id);
                                     results.peopleCreated++;
                                 }
                             }
@@ -163,7 +180,7 @@ async function handlePOST(req: Request) {
                 let existing = null;
                 if (meetData.title && meetData.date) {
                     existing = await prisma.meeting.findFirst({
-                        where: { title: meetData.title, date: meetData.date }
+                        where: { title: meetData.title, date: meetData.date, eventId }
                     });
                 }
 
@@ -172,6 +189,7 @@ async function handlePOST(req: Request) {
                         where: { id: existing.id },
                         data: {
                             ...meetData,
+                            eventId,
                             attendees: attendeeConnects.length > 0 ? { set: attendeeConnects } : undefined
                         }
                     });
@@ -180,6 +198,7 @@ async function handlePOST(req: Request) {
                     await prisma.meeting.create({
                         data: {
                             ...meetData,
+                            eventId,
                             attendees: attendeeConnects.length > 0 ? { connect: attendeeConnects } : undefined
                         }
                     });
@@ -196,4 +215,5 @@ async function handlePOST(req: Request) {
     }
 }
 
-export const POST = withAuth(handlePOST, { requireRole: 'manageEvents' }) as any;
+// Authorized for 'write' which maps to Root, Marketing, and Admin
+export const POST = withAuth(handlePOST, { requireRole: 'write' }) as any;

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { generateContentWithLog } from '@/lib/gemini';
-import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { withAuth, type AuthContext } from '@/lib/with-auth';
 
@@ -29,7 +28,7 @@ async function extractTextFromBlob(blob: Blob, fileName: string): Promise<string
     }
 }
 
-async function handlePOST(req: Request, ctx: { authCtx: AuthContext }) {
+async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Promise<{ id: string }> }) {
     try {
         const formData = await req.formData();
         const file = formData.get('file') as Blob | null;
@@ -68,13 +67,13 @@ ${textData}
         const result = await generateContentWithLog('gemini-3-flash-preview', prompt, { functionName: 'DataIngestion-Extract' });
         const textResponse = result.response.text();
         const cleanText = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-        
+
         const firstOpen = cleanText.indexOf('{');
         const lastClose = cleanText.lastIndexOf('}');
-        const jsonStr = firstOpen !== -1 && lastClose !== -1 
-            ? cleanText.substring(firstOpen, lastClose + 1) 
+        const jsonStr = firstOpen !== -1 && lastClose !== -1
+            ? cleanText.substring(firstOpen, lastClose + 1)
             : cleanText;
-            
+
         const object = JSON.parse(jsonStr);
 
         // Helper to fill in blank AI extracted fields from Existing DB values
@@ -103,22 +102,22 @@ ${textData}
         const augmentedPeople = await Promise.all(object.people.map(async (person: any) => {
             const emailDomain = person.email.split('@')[1]?.toLowerCase();
             const isExternalFlag = emailDomain && internalDomains.has(emailDomain) ? false : true;
-            
-            const existingMatch = await prisma.attendee.findUnique({ 
+
+            const existingMatch = await prisma.attendee.findUnique({
                 where: { email: person.email },
                 include: { company: true }
             }) as any;
-            
+
             if (existingMatch && existingMatch.company) {
                 existingMatch.companyName = existingMatch.company.name;
             }
-            
+
             applyFill(person, existingMatch);
-            
+
             if (!person.title || person.title.trim() === '') {
                 person.title = 'Unknown';
             }
-            
+
             return {
                 ...person,
                 isExternal: isExternalFlag,
@@ -132,7 +131,7 @@ ${textData}
                 where: { name: { equals: comp.name, mode: 'insensitive' } }
             });
             applyFill(comp, existingMatch);
-            
+
             return {
                 ...comp,
                 existingRecord: existingMatch ? existingMatch : null,
@@ -144,21 +143,21 @@ ${textData}
             let existingMatch = null;
             if (meet.title && meet.date) {
                 existingMatch = await prisma.meeting.findFirst({
-                    where: { 
+                    where: {
                         title: meet.title,
                         date: meet.date
                     }
                 });
             } else if (meet.title && meet.startTime) {
                 existingMatch = await prisma.meeting.findFirst({
-                    where: { 
+                    where: {
                         title: meet.title,
                         startTime: meet.startTime
                     }
                 });
             }
             applyFill(meet, existingMatch);
-            
+
             return {
                 ...meet,
                 existingRecord: existingMatch ? existingMatch : null,
@@ -176,5 +175,5 @@ ${textData}
     }
 }
 
-// Authorized for 'manageEvents' which maps to Root and Marketing
-export const POST = withAuth(handlePOST, { requireRole: 'manageEvents' }) as any;
+// Authorized for 'write' which maps to Root, Marketing, and Admin
+export const POST = withAuth(handlePOST, { requireRole: 'write' }) as any;

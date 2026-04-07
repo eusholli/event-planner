@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useParams } from 'next/navigation';
 import { Upload, FileText, CheckCircle, AlertTriangle, Save, Wand2, Trash2, RotateCcw, Sparkles } from 'lucide-react';
 
 type ExtractStatus = 'idle' | 'uploading' | 'reviewing' | 'saving' | 'success';
@@ -19,7 +20,7 @@ const isAiSuggested = (obj: any, fieldName: string) => {
 const FieldEditor = ({ obj, idx, field, label, required = false, type = 'text', setFn, list }: any) => {
     const predicted = isAiSuggested(obj, field);
     const hasError = required && (!obj[field] || String(obj[field]).trim() === '');
-    
+
     const existingVal = obj.existingRecord ? obj.existingRecord[field] : undefined;
     const stringifyObjVal = obj[field] !== null && obj[field] !== undefined ? String(obj[field]) : '';
     const stringifyExistingVal = existingVal !== null && existingVal !== undefined ? String(existingVal) : '';
@@ -28,7 +29,7 @@ const FieldEditor = ({ obj, idx, field, label, required = false, type = 'text', 
     const revertToDb = () => {
         updateEntity(obj, idx, field, existingVal, setFn, list);
     };
-    
+
     return (
         <div className="flex flex-col space-y-1 my-2 border-l-2 pl-3 pb-2
             transition-all duration-300 relative
@@ -46,12 +47,12 @@ const FieldEditor = ({ obj, idx, field, label, required = false, type = 'text', 
                     </div>
                 )}
             </div>
-            
+
             {type === 'boolean' ? (
                 <select
                     value={obj[field] === true ? 'true' : obj[field] === false ? 'false' : ''}
                     onChange={e => updateEntity(obj, idx, field, e.target.value === 'true', setFn, list)}
-                    className={`text-sm py-1 border-b bg-transparent outline-none transition-colors 
+                    className={`text-sm py-1 border-b bg-transparent outline-none transition-colors
                         ${predicted ? 'border-amber-300 bg-amber-50 rounded-sm px-1' : 'border-zinc-200 focus:border-zinc-800'}
                         ${hasError ? 'border-red-500 bg-red-50' : ''}`}
                 >
@@ -70,15 +71,15 @@ const FieldEditor = ({ obj, idx, field, label, required = false, type = 'text', 
                     placeholder={`Enter ${label.toLowerCase()}...`}
                 />
             )}
-            
+
             {hasConflict && (
                 <div className="mt-1.5 flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded p-1.5 px-2">
                     <div className="flex items-center text-[10px] text-zinc-500 truncate mr-2">
                         <span className="font-semibold text-zinc-700 mr-1 shrink-0">DB Value:</span>
                         <span className="truncate" title={stringifyExistingVal}>{stringifyExistingVal}</span>
                     </div>
-                    <button 
-                        onClick={revertToDb} 
+                    <button
+                        onClick={revertToDb}
                         title="Revert to existing Database value"
                         className="shrink-0 flex items-center text-[10px] font-bold uppercase text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 px-2 py-1 rounded transition-colors"
                     >
@@ -92,6 +93,7 @@ const FieldEditor = ({ obj, idx, field, label, required = false, type = 'text', 
 };
 
 export default function DataIngestionPage() {
+    const { id: eventId } = useParams<{ id: string }>();
     const [status, setStatus] = useState<ExtractStatus>('idle');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [enhancingIdx, setEnhancingIdx] = useState<{type: string, idx: number} | null>(null);
@@ -111,11 +113,11 @@ export default function DataIngestionPage() {
         try {
             setStatus('uploading');
             setErrorMsg(null);
-            
+
             const formData = new FormData();
             formData.append('file', file);
 
-            const res = await fetch('/api/admin/data-ingestion/extract', {
+            const res = await fetch(`/api/events/${eventId}/data-ingestion/extract`, {
                 method: 'POST',
                 body: formData
             });
@@ -170,7 +172,7 @@ export default function DataIngestionPage() {
             setStatus('saving');
             setErrorMsg(null);
 
-            const res = await fetch('/api/admin/data-ingestion/save', {
+            const res = await fetch(`/api/events/${eventId}/data-ingestion/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ companies, people, meetings })
@@ -210,11 +212,11 @@ export default function DataIngestionPage() {
                 body: JSON.stringify({ record: recordToEnhance, type })
             });
             const enhancements = await res.json();
-            
+
             if (res.ok && enhancements && Object.keys(enhancements).length > 0) {
                 const keysToUpdate = Object.keys(enhancements);
                 const aiSuggestedFields = [...(recordToEnhance.aiSuggestedFields || [])];
-                
+
                 keysToUpdate.forEach(k => {
                    if (!aiSuggestedFields.includes(k)) aiSuggestedFields.push(k);
                 });
@@ -274,7 +276,7 @@ export default function DataIngestionPage() {
             )}
 
             {status === 'idle' && (
-                <div 
+                <div
                     onClick={() => fileInput.current?.click()}
                     className="border-2 border-dashed border-zinc-300 rounded-xl p-16 text-center cursor-pointer hover:bg-zinc-50 hover:border-zinc-400 transition-all group"
                 >
@@ -294,7 +296,7 @@ export default function DataIngestionPage() {
 
             {(status === 'reviewing' || status === 'saving') && (
                 <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
-                    
+
                     <div className="border-b border-zinc-200 flex justify-between items-center bg-zinc-50 px-4">
                         <div className="flex">
                             <button onClick={() => setActiveTab('companies')} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'companies' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-800'}`}>
@@ -307,8 +309,8 @@ export default function DataIngestionPage() {
                                 Meetings ({meetings.length})
                             </button>
                         </div>
-                        <button 
-                            onClick={handleSave} 
+                        <button
+                            onClick={handleSave}
                             disabled={status === 'saving'}
                             className="bg-zinc-900 text-white hover:bg-zinc-800 px-4 py-2 text-sm font-medium flex items-center rounded disabled:opacity-50 transition-colors"
                         >
@@ -318,7 +320,7 @@ export default function DataIngestionPage() {
                     </div>
 
                     <div className="p-6 bg-white min-h-[400px]">
-                        
+
                         {activeTab === 'companies' && (
                             <div className="space-y-6">
                                 {companies.map((co, idx) => (
@@ -329,17 +331,17 @@ export default function DataIngestionPage() {
                                                     Update / Merge
                                                 </div>
                                             )}
-                                            <button 
-                                                onClick={() => enhanceRecord(idx, 'companies')} 
+                                            <button
+                                                onClick={() => enhanceRecord(idx, 'companies')}
                                                 disabled={enhancingIdx?.type === 'companies' && enhancingIdx.idx === idx}
-                                                className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-amber-100 disabled:opacity-50" 
+                                                className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-amber-100 disabled:opacity-50"
                                                 title="AI Enhance Missing Fields"
                                             >
                                                 {(enhancingIdx?.type === 'companies' && enhancingIdx.idx === idx) ? <div className="w-4 h-4 border-2 border-amber-500 rounded-full border-t-transparent animate-spin"/> : <Sparkles className="w-4 h-4" />}
                                             </button>
-                                            <button 
-                                                onClick={() => removeEntity(idx, 'companies')} 
-                                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-red-100" 
+                                            <button
+                                                onClick={() => removeEntity(idx, 'companies')}
+                                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-red-100"
                                                 title="Delete record"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -366,17 +368,17 @@ export default function DataIngestionPage() {
                                                     Update / Merge
                                                 </div>
                                             )}
-                                            <button 
-                                                onClick={() => enhanceRecord(idx, 'people')} 
+                                            <button
+                                                onClick={() => enhanceRecord(idx, 'people')}
                                                 disabled={enhancingIdx?.type === 'people' && enhancingIdx.idx === idx}
-                                                className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-amber-100 disabled:opacity-50" 
+                                                className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-amber-100 disabled:opacity-50"
                                                 title="AI Enhance Missing Fields"
                                             >
                                                 {(enhancingIdx?.type === 'people' && enhancingIdx.idx === idx) ? <div className="w-4 h-4 border-2 border-amber-500 rounded-full border-t-transparent animate-spin"/> : <Sparkles className="w-4 h-4" />}
                                             </button>
-                                            <button 
-                                                onClick={() => removeEntity(idx, 'people')} 
-                                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-red-100" 
+                                            <button
+                                                onClick={() => removeEntity(idx, 'people')}
+                                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-red-100"
                                                 title="Delete record"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -412,17 +414,17 @@ export default function DataIngestionPage() {
                                                     Update / Merge
                                                 </div>
                                             )}
-                                            <button 
-                                                onClick={() => enhanceRecord(idx, 'meetings')} 
+                                            <button
+                                                onClick={() => enhanceRecord(idx, 'meetings')}
                                                 disabled={enhancingIdx?.type === 'meetings' && enhancingIdx.idx === idx}
-                                                className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-amber-100 disabled:opacity-50" 
+                                                className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-amber-100 disabled:opacity-50"
                                                 title="AI Enhance Missing Fields"
                                             >
                                                 {(enhancingIdx?.type === 'meetings' && enhancingIdx.idx === idx) ? <div className="w-4 h-4 border-2 border-amber-500 rounded-full border-t-transparent animate-spin"/> : <Sparkles className="w-4 h-4" />}
                                             </button>
-                                            <button 
-                                                onClick={() => removeEntity(idx, 'meetings')} 
-                                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-red-100" 
+                                            <button
+                                                onClick={() => removeEntity(idx, 'meetings')}
+                                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 rounded-bl-lg border-l border-b border-transparent hover:border-red-100"
                                                 title="Delete record"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -452,12 +454,11 @@ export default function DataIngestionPage() {
                                 {meetings.length === 0 && <p className="text-zinc-400 text-center py-10">No meetings extracted</p>}
                             </div>
                         )}
-                        
+
                     </div>
                 </div>
             )}
-            
+
         </div>
     );
 }
-

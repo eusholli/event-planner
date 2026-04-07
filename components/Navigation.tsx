@@ -85,7 +85,6 @@ export default function Navigation() {
     const adminLinks = [
         { href: '/admin/users', label: 'Users', roles: [Roles.Root, Roles.Marketing] },
         { href: '/admin/system', label: 'System', roles: [Roles.Root] },
-        { href: '/admin/data-ingestion', label: 'Data Ingestion', roles: [Roles.Root, Roles.Marketing] },
         { href: '/admin/ai-logs', label: 'AI Usage Report', roles: [Roles.Root] },
     ]
 
@@ -105,6 +104,7 @@ export default function Navigation() {
             items: [
                 { href: `/events/${eventId}/attendees`, label: 'Attendees' },
                 { href: `/events/${eventId}/companies`, label: 'Companies' },
+                { href: `/events/${eventId}/data-ingestion`, label: 'Data Ingestion', roles: [Roles.Root, Roles.Admin, Roles.Marketing] },
             ]
         },
         {
