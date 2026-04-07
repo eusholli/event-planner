@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+build/
+
+# Generated files
+app/generated/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment & secrets
+.env
+.env.*
+.env.sentry-build-plugin
+
+# Database export/import files (large, not useful for context)
+db-json/
+
+# Test artifacts
+coverage/
+test-results/
+browser_use_tests/
+
+# Prisma migrations (schema.prisma is enough)
+prisma/migrations/
+prisma/migrations_backup/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+error.log
+server.log
+curl_output.txt
+
+# OS/editor
+.DS_Store
+
+# Large binary/asset files
+public/fonts/
+*.pdf
+*.pem
+
+# Vercel
+.vercel
+
+# Docker local overrides
+docker-compose.override.yml
+
+# Claude/tooling internals
+.antigravity/
+.worktrees/
+.claude/settings.local.json
+
+# One-off debug/scratch files
+debug_import.ts
+tmp-check-db.ts
