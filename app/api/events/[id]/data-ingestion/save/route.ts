@@ -15,7 +15,7 @@ async function resolveCompanyId(companyName: string | null | undefined): Promise
 
 export const dynamic = 'force-dynamic';
 
-async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Promise<{ id: string }> }) {
+async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Promise<Record<string, string>> }) {
     try {
         const { id: eventIdOrSlug } = await ctx.params;
         const event = await prisma.event.findFirst({
