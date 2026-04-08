@@ -21,12 +21,14 @@ type CheckboxKey =
     | 'contentAmplification'
     | 'crmUpdate'
     | 'reportingActivations'
+    | 'debriefOnTeamMeeting'
     | 'eventCompleted'
 
 type ChecklistState = {
     [K in CheckboxKey]: boolean
 } & {
     finalReport: string
+    notes: Record<string, string>
 }
 
 const EMPTY_CHECKLIST: ChecklistState = {
@@ -45,8 +47,10 @@ const EMPTY_CHECKLIST: ChecklistState = {
     contentAmplification: false,
     crmUpdate: false,
     reportingActivations: false,
+    debriefOnTeamMeeting: false,
     eventCompleted: false,
     finalReport: '',
+    notes: {},
 }
 
 const SECTIONS = [
@@ -142,6 +146,11 @@ const SECTIONS = [
                 description: 'Complete final event reporting in event-planner tool.',
             },
             {
+                key: 'debriefOnTeamMeeting' as CheckboxKey,
+                label: 'Debrief on Team Meeting',
+                description: 'Hold an internal team debrief meeting to review event outcomes, capture learnings, and agree on next steps.',
+            },
+            {
                 key: 'eventCompleted' as CheckboxKey,
                 label: 'Event Completed',
                 description: 'Event status is set to "OCCURRED".',
@@ -159,10 +168,11 @@ export default function ChecklistPage() {
     const { user } = useUser()
     const [checklist, setChecklist] = useState<ChecklistState>(EMPTY_CHECKLIST)
     const [loading, setLoading] = useState(true)
-    const [savingReport, setSavingReport] = useState(false)
-    const [reportMessage, setReportMessage] = useState<string | null>(null)
+    const [saving, setSaving] = useState(false)
+    const [saveMessage, setSaveMessage] = useState<string | null>(null)
     const [toggleError, setToggleError] = useState<string | null>(null)
     const savedReportRef = useRef<string>('')
+    const savedNotesRef = useRef<Record<string, string>>({})
 
     const role = user?.publicMetadata?.role as string
     const canEdit = role === 'root' || role === 'marketing'
@@ -183,6 +193,7 @@ export default function ChecklistPage() {
                 if (!data) return
                 if (data.checklist) {
                     const cl = data.checklist
+                    const loadedNotes = (cl.notes as Record<string, string>) ?? {}
                     setChecklist({
                         eventRecommendation: cl.eventRecommendation ?? false,
                         eventROICompleted: cl.eventROICompleted ?? false,
@@ -199,15 +210,50 @@ export default function ChecklistPage() {
                         contentAmplification: cl.contentAmplification ?? false,
                         crmUpdate: cl.crmUpdate ?? false,
                         reportingActivations: cl.reportingActivations ?? false,
+                        debriefOnTeamMeeting: cl.debriefOnTeamMeeting ?? false,
                         eventCompleted: cl.eventCompleted ?? false,
                         finalReport: cl.finalReport ?? '',
+                        notes: loadedNotes,
                     })
                     savedReportRef.current = cl.finalReport ?? ''
+                    savedNotesRef.current = loadedNotes
                 }
             })
             .catch(err => console.error('Failed to load checklist:', err))
             .finally(() => setLoading(false))
     }, [eventId, user, canEdit, router])
+
+    const reportDirty = checklist.finalReport !== savedReportRef.current
+    const notesDirty = JSON.stringify(checklist.notes) !== JSON.stringify(savedNotesRef.current)
+    const isDirty = reportDirty || notesDirty
+
+    // Warn on browser-level navigation (refresh, tab close, external URL)
+    useEffect(() => {
+        if (!isDirty) return
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault()
+            e.returnValue = ''
+        }
+        window.addEventListener('beforeunload', handler)
+        return () => window.removeEventListener('beforeunload', handler)
+    }, [isDirty])
+
+    // Warn on in-app Next.js navigation (sidebar links, etc.)
+    useEffect(() => {
+        if (!isDirty) return
+        const handler = (e: MouseEvent) => {
+            const anchor = (e.target as HTMLElement).closest('a')
+            if (!anchor) return
+            const href = anchor.getAttribute('href')
+            if (!href || href.startsWith('#')) return
+            if (!window.confirm('You have unsaved changes. Leave without saving?')) {
+                e.preventDefault()
+                e.stopPropagation()
+            }
+        }
+        document.addEventListener('click', handler, true)
+        return () => document.removeEventListener('click', handler, true)
+    }, [isDirty])
 
     const handleToggle = async (key: CheckboxKey) => {
         const newValue = !checklist[key]
@@ -227,27 +273,31 @@ export default function ChecklistPage() {
         }
     }
 
-    const handleSaveReport = async () => {
-        setSavingReport(true)
-        setReportMessage(null)
+    const handleSave = async () => {
+        setSaving(true)
+        setSaveMessage(null)
         try {
             const res = await fetch(`/api/events/${eventId}/checklist`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ finalReport: checklist.finalReport }),
+                body: JSON.stringify({
+                    notes: checklist.notes,
+                    finalReport: checklist.finalReport,
+                }),
             })
             if (!res.ok) throw new Error('Save failed')
             savedReportRef.current = checklist.finalReport
-            setReportMessage('Report saved.')
+            savedNotesRef.current = { ...checklist.notes }
+            setSaveMessage('Saved.')
+            setTimeout(() => setSaveMessage(null), 3000)
         } catch {
-            setReportMessage('Failed to save report.')
+            setSaveMessage('Failed to save.')
         } finally {
-            setSavingReport(false)
+            setSaving(false)
         }
     }
 
     const completedCount = CHECKBOX_KEYS.filter(k => checklist[k]).length
-    const reportDirty = checklist.finalReport !== savedReportRef.current
 
     if (!user) return null
 
@@ -273,12 +323,38 @@ export default function ChecklistPage() {
         )
     }
 
+    const SaveButton = ({ className = '' }: { className?: string }) => (
+        <button
+            onClick={handleSave}
+            disabled={saving || !isDirty}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-zinc-900 text-white hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${className}`}
+        >
+            <Save className="h-4 w-4" />
+            {saving ? 'Saving…' : 'Save'}
+        </button>
+    )
+
     return (
         <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-zinc-900">Marketing Execution Checklist</h1>
-                <p className="mt-1 text-sm text-zinc-500">Track all marketing activities for this event from recommendation through wrap-up.</p>
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-zinc-900">Marketing Execution Checklist</h1>
+                    <p className="mt-1 text-sm text-zinc-500">Track all marketing activities for this event from recommendation through wrap-up.</p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 pt-1">
+                    {saveMessage && (
+                        <span className={`text-sm ${saveMessage.startsWith('Failed') ? 'text-red-500' : 'text-teal-600'}`}>
+                            {saveMessage}
+                        </span>
+                    )}
+                    {isDirty && !saveMessage && (
+                        <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                            Unsaved changes
+                        </span>
+                    )}
+                    <SaveButton />
+                </div>
             </div>
 
             {/* Progress */}
@@ -324,24 +400,38 @@ export default function ChecklistPage() {
                             const checked = checklist[item.key]
                             return (
                                 <li key={item.key}>
-                                    <button
-                                        onClick={() => handleToggle(item.key)}
-                                        className="w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-zinc-50 transition-colors group"
-                                    >
-                                        <span className="mt-0.5 shrink-0">
-                                            {checked
-                                                ? <CheckSquare className="h-5 w-5 text-teal-500" />
-                                                : <Square className="h-5 w-5 text-zinc-300 group-hover:text-zinc-400" />
-                                            }
-                                        </span>
-                                        <span className="flex-1 min-w-0">
-                                            <span className={`block text-sm font-medium ${checked ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
-                                                {item.label}
+                                    <div className="flex items-stretch divide-x divide-zinc-100">
+                                        <button
+                                            onClick={() => handleToggle(item.key)}
+                                            className="flex-1 flex items-start gap-3 px-5 py-4 text-left hover:bg-zinc-50 transition-colors group"
+                                        >
+                                            <span className="mt-0.5 shrink-0">
+                                                {checked
+                                                    ? <CheckSquare className="h-5 w-5 text-teal-500" />
+                                                    : <Square className="h-5 w-5 text-zinc-300 group-hover:text-zinc-400" />
+                                                }
                                             </span>
-                                            <span className="block text-xs text-zinc-400 mt-0.5">{item.description}</span>
-                                        </span>
-                                        {checked && <CheckCircle2 className="mt-0.5 h-4 w-4 text-teal-400 shrink-0" />}
-                                    </button>
+                                            <span className="flex-1 min-w-0">
+                                                <span className={`block text-sm font-medium ${checked ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
+                                                    {item.label}
+                                                </span>
+                                                <span className="block text-xs text-zinc-400 mt-0.5">{item.description}</span>
+                                            </span>
+                                            {checked && <CheckCircle2 className="mt-0.5 h-4 w-4 text-teal-400 shrink-0" />}
+                                        </button>
+                                        <div className="w-56 px-3 py-4 flex items-start">
+                                            <textarea
+                                                rows={2}
+                                                placeholder="Notes…"
+                                                value={checklist.notes[item.key] ?? ''}
+                                                onChange={e => setChecklist(prev => ({
+                                                    ...prev,
+                                                    notes: { ...prev.notes, [item.key]: e.target.value },
+                                                }))}
+                                                className="w-full text-xs text-zinc-700 border border-zinc-200 rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-teal-500 placeholder:text-zinc-300"
+                                            />
+                                        </div>
+                                    </div>
                                     {/* Event Completed callout */}
                                     {item.key === 'eventCompleted' && checked && (
                                         <div className="mx-5 mb-4 flex items-start gap-2 text-sm text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-4 py-3">
@@ -358,13 +448,8 @@ export default function ChecklistPage() {
 
             {/* Final Report */}
             <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-                <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
+                <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50">
                     <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Final Event Report</h2>
-                    {reportDirty && (
-                        <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                            Unsaved changes
-                        </span>
-                    )}
                 </div>
                 <div className="p-5 space-y-4">
                     <p className="text-sm text-zinc-500">Write the final marketing report for this event. Summarize outcomes, lessons learned, and recommendations for future events.</p>
@@ -375,24 +460,22 @@ export default function ChecklistPage() {
                         placeholder="Enter your final event report here..."
                         className="w-full text-sm text-zinc-900 border border-zinc-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-y placeholder:text-zinc-300"
                     />
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-zinc-400">
-                            {reportMessage && (
-                                <span className={reportMessage.startsWith('Failed') ? 'text-red-500' : 'text-teal-600'}>
-                                    {reportMessage}
-                                </span>
-                            )}
-                        </span>
-                        <button
-                            onClick={handleSaveReport}
-                            disabled={savingReport || !reportDirty}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-zinc-900 text-white hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <Save className="h-4 w-4" />
-                            {savingReport ? 'Saving…' : 'Save Report'}
-                        </button>
-                    </div>
                 </div>
+            </div>
+
+            {/* Bottom Save */}
+            <div className="flex items-center justify-end gap-3 pb-4">
+                {saveMessage && (
+                    <span className={`text-sm ${saveMessage.startsWith('Failed') ? 'text-red-500' : 'text-teal-600'}`}>
+                        {saveMessage}
+                    </span>
+                )}
+                {isDirty && !saveMessage && (
+                    <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                        Unsaved changes
+                    </span>
+                )}
+                <SaveButton />
             </div>
         </div>
     )
