@@ -93,7 +93,7 @@ export default function Navigation() {
         {
             label: 'Performance',
             items: [
-                { href: `/events/${eventId}/dashboard`, label: 'Dashboard' },
+                { href: `/events/${eventId}/dashboard`, label: 'Meetings' },
                 { href: `/events/${eventId}/roi`, label: 'ROI' },
                 { href: `/events/${eventId}/reports`, label: 'Reports' },
                 { href: `/events/${eventId}/checklist`, label: 'Checklist', roles: [Roles.Root, Roles.Marketing] },
