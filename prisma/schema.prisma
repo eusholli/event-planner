@@ -37,6 +37,7 @@ model Event {
   meetings          Meeting[]
   rooms             Room[]
   roiTargets        EventROITargets?
+  marketingChecklist EventMarketingChecklist?
   password          String?
   description       String?
   latitude          Float?
@@ -255,6 +256,40 @@ model IntelligenceSubEvent {
   event          Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   @@id([subscriptionId, eventId])
   @@index([eventId])
+}
+
+model EventMarketingChecklist {
+  id                    String   @id @default(cuid())
+  eventId               String   @unique
+  event                 Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Pre-Event (7 items)
+  eventRecommendation   Boolean  @default(false)
+  eventROICompleted     Boolean  @default(false)
+  approval              Boolean  @default(false)
+  eventPlanning         Boolean  @default(false)
+  campaignPlanning      Boolean  @default(false)
+  campaignActivation    Boolean  @default(false)
+  campaignEvaluation    Boolean  @default(false)
+
+  // During-Event (3 items)
+  internalAttendeesAdded Boolean @default(false)
+  liveCoverage          Boolean  @default(false)
+  leadManagement        Boolean  @default(false)
+
+  // Post-Event (6 items)
+  eventDataCapture      Boolean  @default(false)
+  eventWrapUp           Boolean  @default(false)
+  contentAmplification  Boolean  @default(false)
+  crmUpdate             Boolean  @default(false)
+  reportingActivations  Boolean  @default(false)
+  eventCompleted        Boolean  @default(false)
+
+  // Final Report
+  finalReport           String?  @db.Text
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model AILog {

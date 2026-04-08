@@ -17,7 +17,8 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
                 rooms: true,
                 meetings: { include: { attendees: true, room: true } },
                 roiTargets: { include: { targetCompanies: true } },
-                linkedInDrafts: true
+                linkedInDrafts: true,
+                marketingChecklist: true
             }
         })
 

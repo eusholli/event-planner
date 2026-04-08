@@ -338,7 +338,26 @@ async function importV5(json: any): Promise<{ warnings: string[] }> {
         }
     }
 
-    // 8. LinkedIn Drafts — nested per event
+    // 8. Marketing Checklist — nested per event
+    if (json.events && Array.isArray(json.events)) {
+        for (const evt of json.events) {
+            if (!evt.marketingChecklist) continue
+            const eventId = eventNameToId.get(evt.name)
+            if (!eventId) continue
+            try {
+                const { id: _id, eventId: _eid, createdAt: _ca, updatedAt: _ua, event: _ev, ...checklistData } = evt.marketingChecklist
+                await prisma.eventMarketingChecklist.upsert({
+                    where: { eventId },
+                    create: { eventId, ...checklistData },
+                    update: checklistData,
+                })
+            } catch (e) {
+                warnings.push(`Marketing checklist for '${evt.name}': import failed — ${(e as Error).message}`)
+            }
+        }
+    }
+
+    // 9. LinkedIn Drafts — nested per event
     if (json.events && Array.isArray(json.events)) {
         for (const evt of json.events) {
             if (!evt.linkedInDrafts || !Array.isArray(evt.linkedInDrafts)) continue
@@ -569,6 +588,19 @@ async function importV4(json: any): Promise<void> {
                     create: { event: { connect: { id: eventId } }, ...roiData },
                     update: { ...roiData, targetCompanies: targetCompanyConnect ? { set: targetCompanyConnect } : undefined },
                 }).catch(e => console.warn('ROI targets import skip', e))
+            }
+
+            if (evt.marketingChecklist) {
+                try {
+                    const { id: _id, eventId: _eid, createdAt: _ca, updatedAt: _ua, event: _ev, ...checklistData } = evt.marketingChecklist
+                    await prisma.eventMarketingChecklist.upsert({
+                        where: { eventId },
+                        create: { eventId, ...checklistData },
+                        update: checklistData,
+                    })
+                } catch (e) {
+                    console.warn('Marketing checklist import skip', e)
+                }
             }
 
             if (evt.linkedInDrafts && Array.isArray(evt.linkedInDrafts)) {

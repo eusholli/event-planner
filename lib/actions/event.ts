@@ -130,7 +130,8 @@ export async function exportEventData(eventId: string) {
             rooms: true,
             meetings: { include: { attendees: true, room: true } },
             roiTargets: { include: { targetCompanies: true } },
-            linkedInDrafts: true
+            linkedInDrafts: true,
+            marketingChecklist: true
         }
     })
     if (!event) throw new Error('Event not found')
@@ -158,7 +159,7 @@ export async function exportEventData(eventId: string) {
     }))
 
     // Event: strip id, authorizedUserIds → authorizedEmails
-    const { id, password: _pw, authorizedUserIds, attendees: _atts, rooms: _rooms, meetings: _mtgs, roiTargets: _roi, ...eventRest } = event as any
+    const { id, password: _pw, authorizedUserIds, attendees: _atts, rooms: _rooms, meetings: _mtgs, roiTargets: _roi, marketingChecklist: _mc, ...eventRest } = event as any
     const eventOut = { ...eventRest, authorizedEmails }
 
     // Attendees: strip id/companyId, add companyName
@@ -191,6 +192,12 @@ export async function exportEventData(eventId: string) {
 
     // LinkedIn drafts: strip id/eventId (no ID translation needed — companyNames is denormalized)
     const linkedInDraftsOut = event.linkedInDrafts.map(({ id: _id, eventId: _eid, ...rest }) => rest)
+
+    // Marketing checklist: strip id/eventId
+    const checklistOut = event.marketingChecklist ? (() => {
+        const { id: _id, eventId: _eid, ...rest } = event.marketingChecklist as any
+        return rest
+    })() : null
 
     // Intelligence subscriptions (already event-scoped — translate IDs to names)
     const eventAttendeeIds = event.attendees.map(a => a.id)
@@ -230,9 +237,10 @@ export async function exportEventData(eventId: string) {
         meetings: meetingsOut,
         roiTargets: roiOut,
         linkedInDrafts: linkedInDraftsOut,
+        marketingChecklist: checklistOut,
         intelligenceSubscriptions,
         exportedAt: new Date().toISOString(),
-        version: '5.1',
+        version: '5.2',
     }
 }
 
@@ -269,8 +277,9 @@ export async function importEventData(eventId: string, data: any) {
 
     const warnings: string[] = []
 
-    if (data.version && data.version !== '5.0') {
-        warnings.push(`File version is ${data.version}, expected 5.0.`)
+    const supportedVersions = ['5.0', '5.1', '5.2']
+    if (data.version && !supportedVersions.includes(data.version)) {
+        warnings.push(`File version is ${data.version}, expected 5.0–5.2.`)
     }
 
     // Scope check: warn if event name doesn't match
@@ -516,7 +525,21 @@ export async function importEventData(eventId: string, data: any) {
         }
     }
 
-    // 8. Intelligence subscriptions
+    // 8. Marketing Checklist
+    if (data.marketingChecklist) {
+        try {
+            const { id: _id, eventId: _eid, createdAt: _ca, updatedAt: _ua, ...checklistData } = data.marketingChecklist
+            await prisma.eventMarketingChecklist.upsert({
+                where: { eventId },
+                create: { eventId, ...checklistData },
+                update: checklistData,
+            })
+        } catch (e) {
+            warnings.push(`Marketing checklist: failed — ${(e as Error).message}`)
+        }
+    }
+
+    // 9. Intelligence subscriptions
     if (data.intelligenceSubscriptions && Array.isArray(data.intelligenceSubscriptions)) {
         for (const s of data.intelligenceSubscriptions) {
             try {
