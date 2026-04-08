@@ -28,7 +28,7 @@ async function extractTextFromBlob(blob: Blob, fileName: string): Promise<string
     }
 }
 
-async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Promise<{ id: string }> }) {
+async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Promise<Record<string, string>> }) {
     try {
         const formData = await req.formData();
         const file = formData.get('file') as Blob | null;
