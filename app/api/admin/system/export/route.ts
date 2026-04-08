@@ -65,6 +65,14 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
             }
         })
 
+        // Capture attendees not connected to any event (orphaned)
+        const allAttendees = await prisma.attendee.findMany()
+        for (const att of allAttendees) {
+            if (!attendeeMap.has(att.id)) {
+                attendeeMap.set(att.id, att)
+            }
+        }
+
         const settings = await prisma.systemSettings.findFirst()
 
         const intelligenceSubscriptions = await prisma.intelligenceSubscription.findMany({

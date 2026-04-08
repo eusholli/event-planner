@@ -501,6 +501,7 @@ export async function importEventData(eventId: string, data: any) {
                         companyIds: draft.companyIds ?? [],
                         companyNames: draft.companyNames ?? [],
                         content: draft.content ?? '',
+                        originalContent: draft.originalContent ?? null,
                         angle: draft.angle ?? '',
                         tone: draft.tone ?? '',
                         status: draft.status ?? 'DRAFT',

@@ -21,8 +21,9 @@ const postHandler = withAuth(async (request) => {
         const config = JSON.parse(text)
         const warnings: string[] = []
 
-        if (config.version && config.version !== '5.0') {
-            warnings.push(`File version is ${config.version}, expected 5.0. Import may produce unexpected results.`)
+        const supportedVersions = ['5.0', '5.1']
+        if (config.version && !supportedVersions.includes(config.version)) {
+            warnings.push(`File version is ${config.version}, expected 5.0–5.1. Import may produce unexpected results.`)
         }
 
         const parseEventDates = (obj: any) => {
@@ -77,7 +78,7 @@ const postHandler = withAuth(async (request) => {
             for (const evt of config.events) {
                 try {
                     const parsed = parseEventDates(evt)
-                    const { id: _id, roiTargets, authorizedEmails, ...eventFields } = parsed
+                    const { id: _id, roiTargets, marketingChecklist: _mc, linkedInDrafts: _li, authorizedEmails, ...eventFields } = parsed
 
                     // Resolve authorizedEmails → authorizedUserIds
                     let authorizedUserIds: string[] = []
@@ -351,6 +352,7 @@ const postHandler = withAuth(async (request) => {
                             companyIds: draft.companyIds ?? [],
                             companyNames: draft.companyNames ?? [],
                             content: draft.content ?? '',
+                            originalContent: draft.originalContent ?? null,
                             angle: draft.angle ?? '',
                             tone: draft.tone ?? '',
                             status: draft.status ?? 'DRAFT',
@@ -379,6 +381,80 @@ const postHandler = withAuth(async (request) => {
                     } catch (e) {
                         warnings.push(`LinkedIn draft for event '${evt.name}': import failed — ${(e as Error).message}`)
                     }
+                }
+            }
+        }
+
+        // 9. Marketing Checklist — nested per event
+        if (config.events && Array.isArray(config.events)) {
+            for (const evt of config.events) {
+                if (!evt.marketingChecklist) continue
+                const eventId = eventNameToId.get(evt.name)
+                if (!eventId) continue
+                try {
+                    const { id: _id, eventId: _eid, createdAt: _ca, updatedAt: _ua, event: _ev, ...checklistData } = evt.marketingChecklist
+                    await prisma.eventMarketingChecklist.upsert({
+                        where: { eventId },
+                        create: { eventId, ...checklistData },
+                        update: checklistData,
+                    })
+                } catch (e) {
+                    warnings.push(`Marketing checklist for '${evt.name}': import failed — ${(e as Error).message}`)
+                }
+            }
+        }
+
+        // 10. Intelligence Subscriptions — top-level, name/email-based
+        if (config.intelligenceSubscriptions && Array.isArray(config.intelligenceSubscriptions)) {
+            for (const s of config.intelligenceSubscriptions) {
+                try {
+                    let sub = await prisma.intelligenceSubscription.findUnique({ where: { userId: s.userId } })
+                    if (!sub) {
+                        sub = await prisma.intelligenceSubscription.create({
+                            data: { userId: s.userId, email: s.email, active: s.active ?? true },
+                        }).catch(() => null)
+                    } else {
+                        await prisma.intelligenceSubscription.update({
+                            where: { id: sub.id },
+                            data: { email: s.email, active: s.active ?? true },
+                        }).catch(() => {})
+                    }
+                    if (!sub) {
+                        warnings.push(`Intelligence sub for user '${s.userId}': could not create — skipped`)
+                        continue
+                    }
+
+                    for (const email of (s.selectedAttendeeEmails ?? [])) {
+                        const aid = emailToAttendeeId.get(email)
+                        if (!aid) continue
+                        await prisma.intelligenceSubAttendee.upsert({
+                            where: { subscriptionId_attendeeId: { subscriptionId: sub.id, attendeeId: aid } },
+                            create: { subscriptionId: sub.id, attendeeId: aid },
+                            update: {},
+                        }).catch(() => {})
+                    }
+
+                    for (const name of (s.selectedCompanyNames ?? [])) {
+                        const cid = companyNameToId.get(name)
+                        if (!cid) continue
+                        await prisma.intelligenceSubCompany.upsert({
+                            where: { subscriptionId_companyId: { subscriptionId: sub.id, companyId: cid } },
+                            create: { subscriptionId: sub.id, companyId: cid },
+                            update: {},
+                        }).catch(() => {})
+                    }
+
+                    for (const name of (s.selectedEventNames ?? [])) {
+                        const eid = eventNameToId.get(name)
+                        if (!eid) continue
+                        await prisma.intelligenceSubEvent.upsert({
+                            where: { subscriptionId_eventId: { subscriptionId: sub.id, eventId: eid } },
+                            create: { subscriptionId: sub.id, eventId: eid },
+                            update: {},
+                        }).catch(() => {})
+                    }
+                } catch (e) {
+                    warnings.push(`Intelligence sub for user '${s.userId}': import failed — ${(e as Error).message}`)
                 }
             }
         }

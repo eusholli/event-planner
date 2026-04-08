@@ -10,7 +10,7 @@ async function exportData(): Promise<Response> {
         const settings = await prisma.systemSettings.findFirst()
         const companies = await prisma.company.findMany()
         const events = await prisma.event.findMany({
-            include: { roiTargets: { include: { targetCompanies: true } }, linkedInDrafts: true }
+            include: { roiTargets: { include: { targetCompanies: true } }, linkedInDrafts: true, marketingChecklist: true }
         })
         const attendees = await prisma.attendee.findMany({
             include: { events: { select: { name: true } } }
@@ -42,7 +42,7 @@ async function exportData(): Promise<Response> {
         // Events: strip id, translate authorizedUserIds → authorizedEmails, targetCompanyIds → targetCompanyNames
         const eventsOut: any[] = []
         for (const event of events) {
-            const { id, roiTargets, linkedInDrafts, authorizedUserIds, password: _pw, subscriptionCount: _sc, ...eventRest } = event as any
+            const { id, roiTargets, linkedInDrafts, marketingChecklist, authorizedUserIds, password: _pw, subscriptionCount: _sc, ...eventRest } = event as any
 
             // Translate authorizedUserIds → authorizedEmails (throws on Clerk failure)
             const authorizedEmails = await userIdsToEmails(authorizedUserIds ?? [])
@@ -57,11 +57,17 @@ async function exportData(): Promise<Response> {
 
             const linkedInDraftsOut = (linkedInDrafts ?? []).map(({ eventId: _eid, ...rest }: any) => rest)
 
+            const checklistOut = marketingChecklist ? (() => {
+                const { id: _id, eventId: _eid, ...rest } = marketingChecklist as any
+                return rest
+            })() : null
+
             eventsOut.push({
                 ...eventRest,
                 authorizedEmails,
                 roiTargets: roiOut,
                 linkedInDrafts: linkedInDraftsOut,
+                marketingChecklist: checklistOut,
             })
         }
 
@@ -92,8 +98,34 @@ async function exportData(): Promise<Response> {
             }
         })
 
+        // Additional lookup needed for intelligence subscriptions
+        const attendeeIdToEmail = new Map(attendees.map(a => [a.id, a.email]))
+
+        const intelligenceSubscriptions = await prisma.intelligenceSubscription.findMany({
+            include: {
+                selectedAttendees: { select: { attendeeId: true } },
+                selectedCompanies: { select: { companyId: true } },
+                selectedEvents: { select: { eventId: true } },
+            },
+        })
+
+        const intelligenceSubscriptionsOut = intelligenceSubscriptions.map(s => ({
+            userId: s.userId,
+            email: s.email,
+            active: s.active,
+            selectedAttendeeEmails: s.selectedAttendees
+                .map(r => attendeeIdToEmail.get(r.attendeeId))
+                .filter((e): e is string => !!e),
+            selectedCompanyNames: s.selectedCompanies
+                .map(r => companyIdToName.get(r.companyId))
+                .filter((n): n is string => !!n),
+            selectedEventNames: s.selectedEvents
+                .map(r => eventIdToName.get(r.eventId))
+                .filter((n): n is string => !!n),
+        }))
+
         const exportDataObj = {
-            version: '5.0',
+            version: '5.1',
             exportedAt: new Date().toISOString(),
             system: systemOut,
             companies: companiesOut,
@@ -101,6 +133,7 @@ async function exportData(): Promise<Response> {
             attendees: attendeesOut,
             rooms: roomsOut,
             meetings: meetingsOut,
+            intelligenceSubscriptions: intelligenceSubscriptionsOut,
         }
 
         const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
