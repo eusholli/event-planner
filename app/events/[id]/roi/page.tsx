@@ -1,6 +1,6 @@
 'use client'
 
-import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles } from 'lucide-react'
+import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles, Upload } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
@@ -98,6 +98,7 @@ function ROIPage() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const [companyInput, setCompanyInput] = useState('')
+    const [bulkInput, setBulkInput] = useState('')
     const [availableCompanies, setAvailableCompanies] = useState<Company[]>([])
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
     const companyDropdownRef = useRef<HTMLDivElement>(null)
@@ -182,9 +183,12 @@ function ROIPage() {
     useEffect(() => {
         fetch('/api/companies')
             .then(res => res.json())
-            .then(data => setAvailableCompanies(data))
+            .then(data => {
+                setAvailableCompanies(data)
+            })
             .catch(err => console.error('Failed to fetch companies', err))
     }, [])
+
 
     // Close company dropdown when clicking outside
     useEffect(() => {
@@ -364,6 +368,30 @@ function ROIPage() {
         }
         setCompanyInput('')
         setShowCompanyDropdown(false)
+    }
+
+    // NOTE: company names containing commas are not supported in the bulk input
+    const handleBulkProcess = () => {
+        if (!bulkInput.trim()) return
+        const names = bulkInput.split(',').map(n => n.trim()).filter(Boolean)
+        const matched: Company[] = []
+        const unmatched: string[] = []
+        for (const name of names) {
+            const found = availableCompanies.find(c => c.name.toLowerCase() === name.toLowerCase())
+            if (found) {
+                if (!targets.targetCompanies.some(tc => tc.id === found.id)) matched.push(found)
+            } else {
+                unmatched.push(name)
+            }
+        }
+        if (matched.length > 0) {
+            setTargets(prev => ({ ...prev, targetCompanies: [...prev.targetCompanies, ...matched] }))
+        }
+        setBulkInput('')
+        if (unmatched.length > 0) {
+            const encoded = unmatched.map(n => encodeURIComponent(n)).join(',')
+            router.push(`/events/${eventId}/data-ingestion?returnTo=roi&pendingCompanies=${encoded}`)
+        }
     }
 
     const removeCompany = (companyId: string) => {
@@ -741,43 +769,45 @@ function ROIPage() {
                     </section>
 
                     {/* Target Companies */}
-                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                    <section id="target-companies" className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-teal-500 rounded-full" />
                             Target Companies
                             {isCompaniesDirty && <UnsavedBadge />}
                             {canEdit && !isLocked && (
-                                <button
-                                    onClick={async () => {
-                                        const draft = await runExtraction('companies')
-                                        if (!draft) return
-                                        const suggested = (draft.targetCompanies || [])
-                                            .filter(c => !targets.targetCompanies.some(tc => tc.name.toLowerCase() === c.name.toLowerCase()))
-                                            .map(c => ({
-                                                name: c.name,
-                                                description: c.description,
-                                                checked: true,
-                                                existingId: availableCompanies.find(ac => ac.name.toLowerCase() === c.name.toLowerCase())?.id ?? null,
-                                            }))
-                                        if (suggested.length === 0) {
-                                            setMessage('All suggested companies are already in your target list.')
-                                            return
-                                        }
-                                        setCompanyChecklist(suggested)
-                                    }}
-                                    disabled={sparkleLoading === 'companies'}
-                                    title="Add suggested target companies from marketing plan"
-                                    className="ml-auto p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
-                                >
-                                    {sparkleLoading === 'companies' ? (
-                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                        </svg>
-                                    ) : (
-                                        <Sparkles className="w-4 h-4" />
-                                    )}
-                                </button>
+                                <>
+                                    <button
+                                        onClick={async () => {
+                                            const draft = await runExtraction('companies')
+                                            if (!draft) return
+                                            const suggested = (draft.targetCompanies || [])
+                                                .filter(c => !targets.targetCompanies.some(tc => tc.name.toLowerCase() === c.name.toLowerCase()))
+                                                .map(c => ({
+                                                    name: c.name,
+                                                    description: c.description,
+                                                    checked: true,
+                                                    existingId: availableCompanies.find(ac => ac.name.toLowerCase() === c.name.toLowerCase())?.id ?? null,
+                                                }))
+                                            if (suggested.length === 0) {
+                                                setMessage('All suggested companies are already in your target list.')
+                                                return
+                                            }
+                                            setCompanyChecklist(suggested)
+                                        }}
+                                        disabled={sparkleLoading === 'companies'}
+                                        title="Add suggested target companies from marketing plan"
+                                        className="ml-auto p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                    >
+                                        {sparkleLoading === 'companies' ? (
+                                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                            </svg>
+                                        ) : (
+                                            <Sparkles className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                </>
                             )}
                         </h3>
                         {companyChecklist && (
@@ -883,32 +913,65 @@ function ROIPage() {
                             </div>
                         )}
                         {!(isLocked || !canEdit) && (
-                            <div ref={companyDropdownRef} className="relative mb-4">
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={companyInput}
-                                        onChange={e => { setCompanyInput(e.target.value); setShowCompanyDropdown(true) }}
-                                        onFocus={() => setShowCompanyDropdown(true)}
-                                        placeholder="Search companies to add..."
-                                        className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm"
-                                    />
-                                </div>
-                                {showCompanyDropdown && filteredAvailableCompanies.length > 0 && (
-                                    <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
-                                        {filteredAvailableCompanies.map(company => (
-                                            <div
-                                                key={company.id}
-                                                className="px-4 py-2 hover:bg-teal-50 cursor-pointer border-b border-zinc-50 last:border-none"
-                                                onClick={() => addCompany(company)}
-                                            >
-                                                <div className="font-medium text-zinc-900">{company.name}</div>
-                                                {company.pipelineValue && <div className="text-xs text-zinc-500">Pipeline: ${company.pipelineValue.toLocaleString()}</div>}
-                                            </div>
-                                        ))}
+                            <>
+                                <div ref={companyDropdownRef} className="relative mb-3">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={companyInput}
+                                            onChange={e => { setCompanyInput(e.target.value); setShowCompanyDropdown(true) }}
+                                            onFocus={() => setShowCompanyDropdown(true)}
+                                            placeholder="Search companies to add..."
+                                            className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm"
+                                        />
                                     </div>
-                                )}
-                            </div>
+                                    {showCompanyDropdown && filteredAvailableCompanies.length > 0 && (
+                                        <div className="absolute z-20 w-full mt-1 bg-white shadow-lg rounded-md border border-zinc-200 max-h-60 overflow-y-auto">
+                                            {filteredAvailableCompanies.map(company => (
+                                                <div
+                                                    key={company.id}
+                                                    className="px-4 py-2 hover:bg-teal-50 cursor-pointer border-b border-zinc-50 last:border-none"
+                                                    onClick={() => addCompany(company)}
+                                                >
+                                                    <div className="font-medium text-zinc-900">{company.name}</div>
+                                                    {!!company.pipelineValue && <div className="text-xs text-zinc-500">Pipeline: ${company.pipelineValue.toLocaleString()}</div>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mb-4">
+                                    <label className="text-xs text-zinc-500 mb-1.5 block">Or paste a comma-separated list of company names</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={bulkInput}
+                                            onChange={e => setBulkInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleBulkProcess()}
+                                            placeholder="Acme Corp, Beta Inc, Gamma Ltd..."
+                                            className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm"
+                                        />
+                                        <button
+                                            onClick={handleBulkProcess}
+                                            disabled={!bulkInput.trim()}
+                                            className="px-4 py-2.5 text-sm bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 disabled:opacity-40 transition-colors"
+                                        >
+                                            Process
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-zinc-400 mt-1.5">Matched companies are added immediately. Unmatched ones open Data Ingestion to create them.</p>
+                                </div>
+                                <div className="mb-4 p-4 border border-dashed border-zinc-300 rounded-xl bg-zinc-50">
+                                    <p className="text-sm text-zinc-600 mb-2">Have a spreadsheet or document with company names? Upload it via Data Ingestion — reviewed companies will be automatically added to your target list.</p>
+                                    <button
+                                        onClick={() => router.push(`/events/${eventId}/data-ingestion?returnTo=roi`)}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-300 rounded-lg hover:bg-zinc-100 hover:border-zinc-400 transition-colors"
+                                    >
+                                        <Upload className="w-4 h-4" />
+                                        Upload File via Data Ingestion
+                                    </button>
+                                </div>
+                            </>
                         )}
                         <div className="flex flex-wrap gap-2">
                             {targets.targetCompanies.map(company => {
@@ -929,7 +992,7 @@ function ROIPage() {
                                             <span className="w-3 h-3 rounded-sm bg-blue-600 flex items-center justify-center text-white" style={{ fontSize: '8px' }}>✓</span>
                                         )}
                                         {company.name}
-                                        {company.pipelineValue && <span className="text-xs opacity-60">(${company.pipelineValue.toLocaleString()})</span>}
+                                        {!!company.pipelineValue && <span className="text-xs opacity-60">(${company.pipelineValue.toLocaleString()})</span>}
                                         {!(isLocked || !canEdit) && (
                                             <button
                                                 onClick={e => { e.stopPropagation(); removeCompany(company.id) }}

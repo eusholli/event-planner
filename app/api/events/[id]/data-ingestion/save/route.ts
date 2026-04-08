@@ -25,7 +25,7 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Pro
             return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
         const eventId = event.id;
-        const { companies, people, meetings } = await req.json();
+        const { companies, people, meetings, addToRoiTargets } = await req.json();
 
         // Server-Side Mandatory Check
         if (companies && Array.isArray(companies)) {
@@ -207,7 +207,30 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Pro
             }
         }
 
-        return NextResponse.json({ success: true, results });
+        const companyIds: string[] = Array.from(companyIdMap.values());
+
+        // When called from ROI page, add the saved companies to the event's ROI targets
+        // Explicitly merge with existing IDs so we never overwrite what's already there
+        if (addToRoiTargets && companyIds.length > 0) {
+            const existing = await prisma.eventROITargets.findUnique({
+                where: { eventId },
+                select: { targetCompanies: { select: { id: true } } },
+            });
+            const existingIds = (existing?.targetCompanies ?? []).map((c: { id: string }) => c.id);
+            const allIds = [...new Set([...existingIds, ...companyIds])];
+            await prisma.eventROITargets.upsert({
+                where: { eventId },
+                create: {
+                    event: { connect: { id: eventId } },
+                    targetCompanies: { connect: allIds.map(id => ({ id })) },
+                },
+                update: {
+                    targetCompanies: { set: allIds.map(id => ({ id })) },
+                },
+            });
+        }
+
+        return NextResponse.json({ success: true, results, companyIds });
 
     } catch (e: any) {
         console.error("Data ingestion save failed:", e);

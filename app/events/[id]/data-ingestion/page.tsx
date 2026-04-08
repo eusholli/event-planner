@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Upload, FileText, CheckCircle, AlertTriangle, Save, Wand2, Trash2, RotateCcw, Sparkles } from 'lucide-react';
 
 type ExtractStatus = 'idle' | 'uploading' | 'reviewing' | 'saving' | 'success';
@@ -94,6 +94,10 @@ const FieldEditor = ({ obj, idx, field, label, required = false, type = 'text', 
 
 export default function DataIngestionPage() {
     const { id: eventId } = useParams<{ id: string }>();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const returnTo = searchParams.get('returnTo');
+    const pendingCompaniesParam = searchParams.get('pendingCompanies');
     const [status, setStatus] = useState<ExtractStatus>('idle');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [enhancingIdx, setEnhancingIdx] = useState<{type: string, idx: number} | null>(null);
@@ -105,6 +109,19 @@ export default function DataIngestionPage() {
     const [activeTab, setActiveTab] = useState<'companies' | 'people' | 'meetings'>('companies');
 
     const fileInput = useRef<HTMLInputElement>(null);
+
+    // Pre-populate companies from ROI page when pendingCompanies param is present
+    useEffect(() => {
+        if (!pendingCompaniesParam) return;
+        const names = pendingCompaniesParam
+            .split(',')
+            .map(n => decodeURIComponent(n).trim())
+            .filter(Boolean);
+        if (names.length === 0) return;
+        setCompanies(names.map(name => ({ name, description: '', aiSuggestedFields: [] })));
+        setActiveTab('companies');
+        setStatus('reviewing');
+    }, []); // intentionally only on mount
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
@@ -175,11 +192,16 @@ export default function DataIngestionPage() {
             const res = await fetch(`/api/events/${eventId}/data-ingestion/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companies, people, meetings })
+                body: JSON.stringify({ companies, people, meetings, addToRoiTargets: returnTo === 'roi' })
             });
 
             const data = await res.json();
             if (!res.ok || data.error) throw new Error(data.error || 'Failed to save');
+
+            if (returnTo === 'roi') {
+                router.push(`/events/${eventId}/roi#target-companies`);
+                return;
+            }
 
             setStatus('success');
         } catch (err: any) {
@@ -296,6 +318,12 @@ export default function DataIngestionPage() {
 
             {(status === 'reviewing' || status === 'saving') && (
                 <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
+
+                    {returnTo === 'roi' && (
+                        <div className="px-4 py-2 bg-teal-50 border-b border-teal-200 text-teal-700 text-sm">
+                            Companies saved here will be added to your ROI target list.
+                        </div>
+                    )}
 
                     <div className="border-b border-zinc-200 flex justify-between items-center bg-zinc-50 px-4">
                         <div className="flex">
