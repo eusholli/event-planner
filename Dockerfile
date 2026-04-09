@@ -41,6 +41,9 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# liteparse references pdf.worker.mjs via a dynamic path string — the Next.js
+# file tracer never discovers it, so we copy the package explicitly.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@llamaindex/liteparse ./node_modules/@llamaindex/liteparse
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
