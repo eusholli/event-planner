@@ -77,8 +77,7 @@ export default function Navigation() {
 
     // Core Links (Global)
     const coreLinks = [
-        { href: '/events', label: 'Events' },
-        { href: '/intelligence', label: 'OpenClaw Insights' }
+        { href: '/events', label: 'Events' }
     ]
 
     // Admin Links (Global)
@@ -184,6 +183,16 @@ export default function Navigation() {
                                         isActive={adminLinks.some(link => isActive(link.href))}
                                     />
                                 )}
+
+                                <Link
+                                    href="/intelligence"
+                                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${isActive('/intelligence')
+                                        ? 'border-zinc-900 text-zinc-900'
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300'
+                                        }`}
+                                >
+                                    OpenClaw Insights
+                                </Link>
                             </div>
                         </SignedIn>
                     </div>
@@ -329,6 +338,17 @@ export default function Navigation() {
                                 </div>
                             )
                         })()}
+
+                        <Link
+                            href="/intelligence"
+                            onClick={() => setIsOpen(false)}
+                            className={`block pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${isActive('/intelligence')
+                                ? 'bg-zinc-100 text-zinc-900'
+                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                }`}
+                        >
+                            OpenClaw Insights
+                        </Link>
                     </div>
                 </div>
             </SignedIn>
