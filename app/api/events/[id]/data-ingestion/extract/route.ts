@@ -24,7 +24,7 @@ async function extractTextFromBlob(blob: Blob, fileName: string): Promise<string
     } catch (e) {
         console.warn('LiteParse parsing failed, falling back to raw:', e);
         const buffer = Buffer.from(await blob.arrayBuffer());
-        return buffer.toString('utf-8');
+        return buffer.toString('utf-8').replace(/\0/g, '');
     }
 }
 
