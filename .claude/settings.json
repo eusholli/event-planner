@@ -15,7 +15,6 @@
   "permissions": {
     "additionalDirectories": [
       "../sales-recon",
-      "../../.openclaw",
       "../li-agent"
     ]
   }

@@ -1,29 +1,52 @@
 // lib/article-generator-client.ts
 
-// ── Request ──────────────────────────────────────────────────────────────────
+// ── Article types ─────────────────────────────────────────────────────────────
+
+export type ArticleType =
+  | 'thought_leadership'
+  | 'awareness'
+  | 'demand_gen'
+  | 'event_attendance'
+  | 'recruitment'
+  | 'product_announcement'
+  | 'case_study'
+
+// ── Requests ──────────────────────────────────────────────────────────────────
 
 export interface GenerateRequest {
   draft: string
-  target_score?: number        // default 89.0
-  word_count_min?: number      // default 1500
-  word_count_max?: number      // default 2000
+  article_type?: ArticleType
+  target_score?: number             // default 89.0
+  max_iterations?: number           // always 1; kept for backwards compat
+  word_count_min?: number           // default 1500
+  word_count_max?: number           // default 2000
   model?: string
   generator_model?: string | null
   judge_model?: string | null
   rag_model?: string | null
-  fact_check?: boolean         // default true
-  use_undetectable?: boolean   // default false
+  fact_check?: boolean              // default true
+}
+
+export interface HumanizeRequest {
+  article: string
+  model?: string
+  humanizer_model?: string | null
+  use_undetectable?: boolean        // default false
 }
 
 // ── SSE Events ───────────────────────────────────────────────────────────────
 
-export type ProgressStage =
+export type GenerateProgressStage =
   | 'init' | 'start' | 'rag_search' | 'rag_queries' | 'rag_complete'
   | 'context' | 'generating' | 'scoring' | 'scored' | 'fact_checking'
   | 'fact_check_results' | 'fact_check_passed' | 'fact_check_failed'
-  | 'citation_issues' | 'humanizing' | 'humanized'
+  | 'citation_issues' | 'complete_generation' | 'info'
+
+export type HumanizeProgressStage =
+  | 'humanizing' | 'humanized'
   | 'humanizing_api' | 'humanizing_api_progress' | 'humanizing_api_done'
-  | 'complete_version' | 'info'
+
+export type ProgressStage = GenerateProgressStage | HumanizeProgressStage
 
 export interface ProgressEvent {
   type: 'progress'
@@ -43,17 +66,23 @@ export interface ArticleScore {
   overall_feedback: string | null
 }
 
-export interface ArticleResult {
-  original: string
-  humanized: string
+export interface FactCheckResult {
+  passed: boolean
+  summary: string
 }
 
-export interface CompleteEvent {
+export interface GenerateCompleteEvent {
   type: 'complete'
-  article: ArticleResult
+  article: { text: string }
   score: ArticleScore
+  fact_check: FactCheckResult | null
   target_achieved: boolean
   iterations_used: number
+}
+
+export interface HumanizeCompleteEvent {
+  type: 'complete'
+  article: { humanized: string }
 }
 
 export interface ErrorEvent {
@@ -64,7 +93,13 @@ export interface ErrorEvent {
 export type ArticleGeneratorEvent =
   | ProgressEvent
   | HeartbeatEvent
-  | CompleteEvent
+  | GenerateCompleteEvent
+  | ErrorEvent
+
+export type HumanizerEvent =
+  | ProgressEvent
+  | HeartbeatEvent
+  | HumanizeCompleteEvent
   | ErrorEvent
 
 // ── Health ───────────────────────────────────────────────────────────────────
@@ -79,40 +114,31 @@ export interface HealthResponse {
 export interface GenerationCallbacks {
   onProgress?: (stage: ProgressStage, message: string) => void
   onHeartbeat?: () => void
-  onComplete: (event: CompleteEvent) => void
+  onComplete: (event: GenerateCompleteEvent) => void
   onError: (message: string) => void
 }
 
-// ── Client ───────────────────────────────────────────────────────────────────
+export interface HumanizationCallbacks {
+  onProgress?: (stage: ProgressStage, message: string) => void
+  onHeartbeat?: () => void
+  onComplete: (event: HumanizeCompleteEvent) => void
+  onError: (message: string) => void
+}
 
-/**
- * Generate a LinkedIn article by streaming SSE events from the API.
- *
- * Returns an AbortController — call controller.abort() to cancel.
- *
- * @example
- * const ctrl = generateArticle(
- *   'http://localhost:8000',
- *   { draft: 'AI is changing everything...' },
- *   {
- *     onProgress: (stage, message) => console.log(`[${stage}] ${message}`),
- *     onComplete: (event) => setArticle(event.article.humanized),
- *     onError: (msg) => setError(msg),
- *   }
- * )
- * // To cancel: ctrl.abort()
- */
-export function generateArticle(
-  baseUrl: string,
-  request: GenerateRequest,
-  callbacks: GenerationCallbacks,
-  clerkToken?: string
+// ── Shared SSE streaming helper ───────────────────────────────────────────────
+
+function streamSse<TEvent extends { type: string }, TComplete extends TEvent>(
+  url: string,
+  body: unknown,
+  clerkToken: string | undefined,
+  onProgress: ((stage: ProgressStage, message: string) => void) | undefined,
+  onHeartbeat: (() => void) | undefined,
+  onComplete: (event: TComplete) => void,
+  onError: (message: string) => void
 ): AbortController {
   const controller = new AbortController()
 
   ;(async () => {
-    let response: Response
-
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
@@ -121,29 +147,31 @@ export function generateArticle(
       headers['Authorization'] = `Bearer ${clerkToken}`
     }
 
+    let response: Response
     try {
-      response = await fetch(`${baseUrl}/articles/generate`, {
+      response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(request),
+        body: JSON.stringify(body),
         signal: controller.signal,
       })
     } catch (err: unknown) {
       if ((err as Error).name === 'AbortError') return
-      callbacks.onError(`Network error: ${(err as Error).message}`)
+      onError(`Network error: ${(err as Error).message}`)
       return
     }
 
     if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      callbacks.onError(`HTTP ${response.status}: ${body}`)
+      const text = await response.text().catch(() => '')
+      onError(`HTTP ${response.status}: ${text}`)
       return
     }
 
     if (!response.body) {
-      callbacks.onError('Response has no body')
+      onError('Response has no body')
       return
     }
+
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
@@ -161,35 +189,83 @@ export function generateArticle(
           const dataLine = part.split('\n').find(line => line.startsWith('data: '))
           if (!dataLine) continue
 
-          let event: ArticleGeneratorEvent
+          let event: TEvent
           try {
-            event = JSON.parse(dataLine.slice(6)) as ArticleGeneratorEvent
+            event = JSON.parse(dataLine.slice(6)) as TEvent
           } catch {
             continue
           }
 
           if (event.type === 'heartbeat') {
-            callbacks.onHeartbeat?.()
+            onHeartbeat?.()
           } else if (event.type === 'progress') {
-            callbacks.onProgress?.(event.stage as ProgressStage, event.message)
+            const e = event as unknown as ProgressEvent
+            onProgress?.(e.stage, e.message)
           } else if (event.type === 'complete') {
-            callbacks.onComplete(event)
+            onComplete(event as unknown as TComplete)
             return
           } else if (event.type === 'error') {
-            callbacks.onError(event.message)
+            const e = event as unknown as ErrorEvent
+            onError(e.message)
             return
           }
         }
       }
     } catch (err: unknown) {
       if ((err as Error).name === 'AbortError') return
-      callbacks.onError(`Stream error: ${(err as Error).message}`)
+      onError(`Stream error: ${(err as Error).message}`)
     } finally {
       reader.releaseLock()
     }
   })()
 
   return controller
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/**
+ * Generate a LinkedIn article by streaming SSE events from the API.
+ *
+ * Returns an AbortController — call controller.abort() to cancel.
+ */
+export function generateArticle(
+  baseUrl: string,
+  request: GenerateRequest,
+  callbacks: GenerationCallbacks,
+  clerkToken?: string
+): AbortController {
+  return streamSse<ArticleGeneratorEvent, GenerateCompleteEvent>(
+    `${baseUrl}/articles/generate`,
+    request,
+    clerkToken,
+    callbacks.onProgress,
+    callbacks.onHeartbeat,
+    callbacks.onComplete,
+    callbacks.onError
+  )
+}
+
+/**
+ * Humanize a pre-generated article by streaming SSE events from the API.
+ *
+ * Returns an AbortController — call controller.abort() to cancel.
+ */
+export function humanizeArticle(
+  baseUrl: string,
+  request: HumanizeRequest,
+  callbacks: HumanizationCallbacks,
+  clerkToken?: string
+): AbortController {
+  return streamSse<HumanizerEvent, HumanizeCompleteEvent>(
+    `${baseUrl}/humanize`,
+    request,
+    clerkToken,
+    callbacks.onProgress,
+    callbacks.onHeartbeat,
+    callbacks.onComplete,
+    callbacks.onError
+  )
 }
 
 export async function checkHealth(baseUrl: string): Promise<boolean> {

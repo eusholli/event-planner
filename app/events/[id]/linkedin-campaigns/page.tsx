@@ -1,15 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Linkedin, Trash2, ChevronDown, ChevronUp, ExternalLink, Check } from 'lucide-react'
 import LinkedInModal from '@/components/roi/LinkedInModal'
+import { humanizeArticle } from '@/lib/article-generator-client'
+import { useAuth } from '@/components/auth'
 
 interface LinkedInDraft {
     id: string
     companyNames: string[]
     angle: string
     tone: string
+    articleType?: string | null
     status: string
     content: string
     originalContent?: string | null
@@ -25,6 +28,13 @@ interface LinkedInDraft {
     engagementRate: number | null
     followsGained: number | null
     profileVisits: number | null
+}
+
+interface LogEntry {
+    elapsedMs: number
+    stage?: string
+    message: string
+    isHeartbeat: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -56,6 +66,7 @@ const METRIC_FIELDS: Array<{ key: keyof LinkedInDraft; label: string; hint: stri
 export default function LinkedInCampaignsPage() {
     const params = useParams()
     const eventId = params?.id as string
+    const { getToken } = useAuth()
 
     const [drafts, setDrafts] = useState<LinkedInDraft[]>([])
     const [loading, setLoading] = useState(true)
@@ -70,6 +81,13 @@ export default function LinkedInCampaignsPage() {
     const [targetCompanies, setTargetCompanies] = useState<Company[]>([])
     const [selectedForLinkedIn, setSelectedForLinkedIn] = useState<Set<string>>(new Set())
     const [linkedInModalOpen, setLinkedInModalOpen] = useState(false)
+
+    // In-page humanization state
+    const [humanizingId, setHumanizingId] = useState<string | null>(null)
+    const [humanizeLog, setHumanizeLog] = useState<LogEntry[]>([])
+    const humanizeAbortRef = useRef<AbortController | null>(null)
+    const humanizeStartRef = useRef<number>(0)
+    const humanizeHeartbeatRef = useRef(0)
 
     useEffect(() => {
         if (!eventId) return
@@ -239,6 +257,71 @@ export default function LinkedInCampaignsPage() {
             setDrafts(prev => prev.filter(d => d.id !== id))
         }
     }
+
+    const elapsedSec = (ms: number) => (ms / 1000).toFixed(1)
+
+    const handleHumanizeDraft = useCallback(async (id: string) => {
+        const draft = drafts.find(d => d.id === id)
+        if (!draft) return
+
+        // Source: use Original tab content preferentially, fall back to Humanized content
+        const sourceText =
+            editingOriginalContent[id] ??
+            draft.originalContent ??
+            editingContent[id] ??
+            draft.content
+
+        if (!sourceText?.trim()) {
+            setMessage('No content to humanize.')
+            setTimeout(() => setMessage(''), 3000)
+            return
+        }
+
+        setHumanizingId(id)
+        setHumanizeLog([])
+        humanizeStartRef.current = Date.now()
+        humanizeHeartbeatRef.current = 0
+
+        const baseUrl = process.env.NEXT_PUBLIC_LI_ARTICLE_API_URL ?? 'http://localhost:8000'
+        const token = await getToken()
+
+        humanizeAbortRef.current = humanizeArticle(
+            baseUrl,
+            { article: sourceText },
+            {
+                onProgress: (stage, message) => {
+                    const elapsedMs = Date.now() - humanizeStartRef.current
+                    setHumanizeLog(prev => [...prev, { elapsedMs, stage, message, isHeartbeat: false }])
+                },
+                onHeartbeat: () => {
+                    humanizeHeartbeatRef.current += 1
+                    if (humanizeHeartbeatRef.current % 6 === 0) {
+                        const elapsedMs = Date.now() - humanizeStartRef.current
+                        setHumanizeLog(prev => [...prev, { elapsedMs, message: 'waiting…', isHeartbeat: true }])
+                    }
+                },
+                onComplete: (event) => {
+                    setEditingContent(prev => ({ ...prev, [id]: event.article.humanized }))
+                    setEditingTab(prev => ({ ...prev, [id]: 'humanized' }))
+                    setHumanizingId(null)
+                    setMessage('Humanization complete. Review and save the updated content.')
+                    setTimeout(() => setMessage(''), 5000)
+                },
+                onError: (msg) => {
+                    setMessage(`Humanization failed: ${msg}`)
+                    setTimeout(() => setMessage(''), 5000)
+                    setHumanizingId(null)
+                },
+            },
+            token ?? undefined
+        )
+    }, [drafts, editingOriginalContent, editingContent, getToken])
+
+    const handleCancelHumanize = useCallback(() => {
+        humanizeAbortRef.current?.abort()
+        humanizeAbortRef.current = null
+        setHumanizingId(null)
+    }, [])
 
     const hasMetrics = (draft: LinkedInDraft) =>
         draft.impressions !== null || draft.clicks !== null || draft.engagementRate !== null
@@ -413,76 +496,113 @@ export default function LinkedInCampaignsPage() {
                             {/* Draft content editor */}
                             {expandedContent.has(draft.id) && (
                                 <div className="px-6 pb-4 border-t border-zinc-100 pt-4 space-y-3">
-                                    {/* Tab bar */}
-                                    <div className="flex gap-1">
-                                        <button
-                                            onClick={() => setEditingTab(prev => ({ ...prev, [draft.id]: 'humanized' }))}
-                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                (editingTab[draft.id] ?? 'humanized') === 'humanized'
-                                                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                                                    : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
-                                            }`}
-                                        >
-                                            Humanized <span className="text-emerald-600 ml-1">Recommended</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setEditingTab(prev => ({ ...prev, [draft.id]: 'original' }))}
-                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                (editingTab[draft.id] ?? 'humanized') === 'original'
-                                                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                                                    : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
-                                            }`}
-                                        >
-                                            Original
-                                        </button>
-                                    </div>
-
-                                    {/* Textarea for active tab */}
-                                    {(editingTab[draft.id] ?? 'humanized') === 'humanized' ? (
-                                        <textarea
-                                            value={editingContent[draft.id] ?? draft.content}
-                                            onChange={e => setEditingContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
-                                            rows={10}
-                                            className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                        />
+                                    {/* Humanizing progress — replaces textarea while running */}
+                                    {humanizingId === draft.id ? (
+                                        <>
+                                            <div className="font-mono text-xs space-y-1 max-h-48 overflow-y-auto bg-zinc-50 rounded-xl border border-zinc-200 px-4 py-3">
+                                                {humanizeLog.map((entry, i) => (
+                                                    <p key={i} className={entry.isHeartbeat ? 'text-zinc-400' : 'text-zinc-700'}>
+                                                        [{elapsedSec(entry.elapsedMs)}s]{entry.stage ? ` [${entry.stage.toUpperCase()}]` : ''} {entry.message}
+                                                    </p>
+                                                ))}
+                                                {humanizeLog.length === 0 && (
+                                                    <p className="text-zinc-400">Connecting to humanizer…</p>
+                                                )}
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={handleCancelHumanize}
+                                                    className="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-700 rounded-lg hover:bg-zinc-100 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </>
                                     ) : (
-                                        <textarea
-                                            value={editingOriginalContent[draft.id] ?? (draft.originalContent ?? '')}
-                                            onChange={e => setEditingOriginalContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
-                                            rows={10}
-                                            placeholder="No original version stored for this draft."
-                                            className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                        />
-                                    )}
+                                        <>
+                                            {/* Tab bar */}
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => setEditingTab(prev => ({ ...prev, [draft.id]: 'humanized' }))}
+                                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                        (editingTab[draft.id] ?? 'humanized') === 'humanized'
+                                                            ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                                            : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
+                                                    }`}
+                                                >
+                                                    Humanized
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingTab(prev => ({ ...prev, [draft.id]: 'original' }))}
+                                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                        (editingTab[draft.id] ?? 'humanized') === 'original'
+                                                            ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                                            : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'
+                                                    }`}
+                                                >
+                                                    Original
+                                                </button>
+                                            </div>
 
-                                    {/* Action buttons */}
-                                    <div className="flex justify-end gap-3">
-                                        <button
-                                            onClick={() => {
-                                                const activeTab = editingTab[draft.id] ?? 'humanized'
-                                                const text = activeTab === 'humanized'
-                                                    ? (editingContent[draft.id] ?? draft.content)
-                                                    : (editingOriginalContent[draft.id] ?? (draft.originalContent ?? ''))
-                                                navigator.clipboard.writeText(text)
-                                            }}
-                                            className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:border-zinc-400 transition-colors"
-                                        >
-                                            Copy
-                                        </button>
-                                        <button
-                                            onClick={() => handleCancel(draft.id)}
-                                            className="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-700 rounded-lg hover:bg-zinc-100 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => saveContent(draft.id)}
-                                            disabled={saving === draft.id}
-                                            className="px-4 py-1.5 text-xs font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-700 transition-colors disabled:opacity-50"
-                                        >
-                                            {saving === draft.id ? 'Saving…' : 'Save Changes'}
-                                        </button>
-                                    </div>
+                                            {/* Textarea for active tab */}
+                                            {(editingTab[draft.id] ?? 'humanized') === 'humanized' ? (
+                                                <textarea
+                                                    value={editingContent[draft.id] ?? draft.content}
+                                                    onChange={e => setEditingContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
+                                                    rows={10}
+                                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                />
+                                            ) : (
+                                                <textarea
+                                                    value={editingOriginalContent[draft.id] ?? (draft.originalContent ?? '')}
+                                                    onChange={e => setEditingOriginalContent(prev => ({ ...prev, [draft.id]: e.target.value }))}
+                                                    rows={10}
+                                                    placeholder="No original version stored for this draft."
+                                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                />
+                                            )}
+
+                                            {/* Action buttons */}
+                                            <div className="flex justify-end gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const activeTab = editingTab[draft.id] ?? 'humanized'
+                                                        const text = activeTab === 'humanized'
+                                                            ? (editingContent[draft.id] ?? draft.content)
+                                                            : (editingOriginalContent[draft.id] ?? (draft.originalContent ?? ''))
+                                                        navigator.clipboard.writeText(text)
+                                                    }}
+                                                    className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:border-zinc-400 transition-colors"
+                                                >
+                                                    Copy
+                                                </button>
+                                                {/* Humanize button — available when on Original tab or when no originalContent exists */}
+                                                {((editingTab[draft.id] ?? 'humanized') === 'original' || !draft.originalContent) && (
+                                                    <button
+                                                        onClick={() => handleHumanizeDraft(draft.id)}
+                                                        disabled={humanizingId !== null}
+                                                        title="Run AI humanization and save result to Humanized tab"
+                                                        className="px-3 py-1.5 text-xs font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    >
+                                                        Humanize
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleCancel(draft.id)}
+                                                    className="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-700 rounded-lg hover:bg-zinc-100 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={() => saveContent(draft.id)}
+                                                    disabled={saving === draft.id}
+                                                    className="px-4 py-1.5 text-xs font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                                                >
+                                                    {saving === draft.id ? 'Saving…' : 'Save Changes'}
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
 

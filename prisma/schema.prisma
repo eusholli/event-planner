@@ -209,6 +209,7 @@ model LinkedInDraft {
   originalContent String?  @db.Text
   angle          String
   tone           String
+  articleType    String?
   status         String    @default("DRAFT")
   createdBy      String
   createdAt      DateTime  @default(now())

@@ -355,6 +355,7 @@ const postHandler = withAuth(async (request) => {
                             originalContent: draft.originalContent ?? null,
                             angle: draft.angle ?? '',
                             tone: draft.tone ?? '',
+                            articleType: draft.articleType ?? null,
                             status: draft.status ?? 'DRAFT',
                             createdBy: draft.createdBy ?? '',
                             datePosted: draft.datePosted ? new Date(draft.datePosted) : null,

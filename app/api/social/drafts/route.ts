@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        const { eventId: rawEventId, companyIds, companyNames, content, originalContent, angle, tone } = await request.json()
+        const { eventId: rawEventId, companyIds, companyNames, content, originalContent, angle, tone, articleType } = await request.json()
 
         if (!rawEventId || !content || !angle || !tone) {
             return NextResponse.json({ error: 'eventId, content, angle, and tone are required' }, { status: 400 })
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
                 originalContent: originalContent ?? null,
                 angle,
                 tone,
+                articleType: articleType ?? null,
                 createdBy: userId,
             },
         })

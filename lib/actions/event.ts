@@ -504,6 +504,7 @@ export async function importEventData(eventId: string, data: any) {
                         originalContent: draft.originalContent ?? null,
                         angle: draft.angle ?? '',
                         tone: draft.tone ?? '',
+                        articleType: draft.articleType ?? null,
                         status: draft.status ?? 'DRAFT',
                         createdBy: draft.createdBy ?? '',
                         ...(draft.createdAt ? { createdAt: new Date(draft.createdAt) } : {}),
