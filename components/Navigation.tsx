@@ -87,6 +87,12 @@ export default function Navigation() {
         { href: '/admin/ai-logs', label: 'AI Usage Report', roles: [Roles.Root] },
     ]
 
+    // Intelligence Links (Global)
+    const intelligenceLinks = [
+        { href: '/intelligence', label: 'OpenClaw Insights' },
+        { href: '/intelligence/subscribe', label: 'Manage Subscriptions' },
+    ]
+
     // Event Groups (Scoped)
     const eventGroups = eventId ? [
         {
@@ -184,15 +190,11 @@ export default function Navigation() {
                                     />
                                 )}
 
-                                <Link
-                                    href="/intelligence"
-                                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${isActive('/intelligence')
-                                        ? 'border-zinc-900 text-zinc-900'
-                                        : 'border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300'
-                                        }`}
-                                >
-                                    OpenClaw Insights
-                                </Link>
+                                <NavDropdown
+                                    label="Intelligence"
+                                    items={intelligenceLinks}
+                                    isActive={isGroupActive(intelligenceLinks)}
+                                />
                             </div>
                         </SignedIn>
                     </div>
@@ -339,16 +341,40 @@ export default function Navigation() {
                             )
                         })()}
 
-                        <Link
-                            href="/intelligence"
-                            onClick={() => setIsOpen(false)}
-                            className={`block pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${isActive('/intelligence')
-                                ? 'bg-zinc-100 text-zinc-900'
-                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
-                                }`}
-                        >
-                            OpenClaw Insights
-                        </Link>
+                        {(() => {
+                            const intelligenceGroupExpanded = openGroup === 'Intelligence'
+                            return (
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => setOpenGroup(intelligenceGroupExpanded ? null : 'Intelligence')}
+                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${intelligenceLinks.some(l => isActive(l.href))
+                                            ? 'text-zinc-900'
+                                            : 'text-zinc-500'
+                                            }`}
+                                    >
+                                        Intelligence
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${intelligenceGroupExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {intelligenceGroupExpanded && (
+                                        <div className="pl-6 space-y-1">
+                                            {intelligenceLinks.map(link => (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    onClick={() => { setIsOpen(false); setOpenGroup(null) }}
+                                                    className={`block pl-3 pr-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
+                                                        ? 'bg-zinc-50 text-zinc-900'
+                                                        : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                                        }`}
+                                                >
+                                                    {link.label}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })()}
                     </div>
                 </div>
             </SignedIn>
