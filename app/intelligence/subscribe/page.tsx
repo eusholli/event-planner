@@ -45,6 +45,7 @@ function SubscribePage() {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reportableNames, setReportableNames] = useState<Set<string>>(new Set())
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? null
 
@@ -63,25 +64,44 @@ function SubscribePage() {
         const rawAttendees = Array.isArray(attendeeData) ? attendeeData : (attendeeData.attendees ?? [])
         const rawCompanies = Array.isArray(companyData) ? companyData : (companyData.companies ?? [])
         const rawEvents = Array.isArray(eventData) ? eventData : (eventData.events ?? [])
-        setAttendees(rawAttendees.map((a: any) => ({
+        const mappedAttendees: AttendeeItem[] = rawAttendees.map((a: any) => ({
           id: a.id,
           name: a.name,
           title: a.title ?? '',
           companyName: a.company?.name ?? a.companyName ?? '',
-        })))
-        setCompanies(rawCompanies.map((c: any) => ({
+        }))
+        const mappedCompanies: CompanyItem[] = rawCompanies.map((c: any) => ({
           id: c.id,
           name: c.name,
           description: c.description ?? null,
           pipelineValue: c.pipelineValue ?? null,
-        })))
-        setEvents(rawEvents.map((e: any) => ({
+        }))
+        const mappedEvents: EventItem[] = rawEvents.map((e: any) => ({
           id: e.id,
           name: e.name,
           startDate: e.startDate ?? null,
           endDate: e.endDate ?? null,
           status: e.status ?? '',
-        })))
+        }))
+        setAttendees(mappedAttendees)
+        setCompanies(mappedCompanies)
+        setEvents(mappedEvents)
+        // Fetch which names have intelligence reports
+        const names = [...new Set([
+          ...mappedAttendees.map(a => a.name),
+          ...mappedCompanies.map(c => c.name),
+          ...mappedEvents.map(e => e.name),
+        ])]
+        if (names.length) {
+          fetch('/api/intelligence/report-exists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ names }),
+          })
+            .then(r => r.ok ? r.json() : { existingNames: [] })
+            .then(({ existingNames }) => setReportableNames(new Set(existingNames)))
+            .catch(() => {})
+        }
         setLoading(false)
       })
       .catch(() => {
@@ -258,6 +278,13 @@ function SubscribePage() {
             className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-sm bg-white"
           />
 
+          {/* Jump Navigation */}
+          <nav className="flex gap-2">
+            <a href="#section-companies" className="text-xs px-3 py-1 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100 transition-colors shadow-sm">Companies</a>
+            <a href="#section-attendees" className="text-xs px-3 py-1 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100 transition-colors shadow-sm">Attendees</a>
+            <a href="#section-events" className="text-xs px-3 py-1 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100 transition-colors shadow-sm">Events</a>
+          </nav>
+
           {/* Currently Subscribed Box */}
           {hasSubscribedItems && (
             <div className="border border-indigo-100 rounded-xl p-5 bg-indigo-50/30 shadow-sm">
@@ -282,6 +309,11 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
+                          {reportableNames.has(e.name) && (
+                            <Link href={`/intelligence/report/${encodeURIComponent(e.name)}`} onClick={e2 => e2.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
+                              Read full brief
+                            </Link>
+                          )}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
                             e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
                               'bg-zinc-100 text-zinc-500'
@@ -305,6 +337,11 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
+                          {reportableNames.has(c.name) && (
+                            <Link href={`/intelligence/report/${encodeURIComponent(c.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
+                              Read full brief
+                            </Link>
+                          )}
                           {c.pipelineValue ? (
                             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
                           ) : (
@@ -329,6 +366,11 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
+                          {reportableNames.has(a.name) && (
+                            <Link href={`/intelligence/report/${encodeURIComponent(a.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
+                              Read full brief
+                            </Link>
+                          )}
                           <span className="text-xs text-zinc-500">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
                         </label>
                       ))}
@@ -339,42 +381,9 @@ function SubscribePage() {
             </div>
           )}
 
-          {/* Events section */}
-          {filteredEvents.length > 0 && (
-            <section className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
-              <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
-                All Events
-                {sub && sub.selectedEventIds.length > 0 && (
-                  <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedEventIds.length} selected</span>
-                )}
-              </h2>
-              <div className="space-y-1">
-                {filteredEvents.map(e => {
-                  const isSelected = sub?.selectedEventIds.includes(e.id) ?? false
-                  return (
-                    <label key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelection('event', e.id, isSelected)}
-                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
-                      />
-                      <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
-                      <span className="text-xs text-zinc-400">{formatDate(e.startDate)}–{formatDate(e.endDate)}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                        e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
-                          'bg-zinc-100 text-zinc-500'
-                        }`}>{e.status}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </section>
-          )}
-
           {/* Companies section */}
           {filteredCompanies.length > 0 && (
-            <section className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
+            <section id="section-companies" className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
               <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
                 All Companies
                 {sub && sub.selectedCompanyIds.length > 0 && (
@@ -393,6 +402,11 @@ function SubscribePage() {
                         className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                       />
                       <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
+                      {reportableNames.has(c.name) && (
+                        <Link href={`/intelligence/report/${encodeURIComponent(c.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
+                          Read full brief
+</Link>
+                      )}
                       {c.pipelineValue ? (
                         <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
                       ) : (
@@ -407,7 +421,7 @@ function SubscribePage() {
 
           {/* Attendees section */}
           {filteredAttendees.length > 0 && (
-            <section className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
+            <section id="section-attendees" className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
               <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
                 All Attendees
                 {sub && sub.selectedAttendeeIds.length > 0 && (
@@ -426,7 +440,50 @@ function SubscribePage() {
                         className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                       />
                       <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
+                      {reportableNames.has(a.name) && (
+                        <Link href={`/intelligence/report/${encodeURIComponent(a.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
+                          Read full brief
+</Link>
+                      )}
                       <span className="text-xs text-zinc-500">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Events section */}
+          {filteredEvents.length > 0 && (
+            <section id="section-events" className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm mt-6">
+              <h2 className="text-sm font-semibold text-zinc-900 mb-3 flex items-center justify-between">
+                All Events
+                {sub && sub.selectedEventIds.length > 0 && (
+                  <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedEventIds.length} selected</span>
+                )}
+              </h2>
+              <div className="space-y-1">
+                {filteredEvents.map(e => {
+                  const isSelected = sub?.selectedEventIds.includes(e.id) ?? false
+                  return (
+                    <label key={e.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelection('event', e.id, isSelected)}
+                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                      />
+                      <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
+                      {reportableNames.has(e.name) && (
+                        <Link href={`/intelligence/report/${encodeURIComponent(e.name)}`} onClick={e2 => e2.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
+                          Read full brief
+</Link>
+                      )}
+                      <span className="text-xs text-zinc-400">{formatDate(e.startDate)}–{formatDate(e.endDate)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                        e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
+                          'bg-zinc-100 text-zinc-500'
+                        }`}>{e.status}</span>
                     </label>
                   )
                 })}

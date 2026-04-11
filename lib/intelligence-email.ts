@@ -52,8 +52,17 @@ export async function composeIntelligenceEmail(
     const actionBlock = t.recommendedAction
       ? `Recommended Action: ${t.recommendedAction}`
       : ''
-    const reportLink = reportUrl ? `Read full brief: ${reportUrl}` : ''
-    return `### ${t.name} (${t.type})\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\n${reportLink}\n\nFull Report:\n${t.fullReport}`
+    const askMoreQuery =
+      t.type === 'event'
+        ? `Show me the latest market intelligence for event ${t.name}`
+        : `Show me the latest market intelligence for ${t.name}`
+    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}`
+    const askMoreLink = `<a href="${askMoreUrl}" style="font-size:12px;color:#4a9eff;display:block;margin:4px 0;">Ask more questions... →</a>`
+    const reportLinkHtml = reportUrl
+      ? `<a href="${reportUrl}" style="font-size:12px;color:#666;display:block;margin:4px 0;">Read full brief →</a>`
+      : ''
+    const linksHtml = [askMoreLink, reportLinkHtml].filter(Boolean).join('\n')
+    return `### ${t.name} (${t.type})\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\nLINKS_HTML_VERBATIM:\n${linksHtml}\nEND_LINKS_HTML\n\nFull Report:\n${t.fullReport}`
   }
 
   const highlightedText = highlighted.length
@@ -96,8 +105,7 @@ Write a concise, professional HTML email. Rules:
    - Per target: <h3> heading, 2-3 bullet points of key updates, a "Sales Angle:" callout in a <blockquote>
    - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
      <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
-   - If a target has a "Read full brief" link: render it as a small <a> link immediately after the Recommended Action div (or after the Sales Angle if no action):
-     <a href="[url]" style="font-size:12px;color:#666;">Read full brief →</a>
+   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Sales Angle blockquote if no action). Do NOT modify the href values or any attributes.
    - Upcoming events as a <table> (columns: Event, Dates, Status)
    - Unsubscribe footer with link: ${baseUrl}/api/intelligence/unsubscribe?token=${unsubscribeToken}
 5. Tone: sharp, B2B sales, no fluff. Max 800 words.
@@ -135,8 +143,17 @@ export async function composeAggregateEmail(
     const actionBlock = t.recommendedAction
       ? `Recommended Action: ${t.recommendedAction}`
       : ''
-    const reportLink = reportUrl ? `Read full brief: ${reportUrl}` : ''
-    return `### ${t.name}\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\n${reportLink}\n\nFull Report:\n${t.fullReport}`
+    const askMoreQuery =
+      t.type === 'event'
+        ? `Show me the latest market intelligence for event ${t.name}`
+        : `Show me the latest market intelligence for ${t.name}`
+    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}`
+    const askMoreLink = `<a href="${askMoreUrl}" style="font-size:12px;color:#4a9eff;display:block;margin:4px 0;">Ask more questions... →</a>`
+    const reportLinkHtml = reportUrl
+      ? `<a href="${reportUrl}" style="font-size:12px;color:#666;display:block;margin:4px 0;">Read full brief →</a>`
+      : ''
+    const linksHtml = [askMoreLink, reportLinkHtml].filter(Boolean).join('\n')
+    return `### ${t.name}\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\nLINKS_HTML_VERBATIM:\n${linksHtml}\nEND_LINKS_HTML\n\nFull Report:\n${t.fullReport}`
   }
 
   const targetsText = [
@@ -172,8 +189,7 @@ Write a concise, professional HTML email. Rules:
    - Events section (if any): same pattern
    - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
      <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
-   - If a target has a "Read full brief" link: render it as a small <a> link immediately after the Recommended Action div (or after the Sales Angle if no action):
-     <a href="[url]" style="font-size:12px;color:#666;">Read full brief →</a>
+   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Sales Angle blockquote if no action). Do NOT modify the href values or any attributes.
    - Upcoming events <table>
    - No unsubscribe link (this is a system report)
 5. Tone: sharp, B2B, executive summary. Max 1200 words.

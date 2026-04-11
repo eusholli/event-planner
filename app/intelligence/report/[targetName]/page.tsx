@@ -27,16 +27,14 @@ export default function IntelligenceReportPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!token) {
-      setError('No access token provided. Please use the link from your intelligence email.')
-      setLoading(false)
-      return
-    }
+    const url = token
+      ? `/api/intelligence/report/${encodeURIComponent(targetName)}?token=${encodeURIComponent(token)}`
+      : `/api/intelligence/report/${encodeURIComponent(targetName)}`
 
-    fetch(`/api/intelligence/report/${encodeURIComponent(targetName)}?token=${encodeURIComponent(token)}`)
+    fetch(url)
       .then(async res => {
         if (res.status === 401) {
-          setError('This link has expired or is invalid. Please request a new intelligence briefing email.')
+          setError('Access denied. Please log in or use the link from your intelligence email.')
         } else if (res.status === 404) {
           setError('No intelligence report found for this target.')
         } else if (!res.ok) {

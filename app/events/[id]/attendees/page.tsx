@@ -37,6 +37,7 @@ interface Attendee {
 function AttendeesContent({ eventId }: { eventId: string }) {
     const [attendees, setAttendees] = useState<Attendee[]>([])
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null)
+    const [reportableNames, setReportableNames] = useState<Set<string>>(new Set())
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const { user } = useUser()
     const [isLocked, setIsLocked] = useState(false)
@@ -211,10 +212,30 @@ function AttendeesContent({ eventId }: { eventId: string }) {
             const res = await fetch(`/api/attendees?eventId=${eventId}`)
             if (!res.ok) throw new Error('Failed to fetch')
             const data = await res.json()
-            setAttendees(Array.isArray(data) ? data : [])
+            const attendeeList: Attendee[] = Array.isArray(data) ? data : []
+            setAttendees(attendeeList)
+            fetchReportableNames(attendeeList)
         } catch (error) {
             console.error('Error fetching attendees:', error)
             setAttendees([])
+        }
+    }
+
+    const fetchReportableNames = async (attendeeList: Attendee[]) => {
+        const names = [...new Set([
+            ...attendeeList.map(a => a.name),
+            ...attendeeList.map(a => a.company?.name).filter(Boolean) as string[],
+        ])]
+        if (!names.length) return
+        try {
+            const params = names.map(n => `names=${encodeURIComponent(n)}`).join('&')
+            const res = await fetch(`/api/intelligence/report-exists?${params}`)
+            if (res.ok) {
+                const { existingNames } = await res.json()
+                setReportableNames(new Set(existingNames))
+            }
+        } catch (error) {
+            console.error('Error fetching reportable names:', error)
         }
     }
 
@@ -455,8 +476,24 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                     LinkedIn Profile
                 </a>
             )}
-            <div className="mt-4 pt-4 border-t border-zinc-100 flex justify-between items-center">
-                <span className="text-xs text-zinc-400 font-mono">{attendee.email}</span>
+            <div className="mt-4 pt-4 border-t border-zinc-100">
+                <div className="flex justify-between items-center">
+                    <span className="text-xs text-zinc-400 font-mono">{attendee.email}</span>
+                </div>
+                {(reportableNames.has(attendee.name) || (attendee.company?.name && reportableNames.has(attendee.company.name))) && (
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                        {reportableNames.has(attendee.name) && (
+                            <Link href={`/intelligence/report/${encodeURIComponent(attendee.name)}`} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+                                Read full brief →
+                            </Link>
+                        )}
+                        {attendee.company?.name && reportableNames.has(attendee.company.name) && (
+                            <Link href={`/intelligence/report/${encodeURIComponent(attendee.company.name)}`} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+                                {attendee.company.name} brief →
+                            </Link>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
