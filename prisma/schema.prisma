@@ -174,14 +174,15 @@ model IntelligenceSubscription {
 }
 
 model IntelligenceReport {
-  id         String   @id @default(cuid())
-  runId      String
-  targetType String
-  targetName String
-  summary    String
-  salesAngle String
-  fullReport String
-  createdAt  DateTime @default(now())
+  id                String   @id @default(cuid())
+  runId             String
+  targetType        String
+  targetName        String
+  summary           String
+  salesAngle        String
+  fullReport        String
+  recommendedAction String?
+  createdAt         DateTime @default(now())
 
   @@unique([runId, targetName])
   @@index([runId])

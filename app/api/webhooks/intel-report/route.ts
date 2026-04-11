@@ -10,6 +10,7 @@ import {
 } from '@/lib/intelligence-email'
 import { sendPlainEmail } from '@/lib/email'
 import { Roles } from '@/lib/constants'
+import { signReportToken } from '@/lib/action-tokens'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -53,7 +54,12 @@ export async function POST(req: Request) {
     for (const target of updatedTargets) {
       await prisma.intelligenceReport.upsert({
         where: { runId_targetName: { runId, targetName: target.name } },
-        update: { summary: target.summary, salesAngle: target.salesAngle, fullReport: target.fullReport },
+        update: {
+          summary: target.summary,
+          salesAngle: target.salesAngle,
+          fullReport: target.fullReport,
+          recommendedAction: target.recommendedAction,
+        },
         create: {
           runId,
           targetType: target.type,
@@ -61,17 +67,13 @@ export async function POST(req: Request) {
           summary: target.summary,
           salesAngle: target.salesAngle,
           fullReport: target.fullReport,
+          recommendedAction: target.recommendedAction,
         },
       })
     }
   } catch (err) {
     console.error('[intel-report] Failed to upsert reports:', err)
     return NextResponse.json({ error: 'Failed to store reports' }, { status: 500 })
-  }
-
-  if (updatedTargets.length === 0) {
-    console.log(`Intelligence run ${runId}: no updated targets, skipping email dispatch`)
-    return NextResponse.json({ status: 'ok', emailsSent: 0 })
   }
 
   // 2. Fetch upcoming events (shared for all emails)
@@ -148,6 +150,48 @@ export async function POST(req: Request) {
       const directAttendeeNames = new Set(directAttendees.map(a => a.name.toLowerCase()))
       const directCompanyNames = new Set(directCompanies.map(c => c.name.toLowerCase()))
 
+      // Build a map of every entity this subscriber tracks for DB fallback use
+      const subscribedEntityMap = new Map<string, {
+        type: TargetUpdate['type']
+        originalName: string
+        highlighted?: boolean
+        linkedEventName?: string
+      }>()
+      for (const c of directCompanies) {
+        subscribedEntityMap.set(c.name.toLowerCase(), { type: 'company', originalName: c.name, highlighted: true })
+      }
+      for (const a of directAttendees) {
+        subscribedEntityMap.set(a.name.toLowerCase(), { type: 'attendee', originalName: a.name, highlighted: true })
+      }
+      for (const subEvent of subscriber.selectedEvents) {
+        const eventKey = subEvent.event.name.toLowerCase()
+        if (!subscribedEntityMap.has(eventKey)) {
+          subscribedEntityMap.set(eventKey, { type: 'event', originalName: subEvent.event.name, linkedEventName: subEvent.event.name })
+        }
+        for (const att of subEvent.event.attendees) {
+          const attKey = att.name.toLowerCase()
+          const isHighlightedAtt = directAttendeeNames.has(attKey)
+          if (!subscribedEntityMap.has(attKey)) {
+            subscribedEntityMap.set(attKey, {
+              type: 'attendee',
+              originalName: att.name,
+              highlighted: isHighlightedAtt || undefined,
+              linkedEventName: isHighlightedAtt ? undefined : subEvent.event.name,
+            })
+          }
+          const coKey = att.company?.name?.toLowerCase() ?? ''
+          if (coKey && !subscribedEntityMap.has(coKey)) {
+            const isHighlightedCo = directCompanyNames.has(coKey)
+            subscribedEntityMap.set(coKey, {
+              type: 'company',
+              originalName: att.company!.name,
+              highlighted: isHighlightedCo || undefined,
+              linkedEventName: isHighlightedCo ? undefined : subEvent.event.name,
+            })
+          }
+        }
+      }
+
       const matched: TargetUpdate[] = []
 
       // Match directly selected entities (highlighted)
@@ -190,6 +234,34 @@ export async function POST(req: Request) {
         }
       }
 
+      // Fallback: fetch existing DB intelligence for subscribed entities not covered by this run
+      const alreadyMatchedKeysFinal = new Set(matched.map(t => t.name.toLowerCase()))
+      const missingEntities = [...subscribedEntityMap.entries()].filter(([key]) => !alreadyMatchedKeysFinal.has(key))
+      if (missingEntities.length > 0) {
+        const missingNames = missingEntities.map(([, meta]) => meta.originalName)
+        const existingReports = await prisma.intelligenceReport.findMany({
+          where: { targetName: { in: missingNames } },
+          orderBy: { createdAt: 'desc' },
+          distinct: ['targetName'],
+        })
+        const existingMap = new Map(existingReports.map(r => [r.targetName.toLowerCase(), r]))
+        for (const [key, meta] of missingEntities) {
+          const report = existingMap.get(key)
+          if (report) {
+            matched.push({
+              type: report.targetType as TargetUpdate['type'],
+              name: report.targetName,
+              summary: report.summary,
+              salesAngle: report.salesAngle,
+              fullReport: report.fullReport,
+              recommendedAction: report.recommendedAction ?? undefined,
+              highlighted: meta.highlighted,
+              linkedEventName: meta.linkedEventName,
+            })
+          }
+        }
+      }
+
       if (matched.length === 0) {
         await prisma.intelligenceEmailLog.create({
           data: { runId, userId: subscriber.userId, email: subscriber.email, targetCount: 0, status: 'skipped' },
@@ -204,12 +276,16 @@ export async function POST(req: Request) {
       })
       const recipientName = attendee?.name ?? subscriber.email
 
+      const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+      const reportToken = signReportToken(subscriber.userId, subscriber.email)
       const { subject, html } = await composeIntelligenceEmail(
         recipientName,
         subscriber.email,
         subscriber.unsubscribeToken,
         matched,
-        upcomingEvents
+        upcomingEvents,
+        appUrl,
+        reportToken
       )
       await sendPlainEmail(subscriber.email, subject, html)
 
@@ -225,9 +301,9 @@ export async function POST(req: Request) {
     }
   }
 
-  // 5. Aggregate report for root/marketing users
+  // 5. Aggregate report for root/marketing users (only when there is genuinely new intelligence)
   let aggregateSent = 0
-  if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+  if (updatedTargets.length > 0 && process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
     try {
       const client = await clerkClient()
       const allUsers = await client.users.getUserList({ limit: 500 })
@@ -240,7 +316,9 @@ export async function POST(req: Request) {
         if (!email) continue
         try {
           const firstName = u.firstName ?? u.emailAddresses[0]?.emailAddress ?? 'Team'
-          const { subject, html } = await composeAggregateEmail(firstName, updatedTargets, upcomingEvents, runDate)
+          const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+          const aggregateReportToken = signReportToken(u.id, email)
+          const { subject, html } = await composeAggregateEmail(firstName, updatedTargets, upcomingEvents, runDate, appUrl, aggregateReportToken)
           await sendPlainEmail(email, subject, html)
           await prisma.intelligenceEmailLog.create({
             data: { runId, userId: u.id, email, targetCount: updatedTargets.length, status: 'aggregate' },

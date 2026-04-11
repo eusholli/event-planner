@@ -8,8 +8,16 @@ export type ActionTokenPayload = {
   exp: number
 }
 
+export type ReportTokenPayload = {
+  userId: string
+  email: string
+  iat: number
+  exp: number
+}
+
 export const ACTION_TOKEN_TTL_MS = 4 * 60 * 60 * 1000 // 4 hours in ms
 const TTL = ACTION_TOKEN_TTL_MS
+const REPORT_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days in ms
 
 export function signActionToken(userId: string, role: string, email: string): string {
   const payload: ActionTokenPayload = {
@@ -38,6 +46,37 @@ export function verifyActionToken(token: string): ActionTokenPayload | null {
     // Timing-safe comparison to prevent timing attacks
     if (!timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null
     const p: ActionTokenPayload = JSON.parse(Buffer.from(data, 'base64url').toString())
+    return Date.now() > p.exp ? null : p
+  } catch {
+    return null
+  }
+}
+
+export function signReportToken(userId: string, email: string): string {
+  const payload: ReportTokenPayload = {
+    userId,
+    email,
+    iat: Date.now(),
+    exp: Date.now() + REPORT_TOKEN_TTL_MS,
+  }
+  const data = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const sig = createHmac('sha256', process.env.CRON_SECRET_KEY!)
+    .update(data)
+    .digest('base64url')
+  return `${data}.${sig}`
+}
+
+export function verifyReportToken(token: string): ReportTokenPayload | null {
+  try {
+    const dot = token.lastIndexOf('.')
+    if (dot === -1) return null
+    const data = token.slice(0, dot)
+    const sig = token.slice(dot + 1)
+    const expected = createHmac('sha256', process.env.CRON_SECRET_KEY!)
+      .update(data)
+      .digest('base64url')
+    if (!timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null
+    const p: ReportTokenPayload = JSON.parse(Buffer.from(data, 'base64url').toString())
     return Date.now() > p.exp ? null : p
   } catch {
     return null

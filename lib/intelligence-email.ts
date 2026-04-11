@@ -8,8 +8,9 @@ export type TargetUpdate = {
   summary: string
   salesAngle: string
   fullReport: string
-  highlighted?: boolean   // true = user directly selected this entity
-  linkedEventName?: string // set when this target came from a subscribed event
+  recommendedAction?: string  // concrete, time-sensitive next step for the sales team
+  highlighted?: boolean       // true = user directly selected this entity
+  linkedEventName?: string    // set when this target came from a subscribed event
 }
 
 export type UpcomingEvent = {
@@ -33,16 +34,27 @@ export async function composeIntelligenceEmail(
   recipientEmail: string,
   unsubscribeToken: string,
   matchedTargets: TargetUpdate[],
-  upcomingEvents: UpcomingEvent[]
+  upcomingEvents: UpcomingEvent[],
+  appUrl?: string,
+  reportToken?: string
 ): Promise<{ subject: string; html: string }> {
 
+  const baseUrl = appUrl ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const highlighted = matchedTargets.filter(t => t.highlighted)
   const eventLinked = matchedTargets.filter(t => !t.highlighted && t.linkedEventName)
   const other = matchedTargets.filter(t => !t.highlighted && !t.linkedEventName)
 
-  const formatTarget = (t: TargetUpdate) =>
-    `### ${t.name} (${t.type})\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n\nFull Report:\n${t.fullReport}`
+  const formatTarget = (t: TargetUpdate) => {
+    const reportUrl = reportToken
+      ? `${baseUrl}/intelligence/report/${encodeURIComponent(t.name)}?token=${reportToken}`
+      : null
+    const actionBlock = t.recommendedAction
+      ? `Recommended Action: ${t.recommendedAction}`
+      : ''
+    const reportLink = reportUrl ? `Read full brief: ${reportUrl}` : ''
+    return `### ${t.name} (${t.type})\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\n${reportLink}\n\nFull Report:\n${t.fullReport}`
+  }
 
   const highlightedText = highlighted.length
     ? `## ⭐ YOUR DIRECTLY TRACKED TARGETS\n${highlighted.map(formatTarget).join('\n\n---\n\n')}`
@@ -61,8 +73,6 @@ export async function composeIntelligenceEmail(
   const eventsText = upcomingEvents
     .map(e => `- ${e.name}: ${e.startDate ?? 'TBD'} to ${e.endDate ?? 'TBD'} (${e.status})`)
     .join('\n')
-
-  const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const prompt = `You are composing a market intelligence briefing email for an internal Rakuten Symphony sales/marketing team member.
 
@@ -84,8 +94,12 @@ Write a concise, professional HTML email. Rules:
    - If there are ⭐ DIRECTLY TRACKED TARGETS: render them first with a bold "⭐ You're tracking this" callout per item
    - If there are FROM YOUR TRACKED EVENTS targets: group them by event name with an <h3> event header
    - Per target: <h3> heading, 2-3 bullet points of key updates, a "Sales Angle:" callout in a <blockquote>
+   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
+     <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
+   - If a target has a "Read full brief" link: render it as a small <a> link immediately after the Recommended Action div (or after the Sales Angle if no action):
+     <a href="[url]" style="font-size:12px;color:#666;">Read full brief →</a>
    - Upcoming events as a <table> (columns: Event, Dates, Status)
-   - Unsubscribe footer with link: ${appUrl}/api/intelligence/unsubscribe?token=${unsubscribeToken}
+   - Unsubscribe footer with link: ${baseUrl}/api/intelligence/unsubscribe?token=${unsubscribeToken}
 5. Tone: sharp, B2B sales, no fluff. Max 800 words.
 6. Do NOT wrap the HTML in markdown code fences.`
 
@@ -101,9 +115,12 @@ export async function composeAggregateEmail(
   recipientName: string,
   allTargets: TargetUpdate[],
   upcomingEvents: UpcomingEvent[],
-  runDate: string
+  runDate: string,
+  appUrl?: string,
+  reportToken?: string
 ): Promise<{ subject: string; html: string }> {
 
+  const baseUrl = appUrl ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const byType = {
     company: allTargets.filter(t => t.type === 'company'),
@@ -111,8 +128,16 @@ export async function composeAggregateEmail(
     event: allTargets.filter(t => t.type === 'event'),
   }
 
-  const formatTarget = (t: TargetUpdate) =>
-    `### ${t.name}\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n\nFull Report:\n${t.fullReport}`
+  const formatTarget = (t: TargetUpdate) => {
+    const reportUrl = reportToken
+      ? `${baseUrl}/intelligence/report/${encodeURIComponent(t.name)}?token=${reportToken}`
+      : null
+    const actionBlock = t.recommendedAction
+      ? `Recommended Action: ${t.recommendedAction}`
+      : ''
+    const reportLink = reportUrl ? `Read full brief: ${reportUrl}` : ''
+    return `### ${t.name}\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\n${reportLink}\n\nFull Report:\n${t.fullReport}`
+  }
 
   const targetsText = [
     byType.company.length ? `## Companies\n${byType.company.map(formatTarget).join('\n\n---\n\n')}` : '',
@@ -145,6 +170,10 @@ Write a concise, professional HTML email. Rules:
    - Companies section (if any): <h2> heading, then per-company <h3> with 2-3 bullets + Sales Angle <blockquote>
    - Attendees section (if any): same pattern
    - Events section (if any): same pattern
+   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
+     <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
+   - If a target has a "Read full brief" link: render it as a small <a> link immediately after the Recommended Action div (or after the Sales Angle if no action):
+     <a href="[url]" style="font-size:12px;color:#666;">Read full brief →</a>
    - Upcoming events <table>
    - No unsubscribe link (this is a system report)
 5. Tone: sharp, B2B, executive summary. Max 1200 words.
