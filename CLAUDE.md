@@ -20,7 +20,6 @@ npm run db:multi         # Switch to multi-event database (.env.multi -> .env)
 
 ## Required Post-Change Checks
 
-- **After any database schema change** (`prisma/schema.prisma` or migrations): run `/sync-schema-exports` to audit all import/export surfaces and fix any misaligned fields or missing models.
 - **After adding any new feature or API route that may be role-restricted**: run `/rbac-check` to verify RBAC correctness — withAuth coverage, permission helper usage, and per-route policy conformance.
 
 **Database switching**: `npm run db:main/multi` copies the specified `.env.*` file to `.env` and regenerates the Prisma client. Use `db:main` on the `main` branch and `db:multi` on the `multi-event` branch.
@@ -28,6 +27,7 @@ npm run db:multi         # Switch to multi-event database (.env.multi -> .env)
 ## Branch & Database Strategy
 
 Two branches with divergent schemas use separate databases:
+
 - `main` branch → `npm run db:main` (V1, single event)
 - `multi-event` branch → `npm run db:multi` (V2, multi event)
 
@@ -53,6 +53,7 @@ const resolvedEventId = event.id
 - Singleton pattern with global caching in development
 
 **Key Models**:
+
 - `SystemSettings` - Global settings (Gemini API key, default types/tags)
 - `Event` - Top-level container with slug routing, `authorizedUserIds` for per-event access, ROI targets (including `marketingPlan` text field)
 - `Attendee` - System-level with unique email. Links to a `Company` relation via `companyId`. Shared across events via many-to-many
@@ -71,6 +72,7 @@ const resolvedEventId = event.id
 **Provider**: Clerk with conditional auth support via `components/auth/index.tsx`. Set `NEXT_PUBLIC_DISABLE_CLERK_AUTH=true` to disable (provides mock root user for testing).
 
 **Roles** (`lib/constants.ts`):
+
 - `root` - Full system access including settings and user management
 - `marketing` - Write access + event management + user management; global event access
 - `admin` - Write access to events and data; requires per-event authorization
@@ -79,6 +81,7 @@ const resolvedEventId = event.id
 **Per-event access** (`lib/access.ts`): Admin and User roles need their userId listed in `event.authorizedUserIds`. Root and Marketing have implicit global access.
 
 **Permission helpers** (`lib/roles.ts`):
+
 - `canWrite()` - True for root/admin/marketing
 - `canManageEvents()` - True for root/marketing
 
@@ -91,6 +94,7 @@ const resolvedEventId = event.id
 **Two distinct chat systems exist — do not confuse them:**
 
 **Event-scoped AI Chat** (`/events/[id]/chat`):
+
 - Vercel AI SDK 5.0 `streamText` with Google Gemini 2.5 Pro
 - Event-scoped; tools created per-request via `createTools(eventId, slug)` in `lib/tools/`
 - Multi-step tool execution (max 5 steps via `stopWhen: stepCountIs(5)`)
@@ -99,6 +103,7 @@ const resolvedEventId = event.id
 - System prompt warns AI NOT to filter by event name (tools are already scoped). Navigation link results render as special UI cards in the frontend.
 
 **OpenClaw Intelligence Chat** (`/intelligence`):
+
 - WebSocket connection to `ws-proxy` → OpenClaw agent "Kenji"; system-wide, not event-scoped
 - `eventId` is passed as a breadcrumb only (helps Kenji orient to context); does not scope tools
 - History persisted server-side in ws-proxy per userId
@@ -115,6 +120,7 @@ The ROI page (`/events/[id]/roi`) has three Gemini-powered sparkle buttons that 
 **Flow**: Each sparkle button first calls `generate-plan` if no marketing plan exists yet, then calls `extract-roi` to parse structured values from the plan. A confirmation panel lists which fields will be filled vs. skipped (already populated). Skipped-company counts are reported in the success message.
 
 **Event card sparkle** (`/events` portfolio page): The sparkle icon (✦) on each event card now calls `/api/events/[id]/roi/generate-plan` directly via Gemini (no longer routes through OpenClaw). Navigation behavior:
+
 - Plan generated successfully → navigates to `/events/{id}/roi`
 - Plan already exists → navigates to `/events/{id}/roi?planWarning=1`
 - Generation error → navigates to `/events/{id}/roi?planError=1`
@@ -145,6 +151,7 @@ const { filters, setFilter, setFilters, isFiltered, resetFilters } = useFilterPa
 **Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
 
 **OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent with two modes — real-time chat and scheduled intelligence reports. Runs as a 3-container Docker stack (see `OPENCLAW_INTEGRATION.md`):
+
 - `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw
 - `sales-recon-openclaw` (OpenClaw + Python + Crawl4AI, port 50045): Hosts agent "Kenji"; MCP tools include web search (Brave/Tavily), Crawl4AI web scraping, and event-planner DB operations via `/api/intelligence/actions`; runs scheduled cron cycles
 - `event-planner` (this app): Provides target list and webhook endpoints, stores reports, dispatches emails
@@ -164,10 +171,12 @@ Served at `/intelligence` (standalone). Inbound intelligence reports arrive via 
 ### API Routes
 
 **Pattern**: RESTful with Next.js App Router
+
 - `/api/[resource]/route.ts` - Collection (GET, POST)
 - `/api/[resource]/[id]/route.ts` - Item (GET, PUT, DELETE)
 
 **Authorization pattern**:
+
 ```typescript
 import { canWrite } from '@/lib/roles'
 if (!await canWrite()) {
@@ -176,6 +185,7 @@ if (!await canWrite()) {
 ```
 
 **Key endpoints not covered elsewhere**:
+
 - `/api/meetings/check-availability` - Room conflict detection
 - `/api/meetings/[id]/email` - Send meeting invite email
 - `/api/meetings/[id]/invite` - Generate ICS invite

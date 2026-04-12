@@ -21,6 +21,8 @@ export default function SystemAdminPage() {
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const [restoreFile, setRestoreFile] = useState<File | null>(null)
+    const [restoreStatus, setRestoreStatus] = useState<'idle' | 'backing-up' | 'restoring'>('idle')
     const router = useRouter()
 
     useEffect(() => {
@@ -87,16 +89,54 @@ export default function SystemAdminPage() {
         if (!exportRes.ok) throw new Error('Backup failed')
 
         const blob = await exportRes.blob()
+        const disposition = exportRes.headers.get('Content-Disposition')
+        const filename = disposition?.match(/filename="([^"]+)"/)?.[1] ?? 'backup.sql.gz'
+
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        // ISO string replacing colons/dots with dashes for filename safety: YYYY-MM-DDTHH-mm-ss
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-        a.download = `system-backup-${timestamp}.json`
+        a.download = filename
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
+    }
+
+    const handleSystemRestore = async () => {
+        if (!restoreFile) return
+
+        const confirmed = confirm(
+            `This will:\n1. Download a backup of the current database\n2. Replace ALL current data with the contents of "${restoreFile.name}"\n\nThis cannot be undone. Continue?`
+        )
+        if (!confirmed) return
+
+        try {
+            setRestoreStatus('backing-up')
+            await performSystemExport()
+
+            setRestoreStatus('restoring')
+            const formData = new FormData()
+            formData.append('file', restoreFile)
+
+            const res = await fetch('/api/admin/system/import', {
+                method: 'POST',
+                body: formData,
+            })
+
+            if (res.ok) {
+                alert('Database restore successful')
+                window.location.reload()
+            } else {
+                const data = await res.json().catch(() => ({}))
+                alert(`Restore failed: ${data.details || data.error || 'Unknown error'}`)
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Error during restore')
+        } finally {
+            setRestoreStatus('idle')
+            setRestoreFile(null)
+        }
     }
 
     const handleSystemExport = async () => {
@@ -255,53 +295,41 @@ export default function SystemAdminPage() {
                     {/* Data Management */}
                     <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4">
                         <h2 className="text-lg font-semibold text-neutral-900">System Backup</h2>
-                        <p className="text-sm text-neutral-500">Export the entire database including all events.</p>
+                        <p className="text-sm text-neutral-500">Download a full pg_dump of the database as a compressed SQL file.</p>
 
                         <button
                             onClick={handleSystemExport}
                             className="text-sm border border-neutral-300 bg-white px-3 py-2 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2"
                         >
-                            <Download className="w-4 h-4" /> Download Full System Backup (JSON)
+                            <Download className="w-4 h-4" /> Download SQL Backup (.sql.gz)
                         </button>
                     </div>
 
                     <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4">
                         <h2 className="text-lg font-semibold text-neutral-900">System Restore</h2>
-                        <p className="text-sm text-neutral-500">Import a full system backup. This merges data.</p>
+                        <p className="text-sm text-neutral-500">Restore from a .sql.gz backup. The current database will be backed up first, then replaced.</p>
 
-                        <label className="text-sm border border-neutral-300 bg-white px-3 py-2 rounded-md hover:bg-neutral-50 w-full flex items-center justify-center gap-2 cursor-pointer">
-                            <Upload className="w-4 h-4" /> Import System Backup
+                        <label className="text-sm border border-dashed border-neutral-300 bg-neutral-50 px-3 py-2 rounded-md hover:bg-neutral-100 w-full flex items-center justify-center gap-2 cursor-pointer">
+                            <Upload className="w-4 h-4" />
+                            {restoreFile ? restoreFile.name : 'Choose .sql.gz file'}
                             <input
                                 type="file"
-                                accept=".json"
+                                accept=".sql.gz"
                                 className="hidden"
-                                onChange={async (e) => {
-                                    const file = e.target.files?.[0]
-                                    if (!file) return
-
-                                    const text = await file.text()
-                                    try {
-                                        const json = JSON.parse(text)
-                                        setLoading(true)
-                                        const res = await fetch('/api/admin/system/import', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(json)
-                                        })
-                                        if (res.ok) {
-                                            alert('System import successful')
-                                            window.location.reload()
-                                        } else {
-                                            alert('Import failed')
-                                        }
-                                    } catch (err) {
-                                        alert('Invalid JSON')
-                                    } finally {
-                                        setLoading(false)
-                                    }
-                                }}
+                                onChange={(e) => setRestoreFile(e.target.files?.[0] ?? null)}
                             />
                         </label>
+
+                        <button
+                            onClick={handleSystemRestore}
+                            disabled={!restoreFile || restoreStatus !== 'idle'}
+                            className="text-sm border border-orange-300 bg-orange-50 text-orange-800 px-3 py-2 rounded-md hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed w-full flex items-center justify-center gap-2"
+                        >
+                            <Upload className="w-4 h-4" />
+                            {restoreStatus === 'backing-up' ? 'Downloading current backup...' :
+                             restoreStatus === 'restoring' ? 'Restoring database...' :
+                             'Restore Database'}
+                        </button>
                     </div>
                 </div>
 
@@ -311,7 +339,7 @@ export default function SystemAdminPage() {
                         Danger Zone
                     </h2>
                     <p className="text-sm text-red-800">
-                        These actions are destructive and cannot be undone.
+                        These actions are destructive and cannot be undone. A SQL backup (.sql.gz) will be downloaded automatically before the reset.
                     </p>
 
                     <button
