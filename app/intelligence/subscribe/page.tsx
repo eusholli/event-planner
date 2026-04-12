@@ -32,6 +32,44 @@ function formatCurrency(val: number | null): string {
   return ' · $' + (val >= 1000000 ? (val / 1000000).toFixed(1) + 'M' : (val / 1000).toFixed(0) + 'K')
 }
 
+function EntityActionButton({
+  name,
+  type,
+  hasReport,
+  onClick,
+}: {
+  name: string
+  type: EntityType
+  hasReport: boolean
+  onClick?: (e: React.MouseEvent) => void
+}) {
+  if (hasReport) {
+    return (
+      <Link
+        href={`/intelligence/report/${encodeURIComponent(name)}`}
+        onClick={onClick ?? (e => e.stopPropagation())}
+        className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors shrink-0 shadow-sm"
+      >
+        Read full brief
+      </Link>
+    )
+  }
+  const query =
+    type === 'event'
+      ? `Show me the latest market intelligence for event ${name}`
+      : `Show me the latest market intelligence for ${name}`
+  const url = `/intelligence?autoQuery=${encodeURIComponent(query)}`
+  return (
+    <Link
+      href={url}
+      onClick={onClick ?? (e => e.stopPropagation())}
+      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-zinc-300 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 transition-colors shrink-0"
+    >
+      Ask Kenji →
+    </Link>
+  )
+}
+
 function SubscribePage() {
   const { user, isLoaded } = useUser()
   const searchParams = useSearchParams()
@@ -309,11 +347,7 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
-                          {reportableNames.has(e.name) && (
-                            <Link href={`/intelligence/report/${encodeURIComponent(e.name)}`} onClick={e2 => e2.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
-                              Read full brief
-                            </Link>
-                          )}
+                          <EntityActionButton name={e.name} type="event" hasReport={reportableNames.has(e.name)} onClick={e2 => e2.stopPropagation()} />
                           <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
                             e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
                               'bg-zinc-100 text-zinc-500'
@@ -337,11 +371,7 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
-                          {reportableNames.has(c.name) && (
-                            <Link href={`/intelligence/report/${encodeURIComponent(c.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
-                              Read full brief
-                            </Link>
-                          )}
+                          <EntityActionButton name={c.name} type="company" hasReport={reportableNames.has(c.name)} onClick={e => e.stopPropagation()} />
                           {c.pipelineValue ? (
                             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
                           ) : (
@@ -366,11 +396,7 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
-                          {reportableNames.has(a.name) && (
-                            <Link href={`/intelligence/report/${encodeURIComponent(a.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
-                              Read full brief
-                            </Link>
-                          )}
+                          <EntityActionButton name={a.name} type="attendee" hasReport={reportableNames.has(a.name)} onClick={e => e.stopPropagation()} />
                           <span className="text-xs text-zinc-500">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
                         </label>
                       ))}
@@ -402,11 +428,7 @@ function SubscribePage() {
                         className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                       />
                       <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
-                      {reportableNames.has(c.name) && (
-                        <Link href={`/intelligence/report/${encodeURIComponent(c.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
-                          Read full brief
-</Link>
-                      )}
+                      <EntityActionButton name={c.name} type="company" hasReport={reportableNames.has(c.name)} onClick={e => e.stopPropagation()} />
                       {c.pipelineValue ? (
                         <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
                       ) : (
@@ -440,11 +462,7 @@ function SubscribePage() {
                         className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                       />
                       <span className="text-sm text-zinc-900 flex-1">{a.name}</span>
-                      {reportableNames.has(a.name) && (
-                        <Link href={`/intelligence/report/${encodeURIComponent(a.name)}`} onClick={e => e.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
-                          Read full brief
-</Link>
-                      )}
+                      <EntityActionButton name={a.name} type="attendee" hasReport={reportableNames.has(a.name)} onClick={e => e.stopPropagation()} />
                       <span className="text-xs text-zinc-500">{a.title}{a.companyName ? ` · ${a.companyName}` : ''}</span>
                     </label>
                   )
@@ -474,11 +492,7 @@ function SubscribePage() {
                         className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                       />
                       <span className="text-sm text-zinc-900 flex-1">{e.name}</span>
-                      {reportableNames.has(e.name) && (
-                        <Link href={`/intelligence/report/${encodeURIComponent(e.name)}`} onClick={e2 => e2.stopPropagation()} className="text-xs font-medium text-blue-600 hover:text-blue-700 shrink-0">
-                          Read full brief
-</Link>
-                      )}
+                      <EntityActionButton name={e.name} type="event" hasReport={reportableNames.has(e.name)} onClick={e2 => e2.stopPropagation()} />
                       <span className="text-xs text-zinc-400">{formatDate(e.startDate)}–{formatDate(e.endDate)}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
                         e.status === 'CANCELED' ? 'bg-red-100 text-red-700' :
