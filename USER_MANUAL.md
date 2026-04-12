@@ -16,7 +16,8 @@ Welcome to the Executive Meeting Coordinator! This guide covers every feature of
 11. [Event Settings](#event-settings)
 12. [System Administration](#system-administration)
 13. [User Administration](#user-administration)
-14. [Data Ingestion](#data-ingestion)
+14. [AI Usage Report](#ai-usage-report)
+15. [Data Ingestion](#data-ingestion)
 
 ---
 
@@ -311,7 +312,7 @@ The built-in **AI Chat** (`/events/[id]/chat`) is powered by Google Gemini via t
 
 ## OpenClaw Insights
 
-**OpenClaw Insights** (`/intelligence`) provides system-level market intelligence through a dedicated AI agent powered by OpenClaw.
+**OpenClaw Insights** (`/intelligence`) provides system-level market intelligence through a dedicated AI agent powered by OpenClaw. The agent is highly resilient with an append-only memory system, strict search limits to prevent looping, and dynamic target scanning via heartbeats.
 
 ### How It Works
 - Connects via WebSocket to the `ws-proxy` service, which communicates with your configured OpenClaw instance.
@@ -323,6 +324,7 @@ The built-in **AI Chat** (`/events/[id]/chat`) is powered by Google Gemini via t
 - **New Session**: Click the "New Session" button to start a fresh conversation.
 - **Download as PDF**: Each assistant response has a "Download as PDF" button that generates a formatted PDF with the report content. Filenames include the subject and timestamp.
 - **Auto-Query**: Navigate from other pages (e.g., attendee intelligence button) with a pre-filled query that executes automatically.
+- **Ask More Questions**: Following intelligence reports, use the "Ask more questions..." button to seamlessly jump into the intelligence interface with an auto-populated query about the specific company, attendee, or event.
 - **Markdown Rendering**: Full markdown support including tables, code blocks, and links.
 
 ---
@@ -412,6 +414,21 @@ Navigate to **Users** (`/admin/users`) from the top navigation.
 
 ---
 
+## AI Usage Report
+
+*Access: Root users only.*
+
+Navigate to **AI Logs** (`/admin/ai-logs`) from the top navigation. 
+
+The AI Usage Report provides comprehensive visibility into how the Google Gemini API is being utilized across the platform.
+
+- **AI Function Types Table**: Displays aggregated usage data showing total invocations per distinct AI feature or tool (e.g., Data Ingestion, Chat Assistant, Marketing Plan). 
+- **Users Table**: Displays aggregated usage data showing how many times each individual user has interacted with AI features.
+- **Interactive Prompts**: Click any row in "AI Function Types" to open a paginated modal detailing the exact prompts sent in reverse chronological order.
+- **Summary Totals**: A grand total of AI invocations is visible at the bottom of the tables.
+
+---
+
 ## Data Ingestion
 
 *Access: Root and Marketing users.*
@@ -421,13 +438,14 @@ Navigate to **Data Ingestion** (`/admin/data-ingestion`) from the top navigation
 The Data Ingestion system is an AI-powered document extraction protocol that seamlessly converts raw offline files (PDFs, DOCXs, CSVs, TXTs) into relational Companies, People, and Meetings schemas mapped directly to the active system database.
 
 ### How It Works
-1. **Upload File**: Drag-and-drop or select an offline file holding your raw data logs, target lists, or unmapped intelligence.
-2. **AI Semantic Extraction**: Google Gemini structurally parses the contents against Event Planner's data schema, leveraging inference to format elements cleanly. 
+1. **Upload File**: Drag-and-drop or select an offline file holding your raw data logs, target lists, or unmapped intelligence. Powered fundamentally by robust, local document processing using **LiteParse**.
+2. **AI Semantic Extraction**: Google Gemini structurally parses the contents against Event Planner's data schema, leveraging a unified AI enhancement endpoint to format elements cleanly. 
 3. **Review & Compare**: The system maps returned elements into three interactive tabs (Companies, People, Meetings).
 4. **Commit Save**: Execute a strictly validated batch commit seamlessly mapping relational data into the active Prisma Database across all events.
 
 ### Smart Operations & Diffing
 - **Conflict Resolution**: If the AI populates a field that disagrees with an existing entity in your Database (e.g., an altered Job Title or outdated Pipeline Value), the form natively displays a stacked "Diff View" showcasing the current database's data value underneath.
+- **Sparkles UI Trigger**: Use the Sparkles (✦) icon on-demand to fetch smart insights and field suggestions directly within the ingestion interface via a unified AI enhancement endpoint.
 - **Revert to DB**: Click `[Revert]` on any conflict discrepancy to instantaneously disregard the new extracted text and securely default back to your existing system data.
-- **Intelligent Pre-fills**: Any data parameters the AI couldn't parse that *are* already present locally in your Database are automatically retrofitted onto the uploaded form blocks, preventing "blank" fields from wiping secure database metrics.
+- **Intelligent Pre-fills**: Any data parameters the AI couldn't parse that *are* already present locally in your Database are automatically retrofitted onto the uploaded form blocks, preventing "blank" fields from wiping secure database metrics. Missing job titles default gracefully to "Unknown".
 - **Remove Records**: Use the **Trash (Delete)** icon cleanly available on any ingested line-item to drop that entire schema from the saving queue instantly.

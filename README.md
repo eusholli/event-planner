@@ -34,10 +34,10 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 
 ### AI Systems
 - **AI Chat Assistant** (`/events/[id]/chat`): Built-in conversational AI using Vercel AI SDK 5.0 and Google Gemini. Context-aware of event data with tool-calling for searching meetings, attendees, rooms, and generating navigation links. Persistent chat history per event.
-- **OpenClaw Insights** (`/intelligence`): Market intelligence agent powered by OpenClaw via WebSocket proxy (`ws-proxy`). Features real-time streaming responses, thinking/status indicators, session management, and PDF download for each response.
+- **OpenClaw Insights** (`/intelligence`): Market intelligence agent powered by OpenClaw via WebSocket proxy (`ws-proxy`). Features an append-only memory system, strict search limits, dynamic target scanning via heartbeats, real-time streaming responses, thinking/status indicators, session management, "Ask more questions..." capability, and PDF download for each response.
 - **AI Marketing Plan Generation**: Generate a tailored event marketing plan via Gemini directly from the Sparkles icon on event cards in the portfolio. The plan is saved to the event's ROI record and can be used to auto-populate ROI targets.
 - **ROI Auto-Fill (Sparkle Buttons)**: Three Gemini-powered sparkle buttons on the ROI page auto-extract and populate Financial Targets, Event KPI Targets, and Target Companies from the event's marketing plan. Each button shows a confirmation panel before applying changes and only fills empty fields.
-- **Data Ingestion** (`/admin/data-ingestion`, Root/Marketing only): AI-powered document extractor. Securely upload native documents (PDF, DOCX, CSV, Excel) and have Google Gemini contextually parse structured Companies, Attendees, and Meetings. Includes inline manual Diffing against the database and intelligent conflict resolution.
+- **Data Ingestion** (`/admin/data-ingestion`, Root/Marketing only): AI-powered document extractor using local LiteParse processing. Securely upload native documents (PDF, DOCX, CSV, Excel) and have Google Gemini contextually parse structured Companies, Attendees, and Meetings. Includes an on-demand Sparkles (✦) UI trigger for field suggestions, inline manual Diffing against the database, and intelligent conflict resolution.
 
 ### Rooms
 - **Room Management**: Create and manage rooms with capacity tracking.
@@ -60,6 +60,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 ### Administration
 - **System Administration** (`/admin/system`, Root only): Global settings including Gemini API key, default tags, meeting types, attendee types. Full system backup/restore and factory reset.
 - **User Administration** (`/admin/users`, Root/Marketing): Manage user roles with search and pagination. Supports user deletion.
+- **AI Usage Report** (`/admin/ai-logs`, Root only): Comprehensive system-level logging of all Google Gemini API interactions. View aggregated usage by user and function type, and click to view full prompt histories via an interactive modal.
 
 ### Authentication & RBAC
 - **Clerk Authentication**: Secure user sessions with modal sign-in/sign-up.
@@ -72,7 +73,7 @@ For a detailed guide on how to use the application, see the **[User Manual](USER
 
 ### Monitoring & Backups
 - **Sentry**: Error tracking and performance monitoring.
-- **Automated Backups**: GitHub Actions cron job for database backup to Cloudflare R2.
+- **Automated Backups**: GitHub Actions cron job for secure PostgreSQL database backups to Cloudflare R2 (JSON backups deprecated).
 - **Auto-Backup**: Automatic JSON backup before any destructive operation (delete, reset).
 
 ## Getting Started
