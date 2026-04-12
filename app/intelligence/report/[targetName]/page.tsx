@@ -85,12 +85,26 @@ export default function IntelligenceReportPage() {
         </Link>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <div className="mb-6">
-            <span className="inline-block text-xs font-semibold uppercase tracking-wide text-gray-400 bg-gray-100 px-2 py-1 rounded mb-2">
-              {report.targetType}
-            </span>
-            <h1 className="text-2xl font-bold text-gray-900">{report.targetName}</h1>
-            <p className="text-sm text-gray-400 mt-1">Intelligence as of {createdDate}</p>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+              <span className="inline-block text-xs font-semibold uppercase tracking-wide text-gray-400 bg-gray-100 px-2 py-1 rounded mb-2">
+                {report.targetType}
+              </span>
+              <h1 className="text-2xl font-bold text-gray-900">{report.targetName}</h1>
+              <p className="text-sm text-gray-400 mt-1">Intelligence as of {createdDate}</p>
+            </div>
+            {['company', 'attendee', 'event'].includes(report.targetType.toLowerCase()) && (
+              <Link
+                href={`/intelligence?autoQuery=${encodeURIComponent(
+                  report.targetType.toLowerCase() === 'event'
+                    ? `Show me the latest market intelligence for event ${report.targetName}`
+                    : `Show me the latest market intelligence for ${report.targetName}`
+                )}`}
+                className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-zinc-300 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 transition-colors shrink-0 sm:mt-1"
+              >
+                Ask more questions →
+              </Link>
+            )}
           </div>
 
           <div className="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">

@@ -65,7 +65,7 @@ function EntityActionButton({
       onClick={onClick ?? (e => e.stopPropagation())}
       className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-zinc-300 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 transition-colors shrink-0"
     >
-      Ask Kenji →
+      Ask questions →
     </Link>
   )
 }
@@ -138,7 +138,7 @@ function SubscribePage() {
           })
             .then(r => r.ok ? r.json() : { existingNames: [] })
             .then(({ existingNames }) => setReportableNames(new Set(existingNames)))
-            .catch(() => {})
+            .catch(() => { })
         }
         setLoading(false)
       })
