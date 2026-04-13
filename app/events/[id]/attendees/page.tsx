@@ -228,8 +228,11 @@ function AttendeesContent({ eventId }: { eventId: string }) {
         ])]
         if (!names.length) return
         try {
-            const params = names.map(n => `names=${encodeURIComponent(n)}`).join('&')
-            const res = await fetch(`/api/intelligence/report-exists?${params}`)
+            const res = await fetch('/api/intelligence/report-exists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ names }),
+            })
             if (res.ok) {
                 const { existingNames } = await res.json()
                 setReportableNames(new Set(existingNames))
