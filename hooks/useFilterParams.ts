@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { isAtDefault, FilterParamDefault } from '@/lib/filter-params'
 
 type FilterDefaults = Record<string, FilterParamDefault>
@@ -26,16 +26,23 @@ function readFromStorage<T extends FilterDefaults>(storageKey: string, defaults:
 }
 
 function useFilterParams<T extends FilterDefaults>(storageKey: string, defaults: T) {
-    // Read from localStorage synchronously at mount — no restore effect needed,
-    // no race condition where persist effect can overwrite saved state.
-    const [filters, setFiltersState] = useState<ParsedFilters<T>>(() =>
-        typeof window !== 'undefined'
-            ? readFromStorage(storageKey, defaults)
-            : (defaults as unknown as ParsedFilters<T>)
+    // Always initialize with defaults so SSR and first client render match (avoids hydration mismatch).
+    // Restore from localStorage in a useEffect after hydration.
+    const [filters, setFiltersState] = useState<ParsedFilters<T>>(
+        defaults as unknown as ParsedFilters<T>
     )
+    const hydratedRef = useRef(false)
 
-    // Persist every state change to localStorage
+    // Restore saved filter state from localStorage after hydration
     useEffect(() => {
+        hydratedRef.current = true
+        setFiltersState(readFromStorage(storageKey, defaults))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [storageKey])
+
+    // Persist every state change to localStorage (skip the initial pre-hydration render)
+    useEffect(() => {
+        if (!hydratedRef.current) return
         try {
             localStorage.setItem(`filterState_${storageKey}`, JSON.stringify(filters))
         } catch {

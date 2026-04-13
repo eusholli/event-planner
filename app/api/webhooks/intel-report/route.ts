@@ -27,6 +27,7 @@ type WebhookPayload = {
   runId: string
   timestamp: string
   updatedTargets: TargetUpdate[]
+  silent?: boolean
 }
 
 export async function POST(req: Request) {
@@ -74,6 +75,10 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error('[intel-report] Failed to upsert reports:', err)
     return NextResponse.json({ error: 'Failed to store reports' }, { status: 500 })
+  }
+
+  if (payload.silent) {
+    return NextResponse.json({ status: 'ok', note: 'Silent run, skipped emails' })
   }
 
   // 2. Fetch upcoming events (shared for all emails)
