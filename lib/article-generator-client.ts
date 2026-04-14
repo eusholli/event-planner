@@ -27,11 +27,37 @@ export interface GenerateRequest {
   fact_check?: boolean              // default true
 }
 
+export type UndetectableReadability =
+  | 'High School'
+  | 'University'
+  | 'Doctorate'
+  | 'Journalist'
+  | 'Marketing'
+
+export type UndetectablePurpose =
+  | 'General Writing'
+  | 'Essay'
+  | 'Article'
+  | 'Marketing Material'
+  | 'Story'
+  | 'Cover Letter'
+  | 'Report'
+  | 'Business Material'
+  | 'Legal Material'
+
+export type UndetectableStrength = 'Quality' | 'Balanced' | 'More Human'
+
+export type UndetectableModel = 'v2' | 'v11' | 'v11sr'
+
 export interface HumanizeRequest {
   article: string
   model?: string
   humanizer_model?: string | null
-  use_undetectable?: boolean        // default false
+  use_undetectable?: boolean              // default false
+  readability?: UndetectableReadability   // default "University"
+  purpose?: UndetectablePurpose           // default "Article"
+  strength?: UndetectableStrength         // default "More Human"
+  undetectable_model?: UndetectableModel  // default "v11sr"
 }
 
 // ── SSE Events ───────────────────────────────────────────────────────────────

@@ -6,6 +6,8 @@ import { Linkedin, Trash2, ChevronDown, ChevronUp, ExternalLink, Check } from 'l
 import LinkedInModal from '@/components/roi/LinkedInModal'
 import { humanizeArticle } from '@/lib/article-generator-client'
 import { useAuth } from '@/components/auth'
+import HumanizeOptionsPanel, { DEFAULT_HUMANIZE_OPTIONS } from '@/components/roi/HumanizeOptionsPanel'
+import type { HumanizeOptions } from '@/components/roi/HumanizeOptionsPanel'
 
 interface LinkedInDraft {
     id: string
@@ -90,6 +92,8 @@ export default function LinkedInCampaignsPage() {
     const [humanizingId, setHumanizingId] = useState<string | null>(null)
     const [humanizeLog, setHumanizeLog] = useState<LogEntry[]>([])
     const [humanizeBlockedId, setHumanizeBlockedId] = useState<string | null>(null)
+    const [humanizeOptions, setHumanizeOptions] = useState<HumanizeOptions>(DEFAULT_HUMANIZE_OPTIONS)
+    const [humanizeOptionsOpenId, setHumanizeOptionsOpenId] = useState<string | null>(null)
     const humanizeAbortRef = useRef<AbortController | null>(null)
     const humanizeStartRef = useRef<number>(0)
     const humanizeHeartbeatRef = useRef(0)
@@ -309,7 +313,14 @@ export default function LinkedInCampaignsPage() {
 
         humanizeAbortRef.current = humanizeArticle(
             baseUrl,
-            { article: sourceText },
+            {
+                article: sourceText,
+                use_undetectable: true,
+                strength: humanizeOptions.strength,
+                readability: humanizeOptions.readability,
+                purpose: humanizeOptions.purpose,
+                undetectable_model: humanizeOptions.undetectable_model,
+            },
             {
                 onProgress: (stage, message) => {
                     const elapsedMs = Date.now() - humanizeStartRef.current
@@ -326,11 +337,13 @@ export default function LinkedInCampaignsPage() {
                     setEditingOriginalContent(prev => ({ ...prev, [id]: sourceText }))
                     setEditingContent(prev => ({ ...prev, [id]: event.article.humanized }))
                     setEditingTab(prev => ({ ...prev, [id]: 'humanized' }))
+                    setHumanizeOptionsOpenId(null)
                     setHumanizingId(null)
                     setMessage('Humanization complete. Review and save the updated content.')
                     setTimeout(() => setMessage(''), 5000)
                 },
                 onError: (msg) => {
+                    setHumanizeOptionsOpenId(null)
                     setMessage(`Humanization failed: ${msg}`)
                     setTimeout(() => setMessage(''), 5000)
                     setHumanizingId(null)
@@ -338,7 +351,7 @@ export default function LinkedInCampaignsPage() {
             },
             token ?? undefined
         )
-    }, [drafts, editingOriginalContent, editingContent, getToken])
+    }, [drafts, editingOriginalContent, editingContent, humanizeOptions, getToken])
 
     const handleCancelHumanize = useCallback(() => {
         humanizeAbortRef.current?.abort()
@@ -600,6 +613,14 @@ export default function LinkedInCampaignsPage() {
                                                     />
                                                 )}
 
+                                                {/* Humanize options panel — visible when gear is open for this draft */}
+                                                {humanizeOptionsOpenId === draft.id && (
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Humanize Options</p>
+                                                        <HumanizeOptionsPanel value={humanizeOptions} onChange={setHumanizeOptions} />
+                                                    </div>
+                                                )}
+
                                                 {/* Action buttons */}
                                                 <div className="flex justify-end gap-3">
                                                     <button
@@ -616,7 +637,7 @@ export default function LinkedInCampaignsPage() {
                                                     >
                                                         {copiedId === draft.id ? 'Copied!' : 'Copy'}
                                                     </button>
-                                                    {/* Humanize button — available when on Original tab or when no originalContent exists */}
+                                                    {/* Humanize + gear — available when on Original tab or when no originalContent exists */}
                                                     {((editingTab[draft.id] ?? 'original') === 'original' || !draft.originalContent) && (
                                                         <div className="relative">
                                                             {humanizeBlockedId === draft.id && (
@@ -625,12 +646,17 @@ export default function LinkedInCampaignsPage() {
                                                                 </span>
                                                             )}
                                                             <button
-                                                                onClick={() => handleHumanizeDraft(draft.id)}
+                                                                onClick={() => {
+                                                                    if (humanizeOptionsOpenId !== draft.id) {
+                                                                        setHumanizeOptionsOpenId(draft.id)
+                                                                    } else {
+                                                                        handleHumanizeDraft(draft.id)
+                                                                    }
+                                                                }}
                                                                 disabled={humanizingId !== null}
-                                                                title="Run AI humanization and save result to Humanized tab"
-                                                                className="px-3 py-1.5 text-xs font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5 ${humanizeOptionsOpenId === draft.id ? 'bg-violet-700 text-white hover:bg-violet-800' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
                                                             >
-                                                                Humanize
+                                                                {humanizeOptionsOpenId === draft.id ? 'Run Humanize' : 'Humanize'}
                                                             </button>
                                                         </div>
                                                     )}

@@ -7,6 +7,8 @@ import { generateArticle, humanizeArticle } from '@/lib/article-generator-client
 import type { ArticleType, ArticleScore, GenerateCompleteEvent } from '@/lib/article-generator-client'
 import { useAuth } from '@/components/auth'
 import Tooltip from '@/components/roi/Tooltip'
+import HumanizeOptionsPanel, { DEFAULT_HUMANIZE_OPTIONS } from '@/components/roi/HumanizeOptionsPanel'
+import type { HumanizeOptions } from '@/components/roi/HumanizeOptionsPanel'
 
 interface Company {
     id: string
@@ -81,6 +83,8 @@ export default function LinkedInModal({
     const [genError, setGenError] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
     const [humanizeBlocked, setHumanizeBlocked] = useState(false)
+    const [humanizeOptions, setHumanizeOptions] = useState<HumanizeOptions>(DEFAULT_HUMANIZE_OPTIONS)
+    const [humanizeOptionsOpen, setHumanizeOptionsOpen] = useState(false)
 
     const controllerRef = useRef<AbortController | null>(null)
     const humanizeAbortRef = useRef<AbortController | null>(null)
@@ -242,7 +246,14 @@ export default function LinkedInModal({
 
         humanizeAbortRef.current = humanizeArticle(
             baseUrl,
-            { article: editedGenerated },
+            {
+                article: editedGenerated,
+                use_undetectable: true,
+                strength: humanizeOptions.strength,
+                readability: humanizeOptions.readability,
+                purpose: humanizeOptions.purpose,
+                undetectable_model: humanizeOptions.undetectable_model,
+            },
             {
                 onProgress: (stage, message) => appendLog(stage, message, false),
                 onHeartbeat: () => {
@@ -255,16 +266,18 @@ export default function LinkedInModal({
                     setHumanizedText(event.article.humanized)
                     setEditedHumanized(event.article.humanized)
                     setActiveReviewTab('humanized')
+                    setHumanizeOptionsOpen(false)
                     setPhase('review')
                 },
                 onError: (msg) => {
                     setGenError(msg)
+                    setHumanizeOptionsOpen(false)
                     setPhase('review') // return to review — preserve generated text
                 },
             },
             token ?? undefined
         )
-    }, [editedGenerated, editedHumanized, getToken, appendLog])
+    }, [editedGenerated, editedHumanized, humanizeOptions, getToken, appendLog])
 
     const handleCancelHumanize = useCallback(() => {
         humanizeAbortRef.current?.abort()
@@ -588,6 +601,14 @@ export default function LinkedInModal({
                                 />
                             </div>
 
+                            {/* Humanize options — visible when settings are open */}
+                            {humanizeOptionsOpen && (
+                                <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Humanize Options</p>
+                                    <HumanizeOptionsPanel value={humanizeOptions} onChange={setHumanizeOptions} />
+                                </div>
+                            )}
+
                             {savedId ? (
                                 <div className="rounded-lg bg-teal-50 border border-teal-200 px-4 py-3 text-sm text-teal-700 flex items-center justify-between">
                                     <span>✓ Saved to campaigns</span>
@@ -667,10 +688,16 @@ export default function LinkedInModal({
                                         </span>
                                     )}
                                     <button
-                                        onClick={handleHumanize}
-                                        className="inline-flex items-center gap-2 px-5 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+                                        onClick={() => {
+                                            if (!humanizeOptionsOpen) {
+                                                setHumanizeOptionsOpen(true)
+                                            } else {
+                                                handleHumanize()
+                                            }
+                                        }}
+                                        className={`inline-flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg transition-colors ${humanizeOptionsOpen ? 'bg-violet-700 text-white hover:bg-violet-800' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
                                     >
-                                        Humanize
+                                        {humanizeOptionsOpen ? 'Run Humanize' : 'Humanize'}
                                     </button>
                                 </div>
                             )}
