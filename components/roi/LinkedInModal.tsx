@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { X, Linkedin } from 'lucide-react'
 import { generateArticle, humanizeArticle } from '@/lib/article-generator-client'
 import type { ArticleType, ArticleScore, GenerateCompleteEvent } from '@/lib/article-generator-client'
@@ -21,6 +21,7 @@ interface LinkedInModalProps {
     eventSlug: string
     initialPhase?: Phase
     initialBrief?: string
+    mode?: 'create' | 'existing'
 }
 
 type Phase = 'brief-loading' | 'params' | 'generating' | 'review' | 'humanizing'
@@ -34,12 +35,12 @@ interface LogEntry {
 
 const ARTICLE_TYPES: Array<{ key: ArticleType; label: string; description: string }> = [
     { key: 'thought_leadership', label: 'Thought Leadership', description: 'Deep analytical content that challenges conventional wisdom and establishes authoritative voice.' },
-    { key: 'awareness',          label: 'Awareness',          description: 'Educates and builds brand recognition. Optimizes for shareability and attracting new followers.' },
-    { key: 'demand_gen',         label: 'Demand Generation',  description: 'Drives qualified leads. Vividly articulates the problem, presents solution with proof, closes with CTA.' },
-    { key: 'event_attendance',   label: 'Event Attendance',   description: 'Drives registrations for a conference or webinar. Highlights event value and creates FOMO.' },
-    { key: 'recruitment',        label: 'Recruitment',        description: 'Attracts qualified candidates. Authentically portrays culture, growth, and mission.' },
+    { key: 'awareness', label: 'Awareness', description: 'Educates and builds brand recognition. Optimizes for shareability and attracting new followers.' },
+    { key: 'demand_gen', label: 'Demand Generation', description: 'Drives qualified leads. Vividly articulates the problem, presents solution with proof, closes with CTA.' },
+    { key: 'event_attendance', label: 'Event Attendance', description: 'Drives registrations for a conference or webinar. Highlights event value and creates FOMO.' },
+    { key: 'recruitment', label: 'Recruitment', description: 'Attracts qualified candidates. Authentically portrays culture, growth, and mission.' },
     { key: 'product_announcement', label: 'Product Announcement', description: 'Creates excitement for a new product. Explains problem solved, quantifies benefits, builds credibility.' },
-    { key: 'case_study',         label: 'Case Study',         description: 'Builds credibility through a customer success story with specific metrics and transferable lessons.' },
+    { key: 'case_study', label: 'Case Study', description: 'Builds credibility through a customer success story with specific metrics and transferable lessons.' },
 ]
 
 const FALLBACK_BRIEF = (companyNames: string[]) =>
@@ -53,8 +54,10 @@ export default function LinkedInModal({
     eventSlug,
     initialPhase = 'brief-loading',
     initialBrief = '',
+    mode = 'create',
 }: LinkedInModalProps) {
     const { getToken } = useAuth()
+    const router = useRouter()
     const [phase, setPhase] = useState<Phase>(initialPhase)
     const [brief, setBrief] = useState('')
     const [briefWarning, setBriefWarning] = useState(false)
@@ -72,9 +75,12 @@ export default function LinkedInModal({
     const [generateScore, setGenerateScore] = useState<ArticleScore | null>(null)
     const [activeReviewTab, setActiveReviewTab] = useState<'humanized' | 'generated'>('humanized')
 
+    const [title, setTitle] = useState('')
     const [savedId, setSavedId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [genError, setGenError] = useState<string | null>(null)
+    const [copied, setCopied] = useState(false)
+    const [humanizeBlocked, setHumanizeBlocked] = useState(false)
 
     const controllerRef = useRef<AbortController | null>(null)
     const humanizeAbortRef = useRef<AbortController | null>(null)
@@ -99,6 +105,18 @@ export default function LinkedInModal({
         setArticleType('thought_leadership')
         setActiveReviewTab('generated')
         heartbeatCountRef.current = 0
+
+        if (mode === 'existing') {
+            setTitle('')
+            setPhase('review')
+            setGeneratedText('')
+            setEditedGenerated('')
+            setEditedHumanized('')
+            setActiveReviewTab('generated')
+            return
+        }
+
+        setTitle(companies.map(c => c.name).join(', '))
 
         if (companies.length === 0) {
             setPhase(initialPhase)
@@ -140,8 +158,8 @@ export default function LinkedInModal({
             })
 
         return () => ac.abort()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, eventId, companyKey, initialPhase, initialBrief])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, eventId, companyKey, initialPhase, initialBrief, mode])
 
     // Auto-scroll progress log
     useEffect(() => {
@@ -209,6 +227,11 @@ export default function LinkedInModal({
 
     const handleHumanize = useCallback(async () => {
         if (!editedGenerated) return
+        if (editedHumanized.trim() !== '') {
+            setHumanizeBlocked(true)
+            setTimeout(() => setHumanizeBlocked(false), 2500)
+            return
+        }
         setPhase('humanizing')
         setLogEntries([])
         startTimeRef.current = Date.now()
@@ -241,7 +264,7 @@ export default function LinkedInModal({
             },
             token ?? undefined
         )
-    }, [editedGenerated, getToken, appendLog])
+    }, [editedGenerated, editedHumanized, getToken, appendLog])
 
     const handleCancelHumanize = useCallback(() => {
         humanizeAbortRef.current?.abort()
@@ -260,9 +283,8 @@ export default function LinkedInModal({
     const articleTypeLabel = ARTICLE_TYPES.find(t => t.key === articleType)?.label ?? 'Campaign Article'
 
     const handleSave = useCallback(async () => {
-        if (!generatedText) return
+        if (generatedText === null) return
         setSaving(true)
-        const hasHumanized = humanizedText !== null
         try {
             const res = await fetch('/api/social/drafts', {
                 method: 'POST',
@@ -271,8 +293,9 @@ export default function LinkedInModal({
                     eventId,
                     companyIds: companies.map(c => c.id),
                     companyNames: companies.map(c => c.name),
-                    content: hasHumanized ? editedHumanized : editedGenerated,
-                    originalContent: editedGenerated,
+                    title: title.trim() || null,
+                    content: editedHumanized,
+                    originalContent: editedGenerated || null,
                     angle: articleTypeLabel,
                     tone: `${wordCountMin}–${wordCountMax} words`,
                     articleType,
@@ -288,13 +311,15 @@ export default function LinkedInModal({
         } finally {
             setSaving(false)
         }
-    }, [generatedText, humanizedText, editedHumanized, editedGenerated, articleType, articleTypeLabel, eventId, companies, wordCountMin, wordCountMax])
+    }, [generatedText, editedHumanized, editedGenerated, title, articleType, articleTypeLabel, eventId, companies, wordCountMin, wordCountMax])
 
     const handleCopy = useCallback(() => {
-        if (!generatedText) return
-        const content = humanizedText !== null ? editedHumanized : editedGenerated
+        if (generatedText === null) return
+        const content = activeReviewTab === 'humanized' ? editedHumanized : editedGenerated
         navigator.clipboard.writeText(content)
-    }, [generatedText, humanizedText, editedHumanized, editedGenerated])
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }, [generatedText, activeReviewTab, editedHumanized, editedGenerated])
 
     if (!isOpen) return null
 
@@ -383,11 +408,10 @@ export default function LinkedInModal({
                                     {ARTICLE_TYPES.map(type => (
                                         <label
                                             key={type.key}
-                                            className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
-                                                articleType === type.key
+                                            className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${articleType === type.key
                                                     ? 'border-blue-300 bg-blue-50'
                                                     : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
-                                            }`}
+                                                }`}
                                         >
                                             <input
                                                 type="radio"
@@ -499,7 +523,7 @@ export default function LinkedInModal({
                             )}
 
                             {/* GPTZero verification nudge — only after humanization */}
-                            {humanizedText !== null && (
+                            {editedHumanized.trim() !== '' && (
                                 <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex items-start justify-between gap-3">
                                     <div className="text-sm text-blue-800">
                                         <p className="font-medium">Verify before publishing</p>
@@ -516,6 +540,18 @@ export default function LinkedInModal({
                                 </div>
                             )}
 
+                            {/* Campaign Title */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-700 mb-1">Campaign Title</label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                    placeholder="Enter a title for this campaign…"
+                                    className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                />
+                            </div>
+
                             {/* Tabs — always shown */}
                             <div className="flex gap-1 border-b border-zinc-200">
                                 <button
@@ -528,35 +564,39 @@ export default function LinkedInModal({
                                     onClick={() => setActiveReviewTab('humanized')}
                                     className={`px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${activeReviewTab === 'humanized' ? 'border-blue-500 text-blue-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
                                 >
-                                    Humanized {humanizedText !== null && <span className="ml-1 text-xs text-zinc-400">(recommended)</span>}
+                                    Humanized {editedHumanized.trim() !== '' && <span className="ml-1 text-xs text-zinc-400">(recommended)</span>}
                                 </button>
                             </div>
 
                             {/* Article content */}
                             <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-5 py-4 max-h-[40vh] overflow-y-auto">
-                                {activeReviewTab === 'humanized' && humanizedText === null ? (
-                                    <p className="text-sm text-zinc-400 italic py-2">Not yet humanized — click Humanize below to generate the humanized version.</p>
-                                ) : (
-                                    <textarea
-                                        className="w-full text-sm text-zinc-800 font-sans leading-relaxed resize-y bg-transparent focus:outline-none min-h-[200px]"
-                                        value={activeReviewTab === 'humanized' ? editedHumanized : editedGenerated}
-                                        onChange={e => {
-                                            if (activeReviewTab === 'humanized') {
-                                                setEditedHumanized(e.target.value)
-                                            } else {
-                                                setEditedGenerated(e.target.value)
-                                            }
-                                        }}
-                                    />
-                                )}
+                                <textarea
+                                    className="w-full text-sm text-zinc-800 font-sans leading-relaxed resize-y bg-transparent focus:outline-none min-h-[200px]"
+                                    value={activeReviewTab === 'humanized' ? editedHumanized : editedGenerated}
+                                    placeholder={
+                                        activeReviewTab === 'humanized'
+                                            ? 'Paste or generate humanized text here…'
+                                            : 'Paste your original article here…'
+                                    }
+                                    onChange={e => {
+                                        if (activeReviewTab === 'humanized') {
+                                            setEditedHumanized(e.target.value)
+                                        } else {
+                                            setEditedGenerated(e.target.value)
+                                        }
+                                    }}
+                                />
                             </div>
 
                             {savedId ? (
                                 <div className="rounded-lg bg-teal-50 border border-teal-200 px-4 py-3 text-sm text-teal-700 flex items-center justify-between">
                                     <span>✓ Saved to campaigns</span>
-                                    <Link href={`/events/${eventSlug}/linkedin-campaigns`} className="text-blue-600 hover:text-blue-800 text-xs">
+                                    <button
+                                        onClick={() => { handleClose(); router.push(`/events/${eventSlug}/linkedin-campaigns`) }}
+                                        className="text-blue-600 hover:text-blue-800 text-xs underline"
+                                    >
                                         View all campaigns →
-                                    </Link>
+                                    </button>
                                 </div>
                             ) : null}
                         </>
@@ -602,35 +642,45 @@ export default function LinkedInModal({
                     {phase === 'review' && generatedText !== null && (
                         <>
                             {!savedId && (
-                                <button
-                                    onClick={handleCopy}
-                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg hover:border-zinc-400 transition-colors"
-                                >
-                                    Copy
-                                </button>
+                                <div className="relative">
+                                    {copied && (
+                                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-zinc-800 text-white px-2 py-1 rounded shadow-md pointer-events-none">
+                                            Copied!
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={handleCopy}
+                                        className="px-3 py-2 text-sm border border-zinc-200 rounded-lg hover:border-zinc-400 transition-colors"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
                             )}
                             <button onClick={handleClose} className="px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 transition-colors">
                                 Close
                             </button>
-                            {!savedId && humanizedText === null && (
-                                <button
-                                    onClick={handleHumanize}
-                                    className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                                >
-                                    Humanize
-                                </button>
+                            {!savedId && (
+                                <div className="relative">
+                                    {humanizeBlocked && (
+                                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-zinc-800 text-white px-2 py-1 rounded shadow-md pointer-events-none">
+                                            Humanized text field not empty
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={handleHumanize}
+                                        className="inline-flex items-center gap-2 px-5 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+                                    >
+                                        Humanize
+                                    </button>
+                                </div>
                             )}
                             {!savedId && (
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className={`inline-flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
-                                        humanizedText !== null
-                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                            : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'
-                                    }`}
+                                    className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                                 >
-                                    {saving ? 'Saving…' : humanizedText !== null ? 'Save to Campaigns' : 'Save as-is'}
+                                    {saving ? 'Saving…' : 'Save Campaign'}
                                 </button>
                             )}
                         </>
