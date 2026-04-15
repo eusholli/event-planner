@@ -67,7 +67,7 @@ export async function saveROITargets(eventId: string, data: ROITargetsInput) {
         }
     }
 
-    return prisma.eventROITargets.upsert({
+    const result = await prisma.eventROITargets.upsert({
         where: { eventId },
         create: {
             event: { connect: { id: eventId } },
@@ -78,16 +78,20 @@ export async function saveROITargets(eventId: string, data: ROITargetsInput) {
         },
         update: upsertData,
         include: {
-            targetCompanies: true
+            targetCompanies: true,
+            event: { select: { budget: true, requesterEmail: true } }
         }
     })
+
+    const { event: eventData, ...cleanedResult } = result as any
+    return { ...cleanedResult, budget: eventData?.budget, requesterEmail: eventData?.requesterEmail }
 }
 
 export async function submitROIForApproval(eventId: string) {
     const { canManageEvents } = await import('@/lib/roles')
     if (!await canManageEvents()) throw new Error('Forbidden')
 
-    return prisma.eventROITargets.update({
+    const result = await prisma.eventROITargets.update({
         where: { eventId },
         data: {
             status: 'SUBMITTED',
@@ -95,30 +99,42 @@ export async function submitROIForApproval(eventId: string) {
             rejectedBy: null,
             rejectedAt: null,
         },
-        include: { targetCompanies: true }
+        include: {
+            targetCompanies: true,
+            event: { select: { budget: true, requesterEmail: true } }
+        }
     })
+
+    const { event, ...cleanedResult } = result as any
+    return { ...cleanedResult, budget: event?.budget, requesterEmail: event?.requesterEmail }
 }
 
 export async function approveROI(eventId: string, approverUserId: string) {
     const { isRootUser } = await import('@/lib/roles')
     if (!await isRootUser()) throw new Error('Forbidden')
 
-    return prisma.eventROITargets.update({
+    const result = await prisma.eventROITargets.update({
         where: { eventId },
         data: {
             status: 'APPROVED',
             approvedBy: approverUserId,
             approvedAt: new Date(),
         },
-        include: { targetCompanies: true }
+        include: {
+            targetCompanies: true,
+            event: { select: { budget: true, requesterEmail: true } }
+        }
     })
+
+    const { event, ...cleanedResult } = result as any
+    return { ...cleanedResult, budget: event?.budget, requesterEmail: event?.requesterEmail }
 }
 
 export async function rejectROI(eventId: string, rejectorUserId: string) {
     const { isRootUser } = await import('@/lib/roles')
     if (!await isRootUser()) throw new Error('Forbidden')
 
-    return prisma.eventROITargets.update({
+    const result = await prisma.eventROITargets.update({
         where: { eventId },
         data: {
             status: 'DRAFT',
@@ -127,8 +143,14 @@ export async function rejectROI(eventId: string, rejectorUserId: string) {
             approvedBy: null,
             approvedAt: null,
         },
-        include: { targetCompanies: true }
+        include: {
+            targetCompanies: true,
+            event: { select: { budget: true, requesterEmail: true } }
+        }
     })
+
+    const { event, ...cleanedResult } = result as any
+    return { ...cleanedResult, budget: event?.budget, requesterEmail: event?.requesterEmail }
 }
 
 export async function getROITargets(eventId: string) {

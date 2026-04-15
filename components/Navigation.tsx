@@ -182,6 +182,12 @@ export default function Navigation() {
                                     )
                                 })}
 
+                                <NavDropdown
+                                    label="Intelligence"
+                                    items={intelligenceLinks}
+                                    isActive={isGroupActive(intelligenceLinks)}
+                                />
+
                                 {!eventId && adminLinks.filter(filterItem).length > 0 && (
                                     <NavDropdown
                                         label="Admin"
@@ -189,12 +195,6 @@ export default function Navigation() {
                                         isActive={adminLinks.some(link => isActive(link.href))}
                                     />
                                 )}
-
-                                <NavDropdown
-                                    label="Intelligence"
-                                    items={intelligenceLinks}
-                                    isActive={isGroupActive(intelligenceLinks)}
-                                />
                             </div>
                         </SignedIn>
                     </div>
@@ -305,24 +305,23 @@ export default function Navigation() {
                             )
                         })}
 
-                        {!eventId && adminLinks.filter(filterItem).length > 0 && (() => {
-                            const filteredAdminLinks = adminLinks.filter(filterItem)
-                            const adminGroupExpanded = openGroup === 'Admin'
+                        {(() => {
+                            const intelligenceGroupExpanded = openGroup === 'Intelligence'
                             return (
                                 <div className="space-y-1">
                                     <button
-                                        onClick={() => setOpenGroup(adminGroupExpanded ? null : 'Admin')}
-                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${filteredAdminLinks.some(l => isActive(l.href))
+                                        onClick={() => setOpenGroup(intelligenceGroupExpanded ? null : 'Intelligence')}
+                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${intelligenceLinks.some(l => isActive(l.href))
                                             ? 'text-zinc-900'
                                             : 'text-zinc-500'
                                             }`}
                                     >
-                                        Admin
-                                        <ChevronDown className={`h-4 w-4 transition-transform ${adminGroupExpanded ? 'rotate-180' : ''}`} />
+                                        Intelligence
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${intelligenceGroupExpanded ? 'rotate-180' : ''}`} />
                                     </button>
-                                    {adminGroupExpanded && (
+                                    {intelligenceGroupExpanded && (
                                         <div className="pl-6 space-y-1">
-                                            {filteredAdminLinks.map(link => (
+                                            {intelligenceLinks.map(link => (
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
@@ -341,23 +340,24 @@ export default function Navigation() {
                             )
                         })()}
 
-                        {(() => {
-                            const intelligenceGroupExpanded = openGroup === 'Intelligence'
+                        {!eventId && adminLinks.filter(filterItem).length > 0 && (() => {
+                            const filteredAdminLinks = adminLinks.filter(filterItem)
+                            const adminGroupExpanded = openGroup === 'Admin'
                             return (
                                 <div className="space-y-1">
                                     <button
-                                        onClick={() => setOpenGroup(intelligenceGroupExpanded ? null : 'Intelligence')}
-                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${intelligenceLinks.some(l => isActive(l.href))
+                                        onClick={() => setOpenGroup(adminGroupExpanded ? null : 'Admin')}
+                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${filteredAdminLinks.some(l => isActive(l.href))
                                             ? 'text-zinc-900'
                                             : 'text-zinc-500'
                                             }`}
                                     >
-                                        Intelligence
-                                        <ChevronDown className={`h-4 w-4 transition-transform ${intelligenceGroupExpanded ? 'rotate-180' : ''}`} />
+                                        Admin
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${adminGroupExpanded ? 'rotate-180' : ''}`} />
                                     </button>
-                                    {intelligenceGroupExpanded && (
+                                    {adminGroupExpanded && (
                                         <div className="pl-6 space-y-1">
-                                            {intelligenceLinks.map(link => (
+                                            {filteredAdminLinks.map(link => (
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
