@@ -25,11 +25,11 @@ Run this skill after any change to API routes or auth helpers to verify RBAC cor
 | /api/settings/export | root | — | — | — |
 | /api/settings/import | — | root | — | — |
 | /api/settings/delete-data | — | — | — | root |
-| /api/events | auth | manageEvents | — | — |
+| /api/events | auth (all roles see all events) | manageEvents | — | — |
 | /api/events/[id] | eventAccess | — | manageEvents | manageEvents |
 | /api/events/[id]/roi | eventAccess | write+eventAccess | write+eventAccess | — |
 | /api/events/[id]/roi/extract-roi | — | write+eventAccess | — | — |
-| /api/events/[id]/roi/generate-plan | — | write+eventAccess | — | — |
+| /api/events/[id]/roi/generate-plan | — | create+eventAccess | — | — |
 | /api/events/[id]/export | write+eventAccess | — | — | — |
 | /api/events/[id]/import | — | write+eventAccess | — | — |
 | /api/events/[id]/reset | — | write+eventAccess | — | — |
@@ -75,6 +75,8 @@ Run this skill after any change to API routes or auth helpers to verify RBAC cor
 | /api/intelligence/targets | GET | `CRON_SECRET_KEY` bearer — cron-triggered target list |
 | /api/intelligence/unsubscribe | GET | opaque `unsubscribeToken` query param — email-link unsubscribe (public) |
 | /api/webhooks/intel-report | POST | `CRON_SECRET_KEY` bearer — OpenClaw webhook |
+| /api/intelligence/report-exists | POST | direct `auth()` — any authenticated user |
+| /api/intelligence/report/[targetName] | GET | direct `auth()` OR `verifyReportToken()` JWT — supports email-link access |
 
 **Legend:**
 - `auth` = any authenticated user (`requireAuth: true`)
@@ -106,6 +108,8 @@ Grep: pattern "export (const|async function) (GET|POST|PUT|PATCH|DELETE)"
 - `app/api/webhooks/intel-report/route.ts` — `CRON_SECRET_KEY` bearer
 - `app/api/social/drafts/route.ts` — direct `auth()` + `canManageEvents()` (Root | Marketing)
 - `app/api/social/drafts/[id]/route.ts` — direct `auth()` + `canManageEvents()` (Root | Marketing)
+- `app/api/intelligence/report-exists/route.ts` — direct `auth()` (any authenticated user)
+- `app/api/intelligence/report/[targetName]/route.ts` — direct `auth()` OR `verifyReportToken()` JWT
 
 Flag any file NOT in this list as a coverage gap.
 

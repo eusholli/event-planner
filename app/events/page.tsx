@@ -132,11 +132,7 @@ export default function EventsPage() {
 
     // Modal Action
     const handleViewDashboard = (event: Event) => {
-        if (canManage || canWrite || event.status === 'COMMITTED' || event.status === 'OCCURRED' || event.status === 'AWARENESS') {
-            router.push(`/events/${event.slug || event.id}/dashboard`)
-        } else {
-            alert('This event must be in Committed, Occurred, or Awareness status to access the management dashboard.')
-        }
+        router.push(`/events/${event.slug || event.id}/dashboard`)
     }
 
     // Derived Filter Data
@@ -363,40 +359,42 @@ export default function EventsPage() {
                                                 >
                                                     {event.status}
                                                 </span>
-                                                {canManage && (
-                                                    <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                                                         <SparkleMarketingPlanButton
                                                             eventId={event.id}
                                                             onHasPlan={() => router.push(`/events/${event.slug || event.id}/roi?planWarning=1`)}
                                                             onGenerated={() => router.push(`/events/${event.slug || event.id}/roi`)}
                                                             onError={() => router.push(`/events/${event.slug || event.id}/roi?planError=1`)}
                                                         />
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                router.push(`/events/${event.slug || event.id}/settings`)
-                                                            }}
-                                                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                handleDelete(event.id, event.slug)
-                                                            }}
-                                                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        </button>
+                                                        {canManage && (
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        router.push(`/events/${event.slug || event.id}/settings`)
+                                                                    }}
+                                                                    className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors"
+                                                                    title="Edit"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                    </svg>
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        handleDelete(event.id, event.slug)
+                                                                    }}
+                                                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                    title="Delete"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                )}
                                             </div>
                                         </div>
 
@@ -524,8 +522,7 @@ export default function EventsPage() {
                             >
                                 Close
                             </button>
-                            {(canManage || canWrite || selectedEvent.status === 'COMMITTED' || selectedEvent.status === 'OCCURRED' || selectedEvent.status === 'AWARENESS') && (
-                                <button
+                            <button
                                     onClick={() => handleViewDashboard(selectedEvent)}
                                     className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
                                 >
@@ -534,7 +531,6 @@ export default function EventsPage() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                     </svg>
                                 </button>
-                            )}
                         </div>
                     </div>
                 </div>

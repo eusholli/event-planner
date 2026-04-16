@@ -1,26 +1,13 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { withAuth, AuthContext } from '@/lib/with-auth'
-import { Roles } from '@/lib/constants'
 import { geocodeAddress } from '@/lib/geocoding'
 
 export const dynamic = 'force-dynamic'
 
 const GETHandler = withAuth(async (request, ctx) => {
-    const authCtx = ctx.authCtx as AuthContext
     try {
-        const { userId, role } = authCtx
-
-        const isGlobalAccess = role === Roles.Root || role === Roles.Marketing
-
         const where: any = {}
-
-        if (!isGlobalAccess) {
-            // If not global access (Admin or User), they must be in the authorized list
-            if (userId) {
-                where.authorizedUserIds = { has: userId }
-            }
-        }
 
         const events = await prisma.event.findMany({
             where,

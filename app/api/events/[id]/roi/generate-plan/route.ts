@@ -34,7 +34,7 @@ const POSTHandler = withAuth(async (request, ctx) => {
         const status = msg.includes('not configured') ? 400 : 500
         return NextResponse.json({ error: msg }, { status })
     }
-}, { requireRole: 'write', requireEventAccess: true })
+}, { requireRole: 'create', requireEventAccess: true })
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const POST = POSTHandler as any
