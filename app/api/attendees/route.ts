@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { resolveEventId } from '@/lib/events'
 import { withAuth } from '@/lib/with-auth'
+import { generatePlaceholderEmail, isPlaceholderEmail } from '@/lib/attendee-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,7 @@ async function getHandler(request: Request) {
                 where: {
                     OR: [
                         { name: { contains: query, mode: 'insensitive' } },
-                        { email: { contains: query, mode: 'insensitive' } },
+                        { email: { contains: query, mode: 'insensitive' }, emailMissing: false },
                         { company: { name: { contains: query, mode: 'insensitive' } } }
                     ]
                 },
@@ -38,24 +39,29 @@ async function getHandler(request: Request) {
             return NextResponse.json(attendees)
         }
 
+        const missingEmail = searchParams.get('missingEmail')
+        if (missingEmail === 'true' && !rawEventId) {
+            const attendees = await prisma.attendee.findMany({
+                where: { emailMissing: true },
+                include: { company: true },
+                orderBy: { name: 'asc' }
+            })
+            return NextResponse.json(attendees)
+        }
+
         const eventId = await resolveEventId(rawEventId || '')
 
         if (!eventId) {
             return NextResponse.json({ error: 'eventId or query is required' }, { status: 400 })
         }
 
+        const where: any = { events: { some: { id: eventId } } }
+        if (missingEmail === 'true') where.emailMissing = true
+
         const attendees = await prisma.attendee.findMany({
-            where: {
-                events: {
-                    some: {
-                        id: eventId
-                    }
-                }
-            },
+            where,
             include: { company: true },
-            orderBy: {
-                name: 'asc'
-            }
+            orderBy: { name: 'asc' }
         })
         return NextResponse.json(attendees)
     } catch (error) {
@@ -94,11 +100,19 @@ async function postHandler(request: Request) {
             }, { status: 403 })
         }
 
-        // Check for existing attendee
-        const existingAttendee = await prisma.attendee.findUnique({
-            where: { email },
+        // Resolve email: generate placeholder if not provided
+        let resolvedEmail = (email || '').trim()
+        let emailMissing = false
+        if (!resolvedEmail) {
+            resolvedEmail = generatePlaceholderEmail()
+            emailMissing = true
+        }
+
+        // Check for existing attendee (only for real emails — placeholders are unique by construction)
+        const existingAttendee = !emailMissing ? await prisma.attendee.findUnique({
+            where: { email: resolvedEmail },
             include: { company: true }
-        })
+        }) : null
 
         if (existingAttendee) {
             // Link to event if not already linked
@@ -141,8 +155,8 @@ async function postHandler(request: Request) {
 
         let finalImageUrl = ''
 
-        if (!name || !title || !companyId || !email) {
-            return NextResponse.json({ error: 'Name, Title, Company, and Email are required.' }, { status: 400 })
+        if (!name || !title || !companyId) {
+            return NextResponse.json({ error: 'Name, Title, and Company are required.' }, { status: 400 })
         }
 
         // Verify company exists
@@ -190,7 +204,8 @@ async function postHandler(request: Request) {
             data: {
                 name,
                 title,
-                email,
+                email: resolvedEmail,
+                emailMissing,
                 bio,
                 companyId,
                 linkedin,

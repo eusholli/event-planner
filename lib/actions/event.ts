@@ -379,6 +379,7 @@ export async function importEventData(eventId: string, data: any) {
                     where: { email: att.email },
                     create: {
                         name: att.name, email: att.email, title: att.title ?? '',
+                        emailMissing: att.emailMissing ?? false,
                         companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
                         imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
                         type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,
@@ -386,6 +387,7 @@ export async function importEventData(eventId: string, data: any) {
                     },
                     update: {
                         name: att.name, title: att.title ?? '',
+                        emailMissing: att.emailMissing ?? false,
                         companyId, bio: att.bio ?? null, linkedin: att.linkedin ?? null,
                         imageUrl: att.imageUrl ?? null, isExternal: att.isExternal ?? false,
                         type: att.type ?? null, seniorityLevel: att.seniorityLevel ?? null,

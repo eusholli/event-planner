@@ -69,6 +69,7 @@ model Attendee {
   imageUrl       String?
   title          String
   isExternal     Boolean   @default(false)
+  emailMissing   Boolean   @default(false)
   type           String?
   seniorityLevel String?
   events            Event[]

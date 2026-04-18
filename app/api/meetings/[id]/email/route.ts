@@ -27,6 +27,14 @@ export const POST = withAuth(async (
             return NextResponse.json({ error: 'Recipient email is required' }, { status: 400 })
         }
 
+        // Filter out placeholder addresses from missing-email attendees
+        const validEmails = emailsToProcess.filter(e => !e.endsWith('@placeholder.invalid'))
+        if (validEmails.length === 0) {
+            return NextResponse.json({ error: 'No valid recipient emails — all provided addresses are placeholders for attendees without emails.' }, { status: 400 })
+        }
+        emailsToProcess.length = 0
+        emailsToProcess.push(...validEmails)
+
         const meeting = await prisma.meeting.findUnique({
             where: { id },
             include: {

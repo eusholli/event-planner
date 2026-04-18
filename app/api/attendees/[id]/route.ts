@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { findLinkedInUrl, generateBio } from '@/lib/enrichment'
 import { withAuth } from '@/lib/with-auth'
+import { generatePlaceholderEmail } from '@/lib/attendee-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,8 +46,25 @@ async function putHandler(
         let finalImageUrl = existingAttendee.imageUrl
 
         // Validation
-        if (!name || !title || !companyId || !email) {
-            return NextResponse.json({ error: 'Name, Title, Company, and Email cannot be empty.' }, { status: 400 })
+        if (!name || !title || !companyId) {
+            return NextResponse.json({ error: 'Name, Title, and Company cannot be empty.' }, { status: 400 })
+        }
+
+        // Resolve email: keep/generate placeholder if empty, clear flag if real email provided
+        const trimmedEmail = (email || '').trim()
+        let resolvedEmail: string
+        let newEmailMissing: boolean
+        if (!trimmedEmail) {
+            if (existingAttendee.emailMissing) {
+                resolvedEmail = existingAttendee.email
+                newEmailMissing = true
+            } else {
+                resolvedEmail = generatePlaceholderEmail()
+                newEmailMissing = true
+            }
+        } else {
+            resolvedEmail = trimmedEmail
+            newEmailMissing = false
         }
 
         // Verify company exists and get name for enrichment
@@ -125,7 +143,8 @@ async function putHandler(
             data: {
                 name,
                 title,
-                email,
+                email: resolvedEmail,
+                emailMissing: newEmailMissing,
                 bio,
                 companyId,
                 linkedin,
@@ -138,7 +157,10 @@ async function putHandler(
         })
 
         return NextResponse.json(attendee)
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+            return NextResponse.json({ error: 'An attendee with this email already exists.' }, { status: 409 })
+        }
         console.error('Update error:', error)
         return NextResponse.json({ error: 'Failed to update attendee' }, { status: 500 })
     }

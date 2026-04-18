@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { withAuth, type AuthContext } from '@/lib/with-auth';
+import { generatePlaceholderEmail } from '@/lib/attendee-utils';
 
 // Utility to resolve or create a company to get a valid companyId
 async function resolveCompanyId(companyName: string | null | undefined): Promise<string | null> {
@@ -35,8 +36,8 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Pro
         }
         if (people && Array.isArray(people)) {
             for (const p of people) {
-                if (!p.name || !p.email || !p.companyName || !p.title) {
-                    throw new Error(`Person ${p.name || p.email} is missing required fields (name, email, companyName, title).`);
+                if (!p.name || !p.companyName || !p.title) {
+                    throw new Error(`Person ${p.name} is missing required fields (name, companyName, title).`);
                 }
             }
         }
@@ -92,14 +93,21 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Pro
                     throw new Error(`Could not resolve company for ${person.name}`);
                 }
 
+                // Resolve email: generate placeholder if not provided
+                const rawEmail = (personData.email || '').trim()
+                const personEmail = rawEmail || generatePlaceholderEmail()
+                const personEmailMissing = !rawEmail
+
                 const dataPayload = {
                     ...personData,
+                    email: personEmail,
+                    emailMissing: personEmailMissing,
                     companyId: resolvedCompanyId,
                     isExternal: isExternal ?? false
                 };
 
-                const existing = await prisma.attendee.findUnique({
-                    where: { email: personData.email }
+                const existing = personEmailMissing ? null : await prisma.attendee.findUnique({
+                    where: { email: personEmail }
                 });
 
                 if (existing) {
@@ -110,7 +118,7 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Pro
                             events: { connect: { id: eventId } }
                         }
                     });
-                    personEmailToIdMap.set(personData.email, existing.id);
+                    personEmailToIdMap.set(personEmail, existing.id);
                     results.peopleUpdated++;
                 } else {
                     const fresh = await prisma.attendee.create({
@@ -119,7 +127,7 @@ async function handlePOST(req: Request, ctx: { authCtx: AuthContext, params: Pro
                             events: { connect: { id: eventId } }
                         }
                     });
-                    personEmailToIdMap.set(personData.email, fresh.id);
+                    personEmailToIdMap.set(personEmail, fresh.id);
                     results.peopleCreated++;
                 }
             }

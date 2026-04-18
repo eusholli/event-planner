@@ -24,6 +24,7 @@ interface Attendee {
     name: string
     title: string
     email: string
+    emailMissing?: boolean
     companyId: string
     company: Company
     bio: string
@@ -68,6 +69,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const { filters: attendeeFilters, setFilter: setAttendeeFilter, isFiltered: attendeeIsFiltered, resetFilters: resetAttendeeFilters } = useFilterParams('attendees', ATTENDEES_FILTER_DEFAULTS)
+    const [showMissingEmail, setShowMissingEmail] = useState(false)
 
     // Company selector state for edit modal
     const [editCompanies, setEditCompanies] = useState<Company[]>([])
@@ -269,7 +271,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
         setEditFormData({
             name: attendee.name,
             title: attendee.title || '',
-            email: attendee.email,
+            email: attendee.emailMissing ? '' : attendee.email,
             companyId: attendee.companyId,
             bio: attendee.bio || '',
             linkedin: attendee.linkedin || '',
@@ -362,8 +364,13 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const otherAttendees = attendees.filter(a => !userEmail || a.email !== userEmail)
 
     const companyName = (a: Attendee) => a.company?.name || ''
-    const internalAttendees = otherAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes((attendeeFilters.search as string).toLowerCase()) || companyName(a).toLowerCase().includes((attendeeFilters.search as string).toLowerCase())))
-    const externalAttendees = otherAttendees.filter(a => a.isExternal && (a.name.toLowerCase().includes((attendeeFilters.search as string).toLowerCase()) || companyName(a).toLowerCase().includes((attendeeFilters.search as string).toLowerCase())))
+    const matchesSearch = (a: Attendee) => {
+        const q = (attendeeFilters.search as string).toLowerCase()
+        return a.name.toLowerCase().includes(q) || companyName(a).toLowerCase().includes(q)
+    }
+    const matchesMissingEmail = (a: Attendee) => !showMissingEmail || a.emailMissing === true
+    const internalAttendees = otherAttendees.filter(a => !a.isExternal && matchesSearch(a) && matchesMissingEmail(a))
+    const externalAttendees = otherAttendees.filter(a => a.isExternal && matchesSearch(a) && matchesMissingEmail(a))
 
     const renderAttendeeCard = (attendee: Attendee) => (
         <div key={attendee.id} className="card hover:border-zinc-200 group relative flex flex-col">
@@ -408,6 +415,11 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                             {attendee.type && (
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                                     {attendee.type}
+                                </span>
+                            )}
+                            {attendee.emailMissing && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">
+                                    No Email
                                 </span>
                             )}
                         </p>
@@ -481,7 +493,11 @@ function AttendeesContent({ eventId }: { eventId: string }) {
             )}
             <div className="mt-4 pt-4 border-t border-zinc-100">
                 <div className="flex justify-between items-center">
-                    <span className="text-xs text-zinc-400 font-mono">{attendee.email}</span>
+                    {attendee.emailMissing ? (
+                        <span className="text-xs text-orange-500 italic">No email on file</span>
+                    ) : (
+                        <span className="text-xs text-zinc-400 font-mono">{attendee.email}</span>
+                    )}
                 </div>
                 {(reportableNames.has(attendee.name) || (attendee.company?.name && reportableNames.has(attendee.company.name))) && (
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
@@ -522,6 +538,17 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                         onChange={(e) => setAttendeeFilter('search', e.target.value)}
                     />
                 </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={showMissingEmail}
+                        onChange={(e) => setShowMissingEmail(e.target.checked)}
+                        className="rounded border-zinc-300 text-orange-500 focus:ring-orange-400"
+                    />
+                    <span className={`text-sm font-medium ${showMissingEmail ? 'text-orange-700' : 'text-zinc-500'}`}>
+                        Missing Email only
+                    </span>
+                </label>
                 {attendeeIsFiltered && (
                     <button
                         onClick={resetAttendeeFilters}
@@ -719,15 +746,21 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                             </div>
 
                             <div>
-                                <label htmlFor="edit-email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email</label>
+                                <label htmlFor="edit-email" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                    Email
+                                    <span className="ml-1 text-xs font-normal text-zinc-400">(optional)</span>
+                                </label>
                                 <input
                                     type="email"
                                     id="edit-email"
-                                    required
                                     className="input-field"
+                                    placeholder="name@company.com"
                                     value={editFormData.email}
                                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                                 />
+                                {editingAttendee?.emailMissing && (
+                                    <p className="mt-1 text-xs text-orange-600">No email on file. Enter a real email address to update.</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="edit-linkedin" className="block text-sm font-medium text-zinc-700 mb-1.5">LinkedIn URL</label>

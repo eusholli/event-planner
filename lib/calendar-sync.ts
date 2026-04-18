@@ -12,7 +12,7 @@ export interface Meeting {
     sequence: number
     room?: { name: string } | null
     location?: string | null
-    attendees: { name: string, email: string, title?: string | null, company?: string | null }[]
+    attendees: { name: string, email: string, emailMissing?: boolean, title?: string | null, company?: string | null }[]
     requesterEmail?: string | null
     otherDetails?: string | null
     createdBy?: string | null
@@ -52,7 +52,7 @@ export async function generateInviteContent(meeting: Meeting, onsiteContact?: On
         sequence: meeting.sequence,
         status: 'CONFIRMED',
         organizer: { name: organizerName, email: organizerEmail },
-        attendees: meeting.attendees.map(a => ({ name: a.name, email: a.email, rsvp: true, partstat: 'NEEDS-ACTION', role: 'REQ-PARTICIPANT' })),
+        attendees: meeting.attendees.filter(a => !a.emailMissing).map(a => ({ name: a.name, email: a.email, rsvp: true, partstat: 'NEEDS-ACTION', role: 'REQ-PARTICIPANT' })),
         method: 'REQUEST'
     }
 

@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma'
 import { sendCalendarInvites } from '@/lib/calendar-sync'
 import { getROITargets, getROIActuals } from '@/lib/actions/roi'
 import type { ROITargetsInput } from '@/lib/actions/roi'
+import { generatePlaceholderEmail } from '@/lib/attendee-utils'
 
 // ─── Meetings ────────────────────────────────────────────────────────────────
 
@@ -154,10 +155,11 @@ export interface GetAttendeesArgs {
   types?: string[]
   isExternal?: boolean
   email?: string
+  missingEmail?: boolean
 }
 
 export async function getAttendeesOp(eventId: string, args: GetAttendeesArgs) {
-  const { search, company, title, types, isExternal, email } = args
+  const { search, company, title, types, isExternal, email, missingEmail } = args
   const where: any = {
     events: { some: { id: eventId } }
   }
@@ -166,6 +168,7 @@ export async function getAttendeesOp(eventId: string, args: GetAttendeesArgs) {
   if (email) where.email = { contains: email, mode: 'insensitive' }
   if (types && types.length > 0) where.type = { in: types }
   if (isExternal !== undefined) where.isExternal = isExternal
+  if (missingEmail !== undefined) where.emailMissing = missingEmail
 
   if (search) {
     const searchOr = [
@@ -191,7 +194,7 @@ export async function getAttendeesOp(eventId: string, args: GetAttendeesArgs) {
 
 export interface AddAttendeeArgs {
   name: string
-  email: string
+  email?: string
   title: string
   company: string
 }
@@ -208,8 +211,12 @@ export async function addAttendeeOp(eventId: string, args: AddAttendeeArgs) {
       companyRecord = await prisma.company.create({ data: { name: company } })
     }
 
-    // Check if attendee already exists globally (email is unique across all events)
-    const existing = await prisma.attendee.findUnique({ where: { email } })
+    // Resolve email: generate placeholder if not provided
+    const resolvedEmail = (email || '').trim() || generatePlaceholderEmail()
+    const emailMissing = !email || !email.trim()
+
+    // Check if attendee already exists globally (only for real emails)
+    const existing = emailMissing ? null : await prisma.attendee.findUnique({ where: { email: resolvedEmail } })
 
     if (existing) {
       // Connect to this event if not already connected
@@ -239,7 +246,8 @@ export async function addAttendeeOp(eventId: string, args: AddAttendeeArgs) {
     const attendee = await prisma.attendee.create({
       data: {
         name,
-        email,
+        email: resolvedEmail,
+        emailMissing,
         title,
         companyId: companyRecord.id,
         linkedin,
@@ -247,7 +255,7 @@ export async function addAttendeeOp(eventId: string, args: AddAttendeeArgs) {
         events: { connect: { id: eventId } }
       }
     })
-    return { message: `Attendee added: ${attendee.name} (${attendee.email})`, attendeeId: attendee.id }
+    return { message: `Attendee added: ${attendee.name}${emailMissing ? ' (no email on file)' : ` (${attendee.email})`}`, attendeeId: attendee.id }
   } catch (e: any) {
     return { error: e.message }
   }

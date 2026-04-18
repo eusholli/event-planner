@@ -15,6 +15,7 @@ interface Attendee {
     name: string
     title: string
     email: string
+    emailMissing?: boolean
     companyId: string
     company: Company
     bio: string
@@ -211,7 +212,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
         setFormData({
             name: attendee.name,
             title: attendee.title,
-            email: attendee.email,
+            email: attendee.emailMissing ? '' : attendee.email,
             companyId: attendee.companyId,
             bio: attendee.bio || '',
             linkedin: attendee.linkedin || '',
@@ -483,8 +484,16 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                             className="px-4 py-2 hover:bg-indigo-50 cursor-pointer border-b border-zinc-50 last:border-none"
                                             onClick={() => selectExisting(result)}
                                         >
-                                            <div className="font-medium text-zinc-900">{result.name}</div>
-                                            <div className="text-xs text-zinc-500">{result.company?.name || 'Unknown'} • {result.email}</div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-zinc-900">{result.name}</span>
+                                                {result.emailMissing && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">No Email</span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-zinc-500">
+                                                {result.company?.name || 'Unknown'}
+                                                {!result.emailMissing && ` • ${result.email}`}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -572,14 +581,17 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                         </div>
 
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1.5">Email</label>
+                            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                                Email
+                                {!isLinking && <span className="ml-1 text-xs font-normal text-zinc-400">(optional — can be added later)</span>}
+                            </label>
                             <input
                                 type="email"
                                 id="email"
-                                required
                                 className={`input-field ${isLinking ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 value={formData.email}
                                 readOnly={isLinking}
+                                placeholder="name@company.com"
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
