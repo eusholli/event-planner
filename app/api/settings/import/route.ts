@@ -360,17 +360,8 @@ const postHandler = withAuth(async (request) => {
                             articleType: draft.articleType ?? null,
                             status: draft.status ?? 'DRAFT',
                             createdBy: draft.createdBy ?? '',
-                            datePosted: draft.datePosted ? new Date(draft.datePosted) : null,
-                            postUrl: draft.postUrl ?? null,
                             impressions: draft.impressions ?? null,
-                            uniqueViews: draft.uniqueViews ?? null,
                             clicks: draft.clicks ?? null,
-                            reactions: draft.reactions ?? null,
-                            comments: draft.comments ?? null,
-                            reposts: draft.reposts ?? null,
-                            engagementRate: draft.engagementRate ?? null,
-                            followsGained: draft.followsGained ?? null,
-                            profileVisits: draft.profileVisits ?? null,
                         }
                         if (draft.id) {
                             await prisma.linkedInDraft.upsert({
