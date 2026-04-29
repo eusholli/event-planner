@@ -48,6 +48,22 @@ const POSTHandler = withAuth(async (request, ctx) => {
         const defaultMeetingTypes = settings?.defaultMeetingTypes || []
         const defaultAttendeeTypes = settings?.defaultAttendeeTypes || []
 
+        let eventName = json.name?.trim()
+        if (!eventName) {
+            eventName = 'New Event'
+            const existing = await prisma.event.findMany({
+                where: { name: { startsWith: 'New Event' } },
+                select: { name: true }
+            })
+            if (existing.some(e => e.name === eventName)) {
+                const nums = existing
+                    .map(e => { const m = e.name.match(/^New Event(?: (\d+))?$/); return m ? (m[1] ? parseInt(m[1]) : 1) : 0 })
+                    .filter(n => n > 0)
+                const next = nums.length ? Math.max(...nums) + 1 : 2
+                eventName = `New Event ${next}`
+            }
+        }
+
         let latitude = null
         let longitude = null
         if (json.address) {
@@ -64,7 +80,7 @@ const POSTHandler = withAuth(async (request, ctx) => {
 
         const event = await prisma.event.create({
             data: {
-                name: json.name?.trim() || 'New Event',
+                name: eventName,
                 slug: slug,
                 startDate: json.startDate,
                 endDate: json.endDate,
