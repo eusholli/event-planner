@@ -64,7 +64,7 @@ const POSTHandler = withAuth(async (request, ctx) => {
 
         const event = await prisma.event.create({
             data: {
-                name: json.name ?? 'New Event',
+                name: json.name?.trim() || 'New Event',
                 slug: slug,
                 startDate: json.startDate,
                 endDate: json.endDate,

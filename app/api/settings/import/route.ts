@@ -362,6 +362,12 @@ const postHandler = withAuth(async (request) => {
                             createdBy: draft.createdBy ?? '',
                             impressions: draft.impressions ?? null,
                             clicks: draft.clicks ?? null,
+                            adStartDate: draft.adStartDate ? new Date(draft.adStartDate) : null,
+                            adEndDate: draft.adEndDate ? new Date(draft.adEndDate) : null,
+                            ctaUrl: draft.ctaUrl ?? null,
+                            averageCtr: draft.averageCtr ?? null,
+                            averageCpc: draft.averageCpc ?? null,
+                            topCompaniesByEngagement: draft.topCompaniesByEngagement ?? null,
                         }
                         if (draft.id) {
                             await prisma.linkedInDraft.upsert({
