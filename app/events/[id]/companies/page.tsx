@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import useFilterParams from '@/hooks/useFilterParams'
 
 interface Company {
@@ -16,10 +16,16 @@ interface Company {
 const COMPANIES_FILTER_DEFAULTS = { search: '' }
 
 export default function CompaniesPage() {
-    return <CompaniesContent />
+    const params = require('next/navigation').useParams()
+    const id = params?.id as string
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <CompaniesContent eventId={id} />
+        </Suspense>
+    )
 }
 
-function CompaniesContent() {
+function CompaniesContent({ eventId }: { eventId: string }) {
     const [companies, setCompanies] = useState<Company[]>([])
     const [formData, setFormData] = useState({
         name: '',
@@ -39,11 +45,11 @@ function CompaniesContent() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
     useEffect(() => {
-        fetchCompanies()
-    }, [])
+        if (eventId) fetchCompanies()
+    }, [eventId])
 
     const fetchCompanies = async () => {
-        const res = await fetch('/api/companies')
+        const res = await fetch(`/api/companies?eventId=${eventId}`)
         const data = await res.json()
         setCompanies(Array.isArray(data) ? data : [])
     }
@@ -72,25 +78,6 @@ function CompaniesContent() {
             console.error('Error adding company:', error)
         } finally {
             setLoading(false)
-        }
-    }
-
-    const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`Are you sure you want to delete ${name}? This may fail if there are attendees associated with it.`)) return
-
-        try {
-            const res = await fetch(`/api/companies/${id}`, {
-                method: 'DELETE',
-            })
-            if (res.ok) {
-                fetchCompanies()
-            } else {
-                const data = await res.json()
-                alert(data.error || 'Failed to delete company')
-            }
-        } catch (error) {
-            console.error('Error deleting company:', error)
-            alert('An unexpected error occurred')
         }
     }
 
@@ -137,7 +124,7 @@ function CompaniesContent() {
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Companies</h1>
-                        <p className="mt-2 text-neutral-500">Manage all companies across your events.</p>
+                        <p className="mt-2 text-neutral-500">Companies represented by attendees at this event.</p>
                     </div>
                     <div className="relative w-64">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -211,6 +198,9 @@ function CompaniesContent() {
                                 >
                                     {loading ? 'Adding...' : 'Add Company'}
                                 </button>
+                                <p className="text-xs text-neutral-400 text-center">
+                                    This company will appear in the list once you add an attendee from it on the Attendees page.
+                                </p>
                             </form>
                         </div>
                     </div>
@@ -235,15 +225,6 @@ function CompaniesContent() {
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                         </svg>
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(company.id, company.name)}
-                                                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
                                                 </div>
                                             </div>
 
@@ -266,7 +247,7 @@ function CompaniesContent() {
                                                     <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                                     </svg>
-                                                    <span className="text-xs font-medium">{company._count.attendees} Attendees</span>
+                                                    <span className="text-xs font-medium">{company._count.attendees} Attendees at event</span>
                                                 </div>
                                             )}
                                         </div>
@@ -281,7 +262,7 @@ function CompaniesContent() {
                                     </div>
                                     <h3 className="text-lg font-medium text-neutral-900">No companies found</h3>
                                     <p className="text-neutral-500 mt-1">
-                                        {companyFilters.search ? 'Try adjusting your search.' : 'Add your first company using the form.'}
+                                        {companyFilters.search ? 'Try adjusting your search.' : 'Add attendees from a company to see it here.'}
                                     </p>
                                 </div>
                             )}

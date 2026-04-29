@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { withAuth } from '@/lib/with-auth'
+import { resolveEventId } from '@/lib/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,36 @@ async function getHandler(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const query = searchParams.get('query')
+        const rawEventId = searchParams.get('eventId')
+
+        if (rawEventId) {
+            const eventId = await resolveEventId(rawEventId)
+            if (!eventId) {
+                return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+            }
+
+            const companies = await prisma.company.findMany({
+                where: {
+                    attendees: {
+                        some: {
+                            events: { some: { id: eventId } }
+                        }
+                    }
+                },
+                orderBy: { name: 'asc' },
+                include: {
+                    _count: {
+                        select: {
+                            attendees: {
+                                where: { events: { some: { id: eventId } } }
+                            }
+                        }
+                    }
+                }
+            })
+
+            return NextResponse.json(companies)
+        }
 
         const where = query
             ? { name: { contains: query, mode: 'insensitive' as const } }
