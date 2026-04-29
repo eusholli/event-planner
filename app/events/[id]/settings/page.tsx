@@ -550,7 +550,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
 
 
                 {/* Section 4: User Access Control (Privileged Only) */}
-                {availableUsers.length > 0 && (
+                {canManageEvents(currentUser?.publicMetadata?.role as string) && (
                     <>
                         <hr className="border-neutral-200" />
                         <section className="space-y-4 pt-4">
