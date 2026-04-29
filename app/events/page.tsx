@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -28,6 +28,15 @@ interface Event {
 }
 
 function BudgetPivotTable({ events }: { events: Event[] }) {
+    const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set())
+    const toggleRegion = (region: string) =>
+        setExpandedRegions(prev => {
+            const next = new Set(prev)
+            if (next.has(region)) next.delete(region)
+            else next.add(region)
+            return next
+        })
+
     const fmtCurrency = (v: number) =>
         v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
@@ -82,8 +91,17 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
                 </thead>
                 <tbody>
                     {regions.map((region, i) => (
-                        <tr key={region} className={`border-b border-neutral-100 ${i % 2 === 0 ? '' : 'bg-neutral-50/50'}`}>
-                            <td className="px-6 py-3 font-medium text-neutral-700 whitespace-nowrap">{region}</td>
+                        <React.Fragment key={region}>
+                        <tr className={`border-b border-neutral-100 ${i % 2 === 0 ? '' : 'bg-neutral-50/50'}`}>
+                            <td
+                                className="px-6 py-3 font-medium text-neutral-700 whitespace-nowrap cursor-pointer select-none"
+                                onClick={() => toggleRegion(region)}
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${expandedRegions.has(region) ? '' : '-rotate-90'}`} />
+                                    {region}
+                                </span>
+                            </td>
                             {activeStatuses.map(s => {
                                 const val = cellTotal(region, s)
                                 return (
@@ -96,6 +114,36 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
                                 {fmtCurrency(rowTotal(region))}
                             </td>
                         </tr>
+                        {expandedRegions.has(region) &&
+                            events
+                                .filter(e => (e.region ?? '(No Region)') === region)
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map(event => (
+                                    <tr key={event.id} className="border-b border-neutral-100 bg-blue-50/30">
+                                        <td className="pl-10 pr-4 py-2 text-neutral-600 whitespace-nowrap">
+                                            <Link
+                                                href={`/events/${event.slug || event.id}/dashboard`}
+                                                className="text-sm hover:text-blue-600 hover:underline transition-colors"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                {event.name}
+                                            </Link>
+                                        </td>
+                                        {activeStatuses.map(s => (
+                                            <td key={s} className="px-4 py-2 text-right text-sm text-neutral-500 tabular-nums">
+                                                {event.status === s && event.budget != null && event.budget > 0
+                                                    ? fmtCurrency(event.budget)
+                                                    : <span className="text-neutral-300">—</span>
+                                                }
+                                            </td>
+                                        ))}
+                                        <td className="px-6 py-2 text-right text-sm text-neutral-600 tabular-nums bg-neutral-50">
+                                            {event.budget != null && event.budget > 0 ? fmtCurrency(event.budget) : <span className="text-neutral-300">—</span>}
+                                        </td>
+                                    </tr>
+                                ))
+                        }
+                        </React.Fragment>
                     ))}
                 </tbody>
                 <tfoot>
