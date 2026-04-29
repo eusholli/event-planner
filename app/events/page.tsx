@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EventMap } from '@/components/reports/EventMap'
@@ -24,6 +24,96 @@ interface Event {
     description?: string | null
     latitude?: number | null
     longitude?: number | null
+    budget?: number | null
+}
+
+function BudgetPivotTable({ events }: { events: Event[] }) {
+    const fmtCurrency = (v: number) =>
+        v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+
+    const activeStatuses = STATUS_DISPLAY_ORDER.filter(s => events.some(e => e.status === s))
+    const regions = Array.from(new Set(events.map(e => e.region ?? '(No Region)'))).sort()
+
+    if (events.length === 0) {
+        return (
+            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm text-center text-neutral-500 py-20">
+                No events match the current filters.
+            </div>
+        )
+    }
+
+    const cellTotal = (region: string, status: string) =>
+        events
+            .filter(e => (e.region ?? '(No Region)') === region && e.status === status)
+            .reduce((sum, e) => sum + (e.budget ?? 0), 0)
+
+    const rowTotal = (region: string) =>
+        events
+            .filter(e => (e.region ?? '(No Region)') === region)
+            .reduce((sum, e) => sum + (e.budget ?? 0), 0)
+
+    const colTotal = (status: string) =>
+        events.filter(e => e.status === status).reduce((sum, e) => sum + (e.budget ?? 0), 0)
+
+    const grandTotal = events.reduce((sum, e) => sum + (e.budget ?? 0), 0)
+
+    const hasEventsInCell = (region: string, status: string) =>
+        events.some(e => (e.region ?? '(No Region)') === region && e.status === status)
+
+    return (
+        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+            <div className="p-6 border-b border-neutral-100">
+                <h2 className="text-lg font-semibold text-neutral-900">Budget by Region &amp; Status</h2>
+                <p className="text-sm text-neutral-500 mt-1">Totals reflect currently filtered events only.</p>
+            </div>
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="bg-neutral-50 border-b border-neutral-200">
+                        <th className="text-left px-6 py-3 font-semibold text-neutral-600 w-40">Region</th>
+                        {activeStatuses.map(s => (
+                            <th key={s} className="px-4 py-3 font-semibold text-right whitespace-nowrap">
+                                <span className={`px-2 py-0.5 rounded text-[11px] tracking-wider uppercase ${getStatusColor(s).className}`}>
+                                    {s}
+                                </span>
+                            </th>
+                        ))}
+                        <th className="px-6 py-3 font-semibold text-right text-neutral-700">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {regions.map((region, i) => (
+                        <tr key={region} className={`border-b border-neutral-100 ${i % 2 === 0 ? '' : 'bg-neutral-50/50'}`}>
+                            <td className="px-6 py-3 font-medium text-neutral-700 whitespace-nowrap">{region}</td>
+                            {activeStatuses.map(s => {
+                                const val = cellTotal(region, s)
+                                return (
+                                    <td key={s} className="px-4 py-3 text-right text-neutral-600 tabular-nums">
+                                        {hasEventsInCell(region, s) ? fmtCurrency(val) : <span className="text-neutral-300">—</span>}
+                                    </td>
+                                )
+                            })}
+                            <td className="px-6 py-3 text-right font-semibold text-neutral-800 tabular-nums bg-neutral-50">
+                                {fmtCurrency(rowTotal(region))}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+                <tfoot>
+                    <tr className="bg-neutral-100 border-t-2 border-neutral-200">
+                        <td className="px-6 py-3 font-bold text-neutral-800">Total</td>
+                        {activeStatuses.map(s => (
+                            <td key={s} className="px-4 py-3 text-right font-semibold text-neutral-800 tabular-nums">
+                                {fmtCurrency(colTotal(s))}
+                            </td>
+                        ))}
+                        <td className="px-6 py-3 text-right font-bold text-neutral-900 tabular-nums bg-neutral-200">
+                            {fmtCurrency(grandTotal)}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    )
 }
 
 
@@ -215,6 +305,13 @@ export default function EventsPage() {
                                 title="Map View"
                             >
                                 <MapIcon className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setFilter('view', 'budget')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'budget' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                title="Budget View"
+                            >
+                                <DollarSign className="w-5 h-5" />
                             </button>
                         </div>
                         {canManage && (
@@ -418,6 +515,12 @@ export default function EventsPage() {
                                                         <span className="line-clamp-1">{event.address}</span>
                                                     </div>
                                                 )}
+                                                {event.budget != null && event.budget > 0 && (
+                                                    <div className="flex items-center gap-2">
+                                                        <DollarSign className="w-3.5 h-3.5" />
+                                                        <span>{event.budget.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -446,6 +549,10 @@ export default function EventsPage() {
                                 <h2 className="text-lg font-semibold mb-4">Global Event Footprint</h2>
                                 <EventMap events={filteredEvents} onEventClick={handleEventClick} />
                             </div>
+                        )}
+
+                        {eventFilters.view === 'budget' && (
+                            <BudgetPivotTable events={filteredEvents} />
                         )}
                     </div>
                 </div>
@@ -504,6 +611,21 @@ export default function EventsPage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Budget */}
+                            {selectedEvent.budget != null && selectedEvent.budget > 0 && (
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                                        <DollarSign className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">Budget</label>
+                                        <p className="text-neutral-900 font-medium">
+                                            {selectedEvent.budget.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Description */}
                             {selectedEvent.description && (

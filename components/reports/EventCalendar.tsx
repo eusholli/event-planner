@@ -12,10 +12,16 @@ interface Event {
     region: string | null
     status: string
     address: string | null
+    budget?: number | null
 }
 
 const REGIONS = ['NA', 'SA', 'EU/UK', 'MEA', 'APAC', 'Japan']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+const abbreviateBudget = (v: number): string =>
+    v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M`
+    : v >= 1_000 ? `$${Math.round(v / 1_000)}K`
+    : `$${v}`
 
 export function EventCalendar({ events, onEventClick }: { events: Event[], onEventClick?: (event: Event) => void }) {
     // 1. Group by Region
@@ -78,7 +84,8 @@ export function EventCalendar({ events, onEventClick }: { events: Event[], onEve
                         // 1 char approx 0.8% width (assuming ~1000px container and ~8px char width)
                         // Min width 1%
                         // Updated to 1.2% to be conservative and avoid overlap since we removed maxWidth
-                        const estimatedTextWidthPercent = (event.name.length * 1.2) + 2 // +2 for padding/icon
+                        const budgetSuffix = event.budget != null && event.budget > 0 ? ` · ${abbreviateBudget(event.budget)}` : ''
+                        const estimatedTextWidthPercent = ((event.name.length + budgetSuffix.length) * 1.2) + 2 // +2 for padding/icon
                         const visualEndPercent = startPercent + estimatedTextWidthPercent
 
                         // Find first lane where this fits
@@ -132,10 +139,10 @@ export function EventCalendar({ events, onEventClick }: { events: Event[], onEve
                                                 color: colors.text,
                                                 zIndex: 5
                                             }}
-                                            title={`${event.name} - ${event.status}`}
+                                            title={`${event.name} - ${event.status}${event.budget != null && event.budget > 0 ? ` · ${event.budget.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}` : ''}`}
                                         >
                                             <div className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ backgroundColor: colors.text }}></div>
-                                            {event.name}
+                                            {event.name}{event.budget != null && event.budget > 0 ? ` · ${abbreviateBudget(event.budget)}` : ''}
                                         </div>
                                     )
                                 })}

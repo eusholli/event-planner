@@ -22,6 +22,7 @@ interface Event {
     endDate: string | null
     latitude?: number | null
     longitude?: number | null
+    budget?: number | null
 }
 
 // Map component
@@ -103,8 +104,18 @@ export function EventMap({ events, onEventClick }: { events: Event[], onEventCli
                                 }}
                             >
                                 <Popup closeButton={false}>
-                                    <div className="text-xs font-bold text-neutral-900 whitespace-nowrap">
-                                        {event.name}
+                                    <div style={{ minWidth: 160 }}>
+                                        <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>{event.name}</div>
+                                        {event.startDate && (
+                                            <div style={{ fontSize: 11, color: '#6b7280' }}>
+                                                {new Date(event.startDate).toLocaleDateString()}
+                                            </div>
+                                        )}
+                                        {event.budget != null && event.budget > 0 && (
+                                            <div style={{ fontSize: 12, color: '#16a34a', marginTop: 4, fontWeight: 500 }}>
+                                                {event.budget.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+                                            </div>
+                                        )}
                                     </div>
                                 </Popup>
                             </CircleMarker>
