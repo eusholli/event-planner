@@ -217,17 +217,14 @@ model LinkedInDraft {
   createdBy      String
   createdAt      DateTime  @default(now())
 
-  datePosted     DateTime?
-  postUrl        String?
-  impressions    Int?
-  uniqueViews    Int?
-  clicks         Int?
-  reactions      Int?
-  comments       Int?
-  reposts        Int?
-  engagementRate Float?
-  followsGained  Int?
-  profileVisits  Int?
+  adStartDate              DateTime?
+  adEndDate                DateTime?
+  ctaUrl                   String?
+  impressions              Int?
+  clicks                   Int?
+  averageCtr               Float?
+  averageCpc               Float?
+  topCompaniesByEngagement String?   @db.Text
 
   event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 

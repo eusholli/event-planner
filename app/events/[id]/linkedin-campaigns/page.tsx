@@ -20,17 +20,14 @@ interface LinkedInDraft {
     content: string
     originalContent?: string | null
     createdAt: string
-    datePosted: string | null
-    postUrl: string | null
+    adStartDate: string | null
+    adEndDate: string | null
+    ctaUrl: string | null
     impressions: number | null
-    uniqueViews: number | null
     clicks: number | null
-    reactions: number | null
-    comments: number | null
-    reposts: number | null
-    engagementRate: number | null
-    followsGained: number | null
-    profileVisits: number | null
+    averageCtr: number | null
+    averageCpc: number | null
+    topCompaniesByEngagement: string | null
 }
 
 interface LogEntry {
@@ -52,18 +49,15 @@ interface Company {
     pipelineValue?: number | null
 }
 
-const METRIC_FIELDS: Array<{ key: keyof LinkedInDraft; label: string; hint: string; isFloat?: boolean; isDate?: boolean; isUrl?: boolean }> = [
-    { key: 'datePosted', label: 'Date Posted', hint: 'When you published the post', isDate: true },
-    { key: 'postUrl', label: 'Post URL', hint: 'URL of the LinkedIn post (optional)', isUrl: true },
-    { key: 'impressions', label: 'Impressions', hint: 'Post Analytics → Impressions' },
-    { key: 'uniqueViews', label: 'Unique Views', hint: 'Post Analytics → Unique views' },
-    { key: 'clicks', label: 'Clicks', hint: 'Post Analytics → Clicks (link clicks)' },
-    { key: 'reactions', label: 'Reactions', hint: 'Post Analytics → Reactions' },
-    { key: 'comments', label: 'Comments', hint: 'Post Analytics → Comments' },
-    { key: 'reposts', label: 'Reposts', hint: 'Post Analytics → Reposts' },
-    { key: 'engagementRate', label: 'Engagement Rate (%)', hint: 'Post Analytics → Engagement rate', isFloat: true },
-    { key: 'followsGained', label: 'Follows Gained', hint: 'Post Analytics → Follows' },
-    { key: 'profileVisits', label: 'Profile Visits', hint: 'Post Analytics → Profile visits' },
+const METRIC_FIELDS: Array<{ key: keyof LinkedInDraft; label: string; hint: string; isFloat?: boolean; isDate?: boolean; isUrl?: boolean; isTextarea?: boolean }> = [
+    { key: 'adStartDate', label: 'Ad Start Date', hint: 'Campaign start date', isDate: true },
+    { key: 'adEndDate', label: 'Ad End Date', hint: 'Campaign end date', isDate: true },
+    { key: 'ctaUrl', label: 'CTA URL', hint: 'Destination URL users click to', isUrl: true },
+    { key: 'impressions', label: 'Impressions', hint: 'Total ad impressions' },
+    { key: 'clicks', label: 'Clicks', hint: 'Total link clicks' },
+    { key: 'averageCtr', label: 'Average CTR (%)', hint: 'Average click-through rate', isFloat: true },
+    { key: 'averageCpc', label: 'Average CPC ($)', hint: 'Average cost per click', isFloat: true },
+    { key: 'topCompaniesByEngagement', label: 'Top Companies by Impressions/Clicks', hint: 'Paste from LinkedIn Campaign Manager', isTextarea: true },
 ]
 
 export default function LinkedInCampaignsPage() {
@@ -82,6 +76,7 @@ export default function LinkedInCampaignsPage() {
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const [metricDrafts, setMetricDrafts] = useState<Record<string, Record<string, string>>>({})
     const [saving, setSaving] = useState<string | null>(null)
+    const [statusSaving, setStatusSaving] = useState<string | null>(null)
     const [message, setMessage] = useState('')
     const [targetCompanies, setTargetCompanies] = useState<Company[]>([])
     const [selectedForLinkedIn, setSelectedForLinkedIn] = useState<Set<string>>(new Set())
@@ -243,13 +238,13 @@ export default function LinkedInCampaignsPage() {
     const saveMetrics = async (id: string) => {
         setSaving(id)
         const raw = metricDrafts[id] || {}
-        const payload: Record<string, unknown> = { status: 'POSTED' }
+        const payload: Record<string, unknown> = {}
 
         METRIC_FIELDS.forEach(f => {
             const val = raw[f.key]
             if (val === undefined || val === '') return
             if (f.isDate) payload[f.key] = new Date(val).toISOString()
-            else if (f.isUrl) payload[f.key] = val
+            else if (f.isUrl || f.isTextarea) payload[f.key] = val
             else if (f.isFloat) payload[f.key] = parseFloat(val)
             else payload[f.key] = parseInt(val, 10)
         })
@@ -269,6 +264,22 @@ export default function LinkedInCampaignsPage() {
             }
         } finally {
             setSaving(null)
+        }
+    }
+
+    const changeStatus = async (id: string, newStatus: string) => {
+        setStatusSaving(id)
+        try {
+            const res = await fetch(`/api/social/drafts/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            })
+            if (res.ok) {
+                setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d))
+            }
+        } finally {
+            setStatusSaving(null)
         }
     }
 
@@ -360,7 +371,7 @@ export default function LinkedInCampaignsPage() {
     }, [])
 
     const hasMetrics = (draft: LinkedInDraft) =>
-        draft.impressions !== null || draft.clicks !== null || draft.engagementRate !== null
+        draft.impressions !== null || draft.clicks !== null || draft.averageCtr !== null
 
     return (
         <div className="space-y-6">
@@ -479,9 +490,16 @@ export default function LinkedInCampaignsPage() {
                                                 <span className="font-semibold text-zinc-900">
                                                     {draft.title || draft.companyNames.join(', ')}
                                                 </span>
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_COLORS[draft.status] ?? STATUS_COLORS.DRAFT}`}>
-                                                    {draft.status}
-                                                </span>
+                                                <select
+                                                    value={draft.status}
+                                                    onChange={e => changeStatus(draft.id, e.target.value)}
+                                                    disabled={statusSaving === draft.id}
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border cursor-pointer appearance-none bg-transparent pr-5 focus:outline-none disabled:opacity-50 ${STATUS_COLORS[draft.status] ?? STATUS_COLORS.DRAFT}`}
+                                                >
+                                                    <option value="DRAFT">DRAFT</option>
+                                                    <option value="POSTED">POSTED</option>
+                                                    <option value="ARCHIVED">ARCHIVED</option>
+                                                </select>
                                             </div>
                                             <div className="mt-1 flex items-center gap-3 text-xs text-zinc-400">
                                                 <span>{draft.angle}</span>
@@ -489,10 +507,14 @@ export default function LinkedInCampaignsPage() {
                                                 <span>{draft.tone}</span>
                                                 <span>·</span>
                                                 <span>{new Date(draft.createdAt).toLocaleDateString()}</span>
-                                                {draft.datePosted && (
+                                                {(draft.adStartDate || draft.adEndDate) && (
                                                     <>
                                                         <span>·</span>
-                                                        <span className="text-teal-600">Posted {new Date(draft.datePosted).toLocaleDateString()}</span>
+                                                        <span className="text-teal-600">
+                                                            {draft.adStartDate ? new Date(draft.adStartDate).toLocaleDateString() : '?'}
+                                                            {' – '}
+                                                            {draft.adEndDate ? new Date(draft.adEndDate).toLocaleDateString() : 'ongoing'}
+                                                        </span>
                                                     </>
                                                 )}
                                             </div>
@@ -500,10 +522,11 @@ export default function LinkedInCampaignsPage() {
                                                 <div className="mt-2 flex items-center gap-4 text-xs text-zinc-600">
                                                     {draft.impressions !== null && <span>{draft.impressions.toLocaleString()} impressions</span>}
                                                     {draft.clicks !== null && <span>{draft.clicks.toLocaleString()} clicks</span>}
-                                                    {draft.engagementRate !== null && <span className="font-medium text-blue-600">{draft.engagementRate}% engagement</span>}
-                                                    {draft.postUrl && (
-                                                        <a href={draft.postUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 flex items-center gap-0.5">
-                                                            View post <ExternalLink className="w-3 h-3" />
+                                                    {draft.averageCtr !== null && <span className="font-medium text-blue-600">{draft.averageCtr}% CTR</span>}
+                                                    {draft.averageCpc !== null && <span>${draft.averageCpc} CPC</span>}
+                                                    {draft.ctaUrl && (
+                                                        <a href={draft.ctaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 flex items-center gap-0.5">
+                                                            CTA <ExternalLink className="w-3 h-3" />
                                                         </a>
                                                     )}
                                                 </div>
@@ -683,27 +706,39 @@ export default function LinkedInCampaignsPage() {
                                 {expandedMetrics.has(draft.id) && (
                                     <div className="px-6 pb-6 border-t border-zinc-100 pt-4">
                                         <p className="text-xs text-zinc-500 mb-4">
-                                            Find these metrics in LinkedIn by clicking &quot;Analytics&quot; on your published post.
-                                            Copy and paste each value below.
+                                            Find these metrics in LinkedIn Campaign Manager under your ad campaign performance.
                                         </p>
                                         <div className="grid grid-cols-2 gap-3">
                                             {METRIC_FIELDS.map(field => (
-                                                <div key={field.key}>
+                                                <div key={field.key} className={field.isTextarea ? 'col-span-2' : ''}>
                                                     <label className="block text-xs font-medium text-zinc-700 mb-1">
                                                         {field.label}
                                                         <span className="ml-1 font-normal text-zinc-400">{field.hint}</span>
                                                     </label>
-                                                    <input
-                                                        type={field.isDate ? 'date' : field.isUrl ? 'url' : 'number'}
-                                                        step={field.isFloat ? '0.01' : '1'}
-                                                        value={metricDrafts[draft.id]?.[field.key] ?? ''}
-                                                        onChange={e => setMetricDrafts(prev => ({
-                                                            ...prev,
-                                                            [draft.id]: { ...(prev[draft.id] ?? {}), [field.key]: e.target.value }
-                                                        }))}
-                                                        placeholder={field.isUrl ? 'https://linkedin.com/posts/…' : '0'}
-                                                        className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                                    />
+                                                    {field.isTextarea ? (
+                                                        <textarea
+                                                            rows={4}
+                                                            value={metricDrafts[draft.id]?.[field.key] ?? ''}
+                                                            onChange={e => setMetricDrafts(prev => ({
+                                                                ...prev,
+                                                                [draft.id]: { ...(prev[draft.id] ?? {}), [field.key]: e.target.value }
+                                                            }))}
+                                                            placeholder="Paste company engagement data from LinkedIn Campaign Manager…"
+                                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-y"
+                                                        />
+                                                    ) : (
+                                                        <input
+                                                            type={field.isDate ? 'date' : field.isUrl ? 'url' : 'number'}
+                                                            step={field.isFloat ? '0.01' : '1'}
+                                                            value={metricDrafts[draft.id]?.[field.key] ?? ''}
+                                                            onChange={e => setMetricDrafts(prev => ({
+                                                                ...prev,
+                                                                [draft.id]: { ...(prev[draft.id] ?? {}), [field.key]: e.target.value }
+                                                            }))}
+                                                            placeholder={field.isUrl ? 'https://…' : '0'}
+                                                            className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                        />
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
