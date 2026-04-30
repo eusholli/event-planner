@@ -173,14 +173,19 @@ async function deleteHandler(
     const id = (await params).id
     try {
         const { searchParams } = new URL(request.url)
-        const eventId = searchParams.get('eventId')
+        const rawEventId = searchParams.get('eventId')
 
         const { deleteImageFromR2 } = await import('@/lib/storage')
 
         // If eventId provided, we are Unlinking
-        if (eventId) {
+        if (rawEventId) {
+            const { isEventEditable, resolveEventId } = await import('@/lib/events')
+            const eventId = await resolveEventId(rawEventId)
+            if (!eventId) {
+                return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+            }
+
             // LOCK CHECK for the specific event
-            const { isEventEditable } = await import('@/lib/events')
             if (!await isEventEditable(eventId)) {
                 return NextResponse.json({
                     error: 'Event has occurred and is read-only.'
