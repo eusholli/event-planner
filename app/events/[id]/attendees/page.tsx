@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { Sparkles, Building2, Plus } from 'lucide-react'
+import { Sparkles, Building2, Plus, FileText } from 'lucide-react'
 import AddAttendeeForm from '@/components/AddAttendeeForm'
 import { generateMultiMeetingBriefingBook } from '@/lib/briefing-book'
 import { useUser } from '@/components/auth'
@@ -33,6 +33,7 @@ interface Attendee {
     isExternal?: boolean
     type?: string
     seniorityLevel?: string
+    reportText?: string | null
 }
 
 function AttendeesContent({ eventId }: { eventId: string }) {
@@ -68,6 +69,12 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     })
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+
+    // Report modal state
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+    const [reportAttendee, setReportAttendee] = useState<Attendee | null>(null)
+    const [reportText, setReportText] = useState('')
+    const [reportSaving, setReportSaving] = useState(false)
     const { filters: attendeeFilters, setFilter: setAttendeeFilter, isFiltered: attendeeIsFiltered, resetFilters: resetAttendeeFilters } = useFilterParams('attendees', ATTENDEES_FILTER_DEFAULTS)
     const [showMissingEmail, setShowMissingEmail] = useState(false)
 
@@ -263,6 +270,56 @@ function AttendeesContent({ eventId }: { eventId: string }) {
         }
     }
 
+    const openReportModal = (attendee: Attendee) => {
+        setReportAttendee(attendee)
+        setReportText(attendee.reportText ?? '')
+        setIsReportModalOpen(true)
+    }
+
+    const closeReportModal = () => {
+        setIsReportModalOpen(false)
+        setReportAttendee(null)
+        setReportText('')
+    }
+
+    const handleSaveReport = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!reportAttendee) return
+        setReportSaving(true)
+        try {
+            const res = await fetch(`/api/events/${eventId}/attendee-reports?attendeeId=${reportAttendee.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reportText })
+            })
+            if (res.ok) {
+                await fetchAttendees()
+                closeReportModal()
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Failed to save report')
+            }
+        } finally {
+            setReportSaving(false)
+        }
+    }
+
+    const handleDeleteReport = async () => {
+        if (!reportAttendee || !confirm('Delete this report?')) return
+        setReportSaving(true)
+        try {
+            const res = await fetch(`/api/events/${eventId}/attendee-reports?attendeeId=${reportAttendee.id}`, {
+                method: 'DELETE'
+            })
+            if (res.ok) {
+                await fetchAttendees()
+                closeReportModal()
+            }
+        } finally {
+            setReportSaving(false)
+        }
+    }
+
     const openEditModal = (attendee: Attendee) => {
         setEditingAttendee(attendee)
         setSelectedFile(null)
@@ -426,6 +483,20 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                     </div>
                 </div>
                 <div className="flex space-x-1">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            openReportModal(attendee)
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                            attendee.reportText
+                                ? 'text-teal-600 bg-teal-50 hover:text-teal-700 hover:bg-teal-100'
+                                : 'text-zinc-400 hover:text-teal-600 hover:bg-teal-50'
+                        }`}
+                        title={attendee.reportText ? 'View/Edit Report' : 'Add Report'}
+                    >
+                        <FileText className="w-4 h-4" />
+                    </button>
                     <button
                         onClick={(e) => {
                             e.stopPropagation()
@@ -844,6 +915,62 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                     </div>
                 </div>
             )}
+
+            {/* Report Modal */}
+            {isReportModalOpen && reportAttendee && (() => {
+                const isOwnReport = !!(userEmail && reportAttendee.email === userEmail && !reportAttendee.emailMissing)
+                const reportReadOnly = readOnly && !isOwnReport
+                return (
+                    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
+                            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 mb-2">Attendee Report</h2>
+                            <p className="text-sm text-zinc-500 mb-6">{reportAttendee.name} · {reportAttendee.company?.name}</p>
+                            <form onSubmit={handleSaveReport} className="space-y-5">
+                                <div>
+                                    <label htmlFor="report-text" className="block text-sm font-medium text-zinc-700 mb-1.5">Report Notes</label>
+                                    {reportReadOnly ? (
+                                        <p className="text-sm text-zinc-700 whitespace-pre-wrap min-h-[6rem]">
+                                            {reportText || <span className="text-zinc-400 italic">No report added.</span>}
+                                        </p>
+                                    ) : (
+                                        <textarea
+                                            id="report-text"
+                                            className="input-field h-40 resize-none"
+                                            placeholder="Add your report notes here..."
+                                            value={reportText}
+                                            onChange={(e) => setReportText(e.target.value)}
+                                        />
+                                    )}
+                                </div>
+                                <div className="flex justify-between items-center pt-4">
+                                    <div>
+                                        {!reportReadOnly && reportAttendee.reportText && (
+                                            <button
+                                                type="button"
+                                                onClick={handleDeleteReport}
+                                                disabled={reportSaving}
+                                                className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
+                                            >
+                                                Delete Report
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="flex space-x-3">
+                                        <button type="button" onClick={closeReportModal} className="btn-secondary">
+                                            {reportReadOnly ? 'Close' : 'Cancel'}
+                                        </button>
+                                        {!reportReadOnly && (
+                                            <button type="submit" disabled={reportSaving} className="btn-primary disabled:opacity-50">
+                                                {reportSaving ? 'Saving...' : 'Save Report'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            })()}
         </div>
     )
 }

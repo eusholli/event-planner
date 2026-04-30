@@ -60,10 +60,18 @@ async function getHandler(request: Request) {
 
         const attendees = await prisma.attendee.findMany({
             where,
-            include: { company: true },
+            include: {
+                company: true,
+                eventReports: { where: { eventId } }
+            },
             orderBy: { name: 'asc' }
         })
-        return NextResponse.json(attendees)
+        const mapped = attendees.map(a => ({
+            ...a,
+            reportText: a.eventReports[0]?.reportText ?? null,
+            eventReports: undefined
+        }))
+        return NextResponse.json(mapped)
     } catch (error) {
         console.error('Error fetching attendees:', error)
         return NextResponse.json({ error: 'Failed to fetch attendees' }, { status: 500 })

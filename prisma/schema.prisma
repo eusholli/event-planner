@@ -45,6 +45,7 @@ model Event {
   subscriptionCount Int        @default(0)
   intelligenceSubs  IntelligenceSubEvent[]
   linkedInDrafts    LinkedInDraft[]
+  attendeeReports   AttendeeEventReport[]
 }
 
 model Company {
@@ -76,6 +77,7 @@ model Attendee {
   meetings          Meeting[]  @relation("AttendeeMeetings")
   subscriptionCount Int        @default(0)
   intelligenceSubs  IntelligenceSubAttendee[]
+  eventReports      AttendeeEventReport[]
 }
 
 model Room {
@@ -296,6 +298,19 @@ model EventMarketingChecklist {
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+}
+
+model AttendeeEventReport {
+  eventId    String
+  attendeeId String
+  reportText String   @db.Text
+  updatedAt  DateTime @updatedAt
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attendee Attendee @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, attendeeId])
+  @@index([attendeeId])
 }
 
 model AILog {
