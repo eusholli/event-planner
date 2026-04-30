@@ -13,6 +13,7 @@ interface MetricCardProps {
     formatValue?: (v: number) => string
     size?: 'sm' | 'lg'
     tooltip?: React.ReactNode
+    invertColors?: boolean
 }
 
 export default function MetricCard({
@@ -23,6 +24,7 @@ export default function MetricCard({
     formatValue,
     size = 'sm',
     tooltip,
+    invertColors = false,
 }: MetricCardProps) {
     const fmt = formatValue || ((v: number) => v.toLocaleString())
 
@@ -37,6 +39,7 @@ export default function MetricCard({
                     formatValue={formatValue}
                     formatMax={formatValue}
                     tooltip={tooltip}
+                    invertColors={invertColors}
                 />
             ) : (
                 <>

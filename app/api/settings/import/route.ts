@@ -323,6 +323,7 @@ const postHandler = withAuth(async (request) => {
                         actualErta: roi.actualErta ?? null,
                         actualSpeaking: roi.actualSpeaking ?? null,
                         actualMediaPR: roi.actualMediaPR ?? null,
+                        actualCost: roi.actualCost ?? null,
                         status: roi.status ?? 'DRAFT',
                         approvedBy: roi.approvedBy ?? null,
                         approvedAt: roi.approvedAt ? new Date(roi.approvedAt) : null,

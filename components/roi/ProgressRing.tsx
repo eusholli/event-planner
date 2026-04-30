@@ -12,6 +12,7 @@ interface ProgressRingProps {
     formatValue?: (value: number) => string
     formatMax?: (max: number) => string
     tooltip?: React.ReactNode
+    invertColors?: boolean
 }
 
 export default function ProgressRing({
@@ -23,6 +24,7 @@ export default function ProgressRing({
     formatValue,
     formatMax,
     tooltip,
+    invertColors = false,
 }: ProgressRingProps) {
     const radius = (size - strokeWidth) / 2
     const circumference = radius * 2 * Math.PI
@@ -30,6 +32,11 @@ export default function ProgressRing({
     const offset = circumference - (percentage / 100) * circumference
 
     const getColor = () => {
+        if (invertColors) {
+            if (max === 0) return { stroke: '#d4d4d8', bg: 'rgba(212, 212, 216, 0.1)' } // zinc (no budget set)
+            if (value <= max) return { stroke: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' } // emerald (under/on budget)
+            return { stroke: '#f43f5e', bg: 'rgba(244, 63, 94, 0.1)' } // rose (over budget)
+        }
         if (percentage >= 100) return { stroke: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' } // emerald
         if (percentage >= 50) return { stroke: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' } // amber
         return { stroke: '#f43f5e', bg: 'rgba(244, 63, 94, 0.1)' } // rose

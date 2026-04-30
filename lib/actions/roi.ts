@@ -18,6 +18,7 @@ export interface ROITargetsInput {
     actualErta?: number | null
     actualSpeaking?: number | null
     actualMediaPR?: number | null
+    actualCost?: number | null
     budget?: number | null
     requesterEmail?: string | null
     marketingPlan?: string | null
@@ -33,6 +34,7 @@ export interface ROIActuals {
     actualErta: number
     actualSpeaking: number
     actualMediaPR: number
+    actualCost: number
 }
 
 // Senior levels that qualify for "hitting" a target company
@@ -222,5 +224,6 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         actualErta: roiTargets?.actualErta || 0,
         actualSpeaking: roiTargets?.actualSpeaking || 0,
         actualMediaPR: roiTargets?.actualMediaPR || 0,
+        actualCost: roiTargets?.actualCost || 0,
     }
 }

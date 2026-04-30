@@ -148,6 +148,7 @@ model EventROITargets {
   actualErta              Float?
   actualSpeaking          Int?
   actualMediaPR           Int?
+  actualCost              Float?
 
   // Approval
   status                  String   @default("DRAFT")
