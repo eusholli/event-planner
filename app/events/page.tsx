@@ -25,7 +25,11 @@ interface Event {
     latitude?: number | null
     longitude?: number | null
     budget?: number | null
+    actualCost?: number | null
 }
+
+const effectiveBudget = (e: Event) =>
+    (e.actualCost != null && e.actualCost > 0) ? e.actualCost : e.budget
 
 function BudgetPivotTable({ events }: { events: Event[] }) {
     const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set())
@@ -54,17 +58,17 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
     const cellTotal = (region: string, status: string) =>
         events
             .filter(e => (e.region ?? '(No Region)') === region && e.status === status)
-            .reduce((sum, e) => sum + (e.budget ?? 0), 0)
+            .reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
     const rowTotal = (region: string) =>
         events
             .filter(e => (e.region ?? '(No Region)') === region)
-            .reduce((sum, e) => sum + (e.budget ?? 0), 0)
+            .reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
     const colTotal = (status: string) =>
-        events.filter(e => e.status === status).reduce((sum, e) => sum + (e.budget ?? 0), 0)
+        events.filter(e => e.status === status).reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
-    const grandTotal = events.reduce((sum, e) => sum + (e.budget ?? 0), 0)
+    const grandTotal = events.reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
     const hasEventsInCell = (region: string, status: string) =>
         events.some(e => (e.region ?? '(No Region)') === region && e.status === status)
@@ -131,14 +135,14 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
                                         </td>
                                         {activeStatuses.map(s => (
                                             <td key={s} className="px-4 py-2 text-right text-sm text-neutral-500 tabular-nums">
-                                                {event.status === s && event.budget != null && event.budget > 0
-                                                    ? fmtCurrency(event.budget)
+                                                {event.status === s && effectiveBudget(event) != null && (effectiveBudget(event) ?? 0) > 0
+                                                    ? fmtCurrency(effectiveBudget(event)!)
                                                     : <span className="text-neutral-300">—</span>
                                                 }
                                             </td>
                                         ))}
                                         <td className="px-6 py-2 text-right text-sm text-neutral-600 tabular-nums bg-neutral-50">
-                                            {event.budget != null && event.budget > 0 ? fmtCurrency(event.budget) : <span className="text-neutral-300">—</span>}
+                                            {(effectiveBudget(event) ?? 0) > 0 ? fmtCurrency(effectiveBudget(event)!) : <span className="text-neutral-300">—</span>}
                                         </td>
                                     </tr>
                                 ))
@@ -309,6 +313,11 @@ export default function EventsPage() {
 
         return true
     })
+
+    const displayEvents = filteredEvents.map(e => ({
+        ...e,
+        budget: effectiveBudget(e) ?? undefined
+    }))
 
     if (loading) return <div className="p-10 flex justify-center text-neutral-500 animate-pulse">Loading portfolio...</div>
 
@@ -484,7 +493,7 @@ export default function EventsPage() {
                     <div className="lg:col-span-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {eventFilters.view === 'list' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {filteredEvents.map((event) => (
+                                {displayEvents.map((event) => (
                                     <div
                                         key={event.id}
                                         onClick={() => handleEventClick(event)}
@@ -573,7 +582,7 @@ export default function EventsPage() {
                                         </div>
                                     </div>
                                 ))}
-                                {filteredEvents.length === 0 && (
+                                {displayEvents.length === 0 && (
                                     <div className="col-span-full py-20 text-center border-2 border-dashed border-neutral-200 rounded-xl bg-white/50">
                                         <div className="mx-auto w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
                                             <CalendarIcon className="w-6 h-6 text-neutral-400" />
@@ -588,19 +597,19 @@ export default function EventsPage() {
                         {eventFilters.view === 'calendar' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
-                                <EventCalendar events={filteredEvents} onEventClick={handleEventClick} />
+                                <EventCalendar events={displayEvents} onEventClick={handleEventClick} />
                             </div>
                         )}
 
                         {eventFilters.view === 'map' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Global Event Footprint</h2>
-                                <EventMap events={filteredEvents} onEventClick={handleEventClick} />
+                                <EventMap events={displayEvents} onEventClick={handleEventClick} />
                             </div>
                         )}
 
                         {eventFilters.view === 'budget' && (
-                            <BudgetPivotTable events={filteredEvents} />
+                            <BudgetPivotTable events={displayEvents} />
                         )}
                     </div>
                 </div>

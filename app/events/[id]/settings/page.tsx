@@ -452,6 +452,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 <option value="MEA">Middle East & Africa</option>
                                 <option value="APAC">Asia Pacific</option>
                                 <option value="Japan">Japan</option>
+                                <option value="Global">Global</option>
                             </select>
                         </div>
 

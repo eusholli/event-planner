@@ -13,9 +13,18 @@ const GETHandler = withAuth(async (request, ctx) => {
             where,
             orderBy: {
                 startDate: 'asc'
+            },
+            include: {
+                roiTargets: {
+                    select: { actualCost: true }
+                }
             }
         })
-        return NextResponse.json(events)
+        const result = events.map(({ roiTargets, ...event }) => ({
+            ...event,
+            actualCost: roiTargets?.actualCost ?? null
+        }))
+        return NextResponse.json(result)
     } catch (error) {
         console.error('Error fetching events:', error)
         return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 })
