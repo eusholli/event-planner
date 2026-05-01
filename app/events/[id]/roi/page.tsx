@@ -94,6 +94,7 @@ function ROIPage() {
     const [activeTab, setActiveTab] = useState<'targets' | 'performance' | 'actuals'>('targets')
     const [targets, setTargets] = useState<ROITargets>(emptyTargets)
     const [actuals, setActuals] = useState<ROIActuals | null>(null)
+    const [eventStatus, setEventStatus] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
@@ -172,6 +173,7 @@ function ROIPage() {
                     savedTargetsRef.current = data.targets
                 }
                 if (data.actuals) setActuals(data.actuals)
+                if (data.eventStatus) setEventStatus(data.eventStatus)
                 setLoading(false)
             })
             .catch(err => {
@@ -479,6 +481,7 @@ function ROIPage() {
     const statusStyle = statusConfig[displayStatus as keyof typeof statusConfig] || statusConfig.DRAFT
 
     const isLocked = targets.status === 'APPROVED'
+    const isActualsLocked = eventStatus === 'OCCURRED' || eventStatus === 'CANCELED'
 
     const tabs = [
         { id: 'targets' as const, label: 'Targets & Approval', icon: Target },
@@ -1185,7 +1188,7 @@ function ROIPage() {
                                     prefix="$"
                                     value={targets.actualCost ?? null}
                                     onChange={val => setTargets(prev => ({ ...prev, actualCost: val }))}
-                                    readOnly={isLocked || !canEdit}
+                                    readOnly={isActualsLocked || !canEdit}
                                     placeholder="0"
                                     focusRingColor="rose"
                                 />
@@ -1203,7 +1206,7 @@ function ROIPage() {
                                 <FormattedInput
                                     value={targets.actualSpeaking}
                                     onChange={val => setTargets(prev => ({ ...prev, actualSpeaking: val }))}
-                                    readOnly={isLocked || !canEdit}
+                                    readOnly={isActualsLocked || !canEdit}
                                     placeholder="0"
                                     focusRingColor="rose"
                                 />
@@ -1213,7 +1216,7 @@ function ROIPage() {
                                 <FormattedInput
                                     value={targets.actualMediaPR}
                                     onChange={val => setTargets(prev => ({ ...prev, actualMediaPR: val }))}
-                                    readOnly={isLocked || !canEdit}
+                                    readOnly={isActualsLocked || !canEdit}
                                     placeholder="0"
                                     focusRingColor="rose"
                                 />
@@ -1222,7 +1225,7 @@ function ROIPage() {
                     </section>
 
                     <div className="flex items-center gap-3">
-                        {canEdit && (
+                        {canEdit && !isActualsLocked && (
                             <button onClick={handleSaveActuals} disabled={saving}
                                 className="bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm">
                                 <Save className="w-4 h-4" />

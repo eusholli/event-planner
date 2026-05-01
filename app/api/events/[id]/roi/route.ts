@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { resolveEventId } from '@/lib/events'
+import prisma from '@/lib/prisma'
 import {
     saveROITargets,
     getROITargets,
@@ -21,12 +22,13 @@ const GETHandler = withAuth(async (request, ctx) => {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
         }
 
-        const [targets, actuals] = await Promise.all([
+        const [targets, actuals, event] = await Promise.all([
             getROITargets(id),
             getROIActuals(id),
+            prisma.event.findUnique({ where: { id }, select: { status: true } }),
         ])
 
-        return NextResponse.json({ targets, actuals })
+        return NextResponse.json({ targets, actuals, eventStatus: event?.status ?? null })
     } catch (error) {
         console.error('Error fetching ROI data:', error)
         return NextResponse.json({ error: 'Failed to fetch ROI data' }, { status: 500 })
