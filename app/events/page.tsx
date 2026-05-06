@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign } from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EventMap } from '@/components/reports/EventMap'
@@ -55,6 +57,10 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
         )
     }
 
+    const allExpanded = regions.length > 0 && regions.every(r => expandedRegions.has(r))
+    const toggleAllRegions = () =>
+        setExpandedRegions(allExpanded ? new Set() : new Set(regions))
+
     const cellTotal = (region: string, status: string) =>
         events
             .filter(e => (e.region ?? '(No Region)') === region && e.status === status)
@@ -73,11 +79,189 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
     const hasEventsInCell = (region: string, status: string) =>
         events.some(e => (e.region ?? '(No Region)') === region && e.status === status)
 
+    const handleExportCsv = () => {
+        const now = new Date().toISOString().slice(0, 19)
+        const dateStr = now.slice(0, 10).replace(/-/g, '') + '-' + now.slice(11).replace(/:/g, '')
+        const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
+
+        const headers = ['Region', ...activeStatuses, 'Sub-total', 'Total']
+        const rows: string[][] = []
+
+        for (const region of regions) {
+            const regionEventsInOrder = events
+                .filter(e => (e.region ?? '(No Region)') === region)
+                .sort((a, b) => a.name.localeCompare(b.name))
+
+            // Region subtotal row: Sub-total blank, Total = region total
+            rows.push([
+                region,
+                ...activeStatuses.map(s => String(cellTotal(region, s))),
+                '',
+                String(rowTotal(region)),
+            ])
+
+            if (expandedRegions.has(region)) {
+                for (const event of regionEventsInOrder) {
+                    const budget = effectiveBudget(event) ?? 0
+                    // Event row: status value in matching column, Sub-total = event budget, Total blank
+                    rows.push([
+                        `  ${event.name}`,
+                        ...activeStatuses.map(s => event.status === s ? String(budget) : ''),
+                        String(budget),
+                        '',
+                    ])
+                }
+            }
+        }
+
+        // Grand total row: Sub-total blank, Total = grand total
+        rows.push([
+            'Total',
+            ...activeStatuses.map(s => String(colTotal(s))),
+            '',
+            String(grandTotal),
+        ])
+
+        const csvContent = [
+            headers.map(escape).join(','),
+            ...rows.map(row => row.map((cell, i) => i === 0 ? escape(cell) : cell).join(',')),
+        ].join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `budget-export-${dateStr}.csv`
+        link.style.display = 'none'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    const handleExportPdf = () => {
+        const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        const doc = new jsPDF({ orientation: 'landscape', format: 'a4' })
+
+        doc.setFontSize(16)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Budget by Region & Status', 14, 18)
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(100)
+        doc.text(`Exported ${dateStr} · ${events.length} event${events.length !== 1 ? 's' : ''} visible`, 14, 25)
+        doc.setTextColor(0)
+
+        const head = [['Region', ...activeStatuses, 'Total']]
+        const body: any[] = []
+
+        for (const region of regions) {
+            const regionEventsInOrder = events
+                .filter(e => (e.region ?? '(No Region)') === region)
+                .sort((a, b) => a.name.localeCompare(b.name))
+
+            body.push({
+                region,
+                cells: [
+                    region,
+                    ...activeStatuses.map(s => fmtCurrency(cellTotal(region, s))),
+                    fmtCurrency(rowTotal(region)),
+                ],
+                isRegion: true,
+            })
+
+            if (expandedRegions.has(region)) {
+                for (const event of regionEventsInOrder) {
+                    const budget = effectiveBudget(event) ?? 0
+                    body.push({
+                        cells: [
+                            `  ${event.name}`,
+                            ...activeStatuses.map(s => event.status === s && budget > 0 ? fmtCurrency(budget) : '—'),
+                            budget > 0 ? fmtCurrency(budget) : '—',
+                        ],
+                        isRegion: false,
+                    })
+                }
+            }
+        }
+
+        const totalRow = [
+            'Total',
+            ...activeStatuses.map(s => fmtCurrency(colTotal(s))),
+            fmtCurrency(grandTotal),
+        ]
+
+        autoTable(doc, {
+            startY: 30,
+            head,
+            body: body.map(r => r.cells),
+            foot: [totalRow],
+            theme: 'grid',
+            headStyles: {
+                fillColor: [55, 65, 81],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 9,
+                cellPadding: 3,
+            },
+            footStyles: {
+                fillColor: [229, 231, 235],
+                textColor: [17, 24, 39],
+                fontStyle: 'bold',
+                fontSize: 9,
+                cellPadding: 3,
+            },
+            bodyStyles: {
+                fontSize: 8.5,
+                cellPadding: 2.5,
+            },
+            alternateRowStyles: { fillColor: [249, 250, 251] },
+            styles: { overflow: 'linebreak', lineColor: [209, 213, 219], lineWidth: 0.3 },
+            margin: { left: 14, right: 14 },
+            didParseCell: (data) => {
+                if (data.section === 'body') {
+                    const row = body[data.row.index]
+                    if (row?.isRegion) {
+                        data.cell.styles.fontStyle = 'bold'
+                        data.cell.styles.textColor = [17, 24, 39]
+                    } else {
+                        data.cell.styles.textColor = [75, 85, 99]
+                    }
+                }
+            },
+        })
+
+        const now2 = new Date().toISOString().slice(0, 19)
+        const dateStr2 = now2.slice(0, 10).replace(/-/g, '') + '-' + now2.slice(11).replace(/:/g, '')
+        doc.save(`budget-export-${dateStr2}.pdf`)
+    }
+
     return (
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-            <div className="p-6 border-b border-neutral-100">
-                <h2 className="text-lg font-semibold text-neutral-900">Budget by Region &amp; Status</h2>
-                <p className="text-sm text-neutral-500 mt-1">Totals reflect currently filtered events only.</p>
+            <div className="p-6 border-b border-neutral-100 flex items-start justify-between gap-4">
+                <div>
+                    <h2 className="text-lg font-semibold text-neutral-900">Budget by Region &amp; Status</h2>
+                    <p className="text-sm text-neutral-500 mt-1">Totals reflect currently filtered events only.</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        onClick={toggleAllRegions}
+                        className="px-3 py-1.5 text-sm font-medium text-neutral-600 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors shadow-sm"
+                    >
+                        {allExpanded ? 'Collapse All' : 'Expand All'}
+                    </button>
+                    <button
+                        onClick={handleExportCsv}
+                        className="px-3 py-1.5 text-sm font-medium text-neutral-600 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors shadow-sm"
+                    >
+                        Export CSV
+                    </button>
+                    <button
+                        onClick={handleExportPdf}
+                        className="px-3 py-1.5 text-sm font-medium text-neutral-600 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors shadow-sm"
+                    >
+                        Export PDF
+                    </button>
+                </div>
             </div>
             <table className="w-full text-sm">
                 <thead>
