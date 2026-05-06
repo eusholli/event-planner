@@ -38,6 +38,10 @@ export async function PUT(
                 ...(body.averageCtr !== undefined && { averageCtr: body.averageCtr }),
                 ...(body.averageCpc !== undefined && { averageCpc: body.averageCpc }),
                 ...(body.topCompaniesByEngagement !== undefined && { topCompaniesByEngagement: body.topCompaniesByEngagement }),
+                ...(body.budget !== undefined && { budget: body.budget }),
+                ...(body.activeUsers !== undefined && { activeUsers: body.activeUsers }),
+                ...(body.viewsPerUser !== undefined && { viewsPerUser: body.viewsPerUser }),
+                ...(body.avgEngagementTimePerActiveUser !== undefined && { avgEngagementTimePerActiveUser: body.avgEngagementTimePerActiveUser }),
             },
         })
 

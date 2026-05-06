@@ -28,6 +28,10 @@ interface LinkedInDraft {
     averageCtr: number | null
     averageCpc: number | null
     topCompaniesByEngagement: string | null
+    budget: number | null
+    activeUsers: number | null
+    viewsPerUser: number | null
+    avgEngagementTimePerActiveUser: number | null
 }
 
 interface LogEntry {
@@ -53,6 +57,10 @@ const METRIC_FIELDS: Array<{ key: keyof LinkedInDraft; label: string; hint: stri
     { key: 'adStartDate', label: 'Ad Start Date', hint: 'Campaign start date', isDate: true },
     { key: 'adEndDate', label: 'Ad End Date', hint: 'Campaign end date', isDate: true },
     { key: 'ctaUrl', label: 'CTA URL', hint: 'Destination URL users click to', isUrl: true },
+    { key: 'budget', label: 'Budget ($)', hint: 'Total campaign spend' },
+    { key: 'activeUsers', label: 'Active Users', hint: 'Unique users who engaged' },
+    { key: 'viewsPerUser', label: 'Views per User', hint: 'Average views per active user', isFloat: true },
+    { key: 'avgEngagementTimePerActiveUser', label: 'Avg Engagement Time (sec)', hint: 'Average engagement time per active user', isFloat: true },
     { key: 'impressions', label: 'Impressions', hint: 'Total ad impressions' },
     { key: 'clicks', label: 'Clicks', hint: 'Total link clicks' },
     { key: 'averageCtr', label: 'Average CTR (%)', hint: 'Average click-through rate', isFloat: true },
@@ -371,7 +379,7 @@ export default function LinkedInCampaignsPage() {
     }, [])
 
     const hasMetrics = (draft: LinkedInDraft) =>
-        draft.impressions !== null || draft.clicks !== null || draft.averageCtr !== null
+        draft.impressions !== null || draft.clicks !== null || draft.averageCtr !== null || draft.budget !== null
 
     return (
         <div className="space-y-6">
@@ -520,6 +528,7 @@ export default function LinkedInCampaignsPage() {
                                             </div>
                                             {hasMetrics(draft) && (
                                                 <div className="mt-2 flex items-center gap-4 text-xs text-zinc-600">
+                                                    {draft.budget !== null && <span className="font-medium text-emerald-600">${draft.budget.toLocaleString()} budget</span>}
                                                     {draft.impressions !== null && <span>{draft.impressions.toLocaleString()} impressions</span>}
                                                     {draft.clicks !== null && <span>{draft.clicks.toLocaleString()} clicks</span>}
                                                     {draft.averageCtr !== null && <span className="font-medium text-blue-600">{draft.averageCtr}% CTR</span>}

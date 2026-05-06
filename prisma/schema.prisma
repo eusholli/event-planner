@@ -229,7 +229,11 @@ model LinkedInDraft {
   clicks                   Int?
   averageCtr               Float?
   averageCpc               Float?
-  topCompaniesByEngagement String?   @db.Text
+  topCompaniesByEngagement       String?   @db.Text
+  budget                         Float?
+  activeUsers                    Int?
+  viewsPerUser                   Float?
+  avgEngagementTimePerActiveUser Float?
 
   event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
