@@ -156,6 +156,30 @@ export async function rejectROI(eventId: string, rejectorUserId: string) {
     return { ...cleanedResult, budget: event?.budget, requesterEmail: event?.requesterEmail }
 }
 
+export async function resetROIToDraft(eventId: string) {
+    const { isRootUser } = await import('@/lib/roles')
+    if (!await isRootUser()) throw new Error('Forbidden')
+
+    const result = await prisma.eventROITargets.update({
+        where: { eventId },
+        data: {
+            status: 'DRAFT',
+            approvedBy: null,
+            approvedAt: null,
+            rejectedBy: null,
+            rejectedAt: null,
+            submittedAt: null,
+        },
+        include: {
+            targetCompanies: true,
+            event: { select: { budget: true, requesterEmail: true } }
+        }
+    })
+
+    const { event, ...cleanedResult } = result as any
+    return { ...cleanedResult, budget: event?.budget, requesterEmail: event?.requesterEmail }
+}
+
 export async function getROITargets(eventId: string) {
     const targets = await prisma.eventROITargets.findUnique({
         where: { eventId },

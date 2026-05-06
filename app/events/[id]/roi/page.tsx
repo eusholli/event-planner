@@ -347,6 +347,22 @@ function ROIPage() {
         }
     }
 
+    const handleResetToDraft = async () => {
+        try {
+            const res = await fetch(`/api/events/${eventId}/roi`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset_to_draft' }),
+            })
+            if (!res.ok) throw new Error('Failed to reset to draft')
+            const result = await res.json()
+            setTargets(result)
+            setMessage('ROI targets unlocked and returned to draft')
+        } catch (err: any) {
+            setMessage(err.message)
+        }
+    }
+
     const handleSaveActuals = async () => {
         setSaving(true)
         setMessage('')
@@ -1130,6 +1146,13 @@ function ROIPage() {
                                 <CheckCircle className="w-4 h-4" />
                                 Targets approved and locked
                             </p>
+                        )}
+                        {isLocked && canApproveOrReject && (
+                            <button onClick={handleResetToDraft}
+                                className="bg-amber-100 text-amber-800 border border-amber-300 px-4 py-2.5 rounded-xl font-medium hover:bg-amber-200 transition-colors flex items-center gap-2 text-sm">
+                                <X className="w-4 h-4" />
+                                Reset to Draft
+                            </button>
                         )}
                     </div>
                 </div>

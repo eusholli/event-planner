@@ -8,6 +8,7 @@ import {
     submitROIForApproval,
     approveROI,
     rejectROI,
+    resetROIToDraft,
 } from '@/lib/actions/roi'
 import { canManageEvents, isRootUser } from '@/lib/roles'
 import { withAuth, AuthContext } from '@/lib/with-auth'
@@ -85,6 +86,14 @@ const POSTHandler = withAuth(async (request, ctx) => {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }
             const result = await rejectROI(id, authCtx.userId || 'system')
+            return NextResponse.json(result)
+        }
+
+        if (action === 'reset_to_draft') {
+            if (!await isRootUser()) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+            }
+            const result = await resetROIToDraft(id)
             return NextResponse.json(result)
         }
 
