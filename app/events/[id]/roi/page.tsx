@@ -29,10 +29,12 @@ interface ROITargets {
     targetErta: number | null
     targetSpeaking: number | null
     targetMediaPR: number | null
+    targetEventScans: number | null
     targetCompanies: Company[]
     actualErta: number | null
     actualSpeaking: number | null
     actualMediaPR: number | null
+    actualEventScans: number | null
     actualCost?: number | null
     status: string
     approvedBy?: string | null
@@ -50,9 +52,11 @@ interface ROIActuals {
     actualCustomerMeetings: number
     targetCompaniesHit: { id: string; name: string }[]
     targetCompaniesHitCount: number
+    additionalCompanies: { id: string; name: string; pipelineValue?: number | null }[]
     actualErta: number
     actualSpeaking: number
     actualMediaPR: number
+    actualEventScans: number
     actualCost: number
 }
 
@@ -66,10 +70,12 @@ const emptyTargets: ROITargets = {
     targetErta: null,
     targetSpeaking: null,
     targetMediaPR: null,
+    targetEventScans: null,
     targetCompanies: [],
     actualErta: null,
     actualSpeaking: null,
     actualMediaPR: null,
+    actualEventScans: null,
     actualCost: null,
     status: 'DRAFT',
     marketingPlan: null,
@@ -124,7 +130,8 @@ function ROIPage() {
         return (
             saved.targetCustomerMeetings !== targets.targetCustomerMeetings ||
             saved.targetSpeaking !== targets.targetSpeaking ||
-            saved.targetMediaPR !== targets.targetMediaPR
+            saved.targetMediaPR !== targets.targetMediaPR ||
+            saved.targetEventScans !== targets.targetEventScans
         )
     }, [targets])
 
@@ -350,6 +357,7 @@ function ROIPage() {
                 body: JSON.stringify({
                     actualSpeaking: targets.actualSpeaking,
                     actualMediaPR: targets.actualMediaPR,
+                    actualEventScans: targets.actualEventScans,
                     actualCost: targets.actualCost,
                 }),
             })
@@ -686,9 +694,19 @@ function ROIPage() {
                                 </button>
                             )}
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The target number of external meetings to be held with customers or prospects during the event.">External Meetings</Tooltip></label>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The target number of contacts to be scanned or collected at the event.">Event Scans</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.targetEventScans}
+                                    onChange={val => setTargets(prev => ({ ...prev, targetEventScans: val }))}
+                                    readOnly={isLocked || !canEdit}
+                                    placeholder="50"
+                                    focusRingColor="violet"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The target number of external leads to be met with customers or prospects during the event.">External Leads</Tooltip></label>
                                 <FormattedInput
                                     value={targets.targetCustomerMeetings}
                                     onChange={val => setTargets(prev => ({ ...prev, targetCustomerMeetings: val }))}
@@ -1150,8 +1168,9 @@ function ROIPage() {
                             <span className="w-1 h-5 bg-rose-500 rounded-full" />
                             Engagement
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <MetricCard label="External Meetings" tooltip="Actual vs target number of confirmed/occurred external meetings." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <MetricCard label="Event Scans" tooltip="Actual vs target contacts scanned or collected at the event." target={targets.targetEventScans || 0} actual={actuals.actualEventScans} />
+                            <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} />
                             <MetricCard label="Speaking" tooltip="The actual vs target number of speaking sessions, panels, or presentations secured at the event." target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
                             <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
                         </div>
@@ -1160,6 +1179,28 @@ function ROIPage() {
                     {/* Target Companies */}
                     <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
                         <CompanyChecklist targetCompanies={targets.targetCompanies} hitCompanyIds={actuals.targetCompaniesHit.map(c => c.id)} />
+                    </section>
+
+                    {/* Additional Companies */}
+                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-orange-400 rounded-full" />
+                            Additional Companies
+                            <span className="ml-1 text-sm font-normal text-zinc-500">({actuals.additionalCompanies.length})</span>
+                        </h3>
+                        <p className="text-sm text-zinc-500 mb-4">Companies of event attendees not in the target list.</p>
+                        <div className="flex flex-wrap gap-2">
+                            {actuals.additionalCompanies.length === 0 ? (
+                                <p className="text-sm text-zinc-400 italic">No additional companies recorded.</p>
+                            ) : (
+                                actuals.additionalCompanies.map(c => (
+                                    <span key={c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-50 text-orange-800 border border-orange-200">
+                                        {c.name}
+                                        {!!c.pipelineValue && <span className="text-xs opacity-60">(${c.pipelineValue.toLocaleString()})</span>}
+                                    </span>
+                                ))
+                            )}
+                        </div>
                     </section>
                 </div>
             )}
@@ -1195,7 +1236,17 @@ function ROIPage() {
                                 <p className="text-xs text-zinc-400 mt-1">Budget: {targets.budget ? `$${targets.budget.toLocaleString()}` : '—'}</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="Number of confirmed and occurred external meetings at this event (auto-calculated).">External Meetings</Tooltip></label>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The actual number of contacts scanned or collected at the event.">Event Scans</Tooltip></label>
+                                <FormattedInput
+                                    value={targets.actualEventScans ?? null}
+                                    onChange={val => setTargets(prev => ({ ...prev, actualEventScans: val }))}
+                                    readOnly={isActualsLocked || !canEdit}
+                                    placeholder="0"
+                                    focusRingColor="rose"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="Number of confirmed and occurred external leads at this event (auto-calculated).">External Leads</Tooltip></label>
                                 <div className="px-3 py-2.5 rounded-xl border border-zinc-100 bg-zinc-50 text-sm text-zinc-600">
                                     {actuals?.actualCustomerMeetings ?? 0}
                                 </div>

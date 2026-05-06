@@ -13,11 +13,13 @@ export interface ROITargetsInput {
     targetErta?: number | null
     targetSpeaking?: number | null
     targetMediaPR?: number | null
+    targetEventScans?: number | null
     targetCompanyIds?: string[]
     targetCompanyNames?: string[]
     actualErta?: number | null
     actualSpeaking?: number | null
     actualMediaPR?: number | null
+    actualEventScans?: number | null
     actualCost?: number | null
     budget?: number | null
     requesterEmail?: string | null
@@ -31,14 +33,13 @@ export interface ROIActuals {
     actualCustomerMeetings: number
     targetCompaniesHit: { id: string; name: string }[]
     targetCompaniesHitCount: number
+    additionalCompanies: { id: string; name: string; pipelineValue?: number | null }[]
     actualErta: number
     actualSpeaking: number
     actualMediaPR: number
+    actualEventScans: number
     actualCost: number
 }
-
-// Senior levels that qualify for "hitting" a target company
-const SENIOR_LEVELS = ['C-Level', 'VP', 'Director']
 
 // ---------------------------
 // Server Actions
@@ -174,16 +175,28 @@ export async function getROITargets(eventId: string) {
 }
 
 export async function getROIActuals(eventId: string): Promise<ROIActuals> {
-    const meetings = await prisma.meeting.findMany({
-        where: { eventId, status: { in: ['CONFIRMED', 'OCCURRED'] } },
-        include: { attendees: { include: { company: true } } },
-    })
-
-    const event = await prisma.event.findUnique({ where: { id: eventId } })
-    const roiTargets = await prisma.eventROITargets.findUnique({
-        where: { eventId },
-        include: { targetCompanies: true }
-    })
+    const [meetings, eventWithAttendees, roiTargets] = await Promise.all([
+        prisma.meeting.findMany({
+            where: { eventId, status: { in: ['CONFIRMED', 'OCCURRED'] } },
+            include: { attendees: { include: { company: true } } },
+        }),
+        prisma.event.findUnique({
+            where: { id: eventId },
+            select: {
+                budget: true,
+                attendees: {
+                    select: {
+                        isExternal: true,
+                        company: { select: { id: true, name: true, pipelineValue: true } }
+                    }
+                }
+            }
+        }),
+        prisma.eventROITargets.findUnique({
+            where: { eventId },
+            include: { targetCompanies: true }
+        }),
+    ])
 
     // Pipeline: Deduplicate by company, take the company's pipelineValue
     const companyValues = new Map<string, number>()
@@ -197,33 +210,41 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
     }
     const actualPipeline = [...companyValues.values()].reduce((sum, val) => sum + val, 0)
 
-    // Target companies hit: A company is "hit" if any meeting attendee from that company
-    // has a senior level (C-Level, VP, or Director)
+    // Target companies hit: any event attendee from that company counts
     const targetCompanyIds = roiTargets?.targetCompanies?.map(c => c.id) || []
-    const seniorAttendeeCompanyIds = new Set<string>()
-    for (const mtg of meetings) {
-        for (const att of mtg.attendees) {
-            if (targetCompanyIds.includes(att.companyId) && SENIOR_LEVELS.includes(att.seniorityLevel || '')) {
-                seniorAttendeeCompanyIds.add(att.companyId)
+    const targetCompanyIdSet = new Set(targetCompanyIds)
+    const attendeeCompanyIds = new Set((eventWithAttendees?.attendees ?? []).map(a => a.company.id))
+    const targetCompaniesHit = (roiTargets?.targetCompanies || [])
+        .filter(c => attendeeCompanyIds.has(c.id))
+        .map(c => ({ id: c.id, name: c.name }))
+
+    // Additional companies: external event attendees whose company is not in the target list
+    const additionalCompanyMap = new Map<string, { id: string; name: string; pipelineValue?: number | null }>()
+    let externalAttendeeCount = 0
+    for (const att of eventWithAttendees?.attendees ?? []) {
+        if (att.isExternal) {
+            externalAttendeeCount++
+            if (!targetCompanyIdSet.has(att.company.id)) {
+                additionalCompanyMap.set(att.company.id, att.company)
             }
         }
     }
-    const targetCompaniesHit = (roiTargets?.targetCompanies || [])
-        .filter(c => seniorAttendeeCompanyIds.has(c.id))
-        .map(c => ({ id: c.id, name: c.name }))
+    const additionalCompanies = [...additionalCompanyMap.values()]
 
-    const actualCustomerMeetings = meetings.length  // all confirmed/occurred meetings
+    const actualCustomerMeetings = externalAttendeeCount
 
     return {
-        actualInvestment: event?.budget || 0,
+        actualInvestment: eventWithAttendees?.budget || 0,
         actualPipeline,
         actualRevenue: actualPipeline * (roiTargets?.winRate || 0),
         actualCustomerMeetings,
         targetCompaniesHit,
         targetCompaniesHitCount: targetCompaniesHit.length,
+        additionalCompanies,
         actualErta: roiTargets?.actualErta || 0,
         actualSpeaking: roiTargets?.actualSpeaking || 0,
         actualMediaPR: roiTargets?.actualMediaPR || 0,
+        actualEventScans: roiTargets?.actualEventScans || 0,
         actualCost: roiTargets?.actualCost || 0,
     }
 }
