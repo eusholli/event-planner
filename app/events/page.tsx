@@ -47,7 +47,7 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
         v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
     const activeStatuses = STATUS_DISPLAY_ORDER.filter(s => events.some(e => e.status === s))
-    const regions = Array.from(new Set(events.map(e => e.region ?? '(No Region)'))).sort()
+    const regions = Array.from(new Set(events.map(e => e.region ?? 'Global'))).sort()
 
     if (events.length === 0) {
         return (
@@ -63,12 +63,12 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
 
     const cellTotal = (region: string, status: string) =>
         events
-            .filter(e => (e.region ?? '(No Region)') === region && e.status === status)
+            .filter(e => (e.region ?? 'Global') === region && e.status === status)
             .reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
     const rowTotal = (region: string) =>
         events
-            .filter(e => (e.region ?? '(No Region)') === region)
+            .filter(e => (e.region ?? 'Global') === region)
             .reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
     const colTotal = (status: string) =>
@@ -77,7 +77,7 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
     const grandTotal = events.reduce((sum, e) => sum + (effectiveBudget(e) ?? 0), 0)
 
     const hasEventsInCell = (region: string, status: string) =>
-        events.some(e => (e.region ?? '(No Region)') === region && e.status === status)
+        events.some(e => (e.region ?? 'Global') === region && e.status === status)
 
     const handleExportCsv = () => {
         const now = new Date().toISOString().slice(0, 19)
@@ -89,7 +89,7 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
 
         for (const region of regions) {
             const regionEventsInOrder = events
-                .filter(e => (e.region ?? '(No Region)') === region)
+                .filter(e => (e.region ?? 'Global') === region)
                 .sort((a, b) => a.name.localeCompare(b.name))
 
             // Region subtotal row: Sub-total blank, Total = region total
@@ -156,7 +156,7 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
 
         for (const region of regions) {
             const regionEventsInOrder = events
-                .filter(e => (e.region ?? '(No Region)') === region)
+                .filter(e => (e.region ?? 'Global') === region)
                 .sort((a, b) => a.name.localeCompare(b.name))
 
             body.push({
@@ -304,7 +304,7 @@ function BudgetPivotTable({ events }: { events: Event[] }) {
                         </tr>
                         {expandedRegions.has(region) &&
                             events
-                                .filter(e => (e.region ?? '(No Region)') === region)
+                                .filter(e => (e.region ?? 'Global') === region)
                                 .sort((a, b) => a.name.localeCompare(b.name))
                                 .map(event => (
                                     <tr key={event.id} className="border-b border-neutral-100 bg-blue-50/30">
@@ -462,7 +462,7 @@ export default function EventsPage() {
     }
 
     // Derived Filter Data
-    const availableRegions = Array.from(new Set(events.map(e => e.region).filter(Boolean))) as string[]
+    const availableRegions = Array.from(new Set(events.map(e => e.region ?? 'Global')))
     const availableYears = Array.from(new Set(events.map(e => {
         return e.startDate ? new Date(e.startDate).getFullYear().toString() : null
     }).filter(Boolean))) as string[]
@@ -485,7 +485,8 @@ export default function EventsPage() {
 
         // Region Filter
         if ((eventFilters.regions as string[]).length > 0) {
-            if (!event.region || !(eventFilters.regions as string[]).includes(event.region)) return false
+            const effectiveRegion = event.region ?? 'Global'
+            if (!(eventFilters.regions as string[]).includes(effectiveRegion)) return false
         }
 
         // Year Filter
