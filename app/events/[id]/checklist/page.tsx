@@ -29,6 +29,7 @@ type ChecklistState = {
 } & {
     finalReport: string
     notes: Record<string, string>
+    nextYearDecision: string
 }
 
 const EMPTY_CHECKLIST: ChecklistState = {
@@ -51,6 +52,7 @@ const EMPTY_CHECKLIST: ChecklistState = {
     eventCompleted: false,
     finalReport: '',
     notes: {},
+    nextYearDecision: '',
 }
 
 const SECTIONS = [
@@ -173,6 +175,7 @@ export default function ChecklistPage() {
     const [toggleError, setToggleError] = useState<string | null>(null)
     const savedReportRef = useRef<string>('')
     const savedNotesRef = useRef<Record<string, string>>({})
+    const savedNextYearRef = useRef<string>('')
 
     const role = user?.publicMetadata?.role as string
     const canEdit = role === 'root' || role === 'marketing'
@@ -214,9 +217,11 @@ export default function ChecklistPage() {
                         eventCompleted: cl.eventCompleted ?? false,
                         finalReport: cl.finalReport ?? '',
                         notes: loadedNotes,
+                        nextYearDecision: cl.nextYearDecision ?? '',
                     })
                     savedReportRef.current = cl.finalReport ?? ''
                     savedNotesRef.current = loadedNotes
+                    savedNextYearRef.current = cl.nextYearDecision ?? ''
                 }
             })
             .catch(err => console.error('Failed to load checklist:', err))
@@ -225,7 +230,8 @@ export default function ChecklistPage() {
 
     const reportDirty = checklist.finalReport !== savedReportRef.current
     const notesDirty = JSON.stringify(checklist.notes) !== JSON.stringify(savedNotesRef.current)
-    const isDirty = reportDirty || notesDirty
+    const nextYearDirty = checklist.nextYearDecision !== savedNextYearRef.current
+    const isDirty = reportDirty || notesDirty || nextYearDirty
 
     // Warn on browser-level navigation (refresh, tab close, external URL)
     useEffect(() => {
@@ -283,11 +289,13 @@ export default function ChecklistPage() {
                 body: JSON.stringify({
                     notes: checklist.notes,
                     finalReport: checklist.finalReport,
+                    nextYearDecision: checklist.nextYearDecision || null,
                 }),
             })
             if (!res.ok) throw new Error('Save failed')
             savedReportRef.current = checklist.finalReport
             savedNotesRef.current = { ...checklist.notes }
+            savedNextYearRef.current = checklist.nextYearDecision
             setSaveMessage('Saved.')
             setTimeout(() => setSaveMessage(null), 3000)
         } catch {
@@ -460,6 +468,41 @@ export default function ChecklistPage() {
                         placeholder="Enter your final event report here..."
                         className="w-full text-sm text-zinc-900 border border-zinc-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-y placeholder:text-zinc-300"
                     />
+                </div>
+            </div>
+
+            {/* Next Year Decision */}
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50">
+                    <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Next Year Decision</h2>
+                </div>
+                <div className="p-5 space-y-4">
+                    <p className="text-sm text-zinc-500">Select whether to attend this event next year.</p>
+                    <ul className="divide-y divide-zinc-100 border border-zinc-200 rounded-lg overflow-hidden">
+                        {([
+                            { value: 'double_down', label: 'Double Down', sub: 'Increase budget next year' },
+                            { value: 'maintain', label: 'Maintain', sub: 'Keep same budget/footprint' },
+                            { value: 'pivot', label: 'Pivot/Downgrade', sub: 'Send fewer people, skip the booth' },
+                            { value: 'cancel', label: 'Cancel', sub: 'Do not attend next year' },
+                        ] as const).map(option => (
+                            <li key={option.value}>
+                                <label className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-zinc-50 transition-colors">
+                                    <input
+                                        type="radio"
+                                        name="nextYearDecision"
+                                        value={option.value}
+                                        checked={checklist.nextYearDecision === option.value}
+                                        onChange={() => setChecklist(prev => ({ ...prev, nextYearDecision: option.value }))}
+                                        className="h-4 w-4 text-teal-500 border-zinc-300 focus:ring-teal-500"
+                                    />
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-sm font-medium text-zinc-900">{option.label}</span>
+                                        <span className="block text-xs text-zinc-400 mt-0.5">{option.sub}</span>
+                                    </span>
+                                </label>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
 

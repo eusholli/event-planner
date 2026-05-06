@@ -302,6 +302,9 @@ model EventMarketingChecklist {
   // Final Report
   finalReport           String?  @db.Text
 
+  // Next Year Decision
+  nextYearDecision      String?
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
