@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { withAuth } from '@/lib/with-auth'
 import { resolveEventId } from '@/lib/events'
 import { geocodeAddress } from '@/lib/geocoding'
+import { sanitizeSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,9 +50,15 @@ const PATCHHandler = withAuth(async (request, ctx) => {
             return NextResponse.json({ error: 'Event name is required' }, { status: 400 })
         }
 
-        // Validation: Slug is mandatory if provided
-        if (json.slug !== undefined && (!json.slug || json.slug.trim() === '')) {
-            return NextResponse.json({ error: 'URL Slug is required' }, { status: 400 })
+        // Validation: Slug is mandatory if provided; sanitize and reject if result is empty
+        if (json.slug !== undefined) {
+            if (!json.slug || json.slug.trim() === '') {
+                return NextResponse.json({ error: 'URL Slug is required' }, { status: 400 })
+            }
+            json.slug = sanitizeSlug(json.slug)
+            if (!json.slug) {
+                return NextResponse.json({ error: 'URL Slug contains no valid characters' }, { status: 400 })
+            }
         }
 
         // Validation: Unique Name

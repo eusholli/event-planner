@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useUser } from '@/components/auth'
 import { Roles } from '@/lib/constants'
 import { canManageEvents } from '@/lib/role-utils'
+import { sanitizeSlug } from '@/lib/slug'
 import { STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 
 interface User {
@@ -85,8 +86,8 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     ...data,
                     startDate: data.startDate ? data.startDate.split('T')[0] : null,
                     endDate: data.endDate ? data.endDate.split('T')[0] : null,
-                    // If slug is a draft, clear it for the UI to force user input
-                    slug: data.slug && data.slug.startsWith('draft-event-') ? '' : data.slug,
+                    // If slug is a draft, default to sanitized event name
+                    slug: data.slug && data.slug.startsWith('draft-event-') ? sanitizeSlug(data.name || '') : data.slug,
                     // Ensure arrays
                     tags: data.tags || [],
                     meetingTypes: data.meetingTypes || [],
@@ -337,7 +338,15 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 type="text"
                                 disabled={isLocked}
                                 value={event.name}
-                                onChange={e => setEvent({ ...event, name: e.target.value })}
+                                onChange={e => {
+                                    const newName = e.target.value
+                                    const slugMatchesName = event.slug === sanitizeSlug(event.name)
+                                    setEvent({
+                                        ...event,
+                                        name: newName,
+                                        slug: slugMatchesName ? sanitizeSlug(newName) : event.slug
+                                    })
+                                }}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             />
                         </div>
@@ -382,12 +391,12 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                     id="slug"
                                     disabled={isLocked}
                                     value={event.slug || ''}
-                                    onChange={e => setEvent({ ...event, slug: e.target.value })}
+                                    onChange={e => setEvent({ ...event, slug: sanitizeSlug(e.target.value) })}
                                     className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-neutral-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-neutral-100 disabled:text-neutral-500"
                                     placeholder="my-unique-event-id"
                                 />
                             </div>
-                            <p className="text-xs text-neutral-500 mt-1">This ID is used in the URL to access the event dashboard.</p>
+                            <p className="text-xs text-neutral-500 mt-1">Only letters, numbers, and hyphens are allowed. Used in the URL to access the event dashboard.</p>
                         </div>
 
                         {/* Password Protection */}

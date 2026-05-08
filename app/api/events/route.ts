@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { withAuth, AuthContext } from '@/lib/with-auth'
 import { geocodeAddress } from '@/lib/geocoding'
+import { sanitizeSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,9 +36,9 @@ const POSTHandler = withAuth(async (request, ctx) => {
     try {
         const json = await request.json()
 
-        let slug = json.slug
+        let slug = json.slug ? sanitizeSlug(json.slug) : ''
 
-        if (slug && slug.trim() !== '') {
+        if (slug) {
             // Check provided slug uniqueness
             const existingSlug = await prisma.event.findUnique({
                 where: { slug }
