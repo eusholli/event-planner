@@ -374,6 +374,10 @@ export default function EventsPage() {
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [newEventName, setNewEventName] = useState('')
+    const [creating, setCreating] = useState(false)
+    const [createError, setCreateError] = useState('')
 
     const fetchEvents = () => {
         setLoading(true)
@@ -429,25 +433,33 @@ export default function EventsPage() {
         }
     }
 
-    const handleCreate = async () => {
+    const handleCreate = async (name: string) => {
+        const trimmed = name.trim()
+        const duplicate = events.some(e => e.name.toLowerCase() === trimmed.toLowerCase())
+        if (duplicate) {
+            setCreateError('An event with this name already exists.')
+            return
+        }
+        setCreating(true)
+        setCreateError('')
         try {
             const res = await fetch('/api/events', {
                 method: 'POST',
-                body: JSON.stringify({ name: '' }),
+                body: JSON.stringify({ name: trimmed }),
                 headers: { 'Content-Type': 'application/json' }
             })
-
             if (res.ok) {
                 const newEvent = await res.json()
-                // Use slug (likely temp) or id to navigate to settings
-                const urlId = newEvent.slug || newEvent.id
-                router.push(`/events/${urlId}/settings`)
+                router.push(`/events/${newEvent.slug || newEvent.id}/settings`)
             } else {
-                alert('Failed to create new event')
+                const data = await res.json().catch(() => ({}))
+                setCreateError(data.error || 'Failed to create event.')
             }
         } catch (e) {
             console.error(e)
-            alert('Error creating event')
+            setCreateError('An unexpected error occurred.')
+        } finally {
+            setCreating(false)
         }
     }
 
@@ -558,7 +570,7 @@ export default function EventsPage() {
                         </div>
                         {canManage && (
                             <button
-                                onClick={handleCreate}
+                                onClick={() => { setNewEventName(''); setCreateError(''); setShowCreateModal(true) }}
                                 aria-label="New Event"
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-95"
                             >
@@ -799,6 +811,52 @@ export default function EventsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Create Event Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-neutral-100">
+                            <h3 className="text-xl font-bold text-neutral-900">New Event</h3>
+                            <p className="text-sm text-neutral-500 mt-1">Enter a name to get started. You can change it later.</p>
+                        </div>
+                        <form onSubmit={e => { e.preventDefault(); if (newEventName.trim()) handleCreate(newEventName) }}>
+                            <div className="p-6 space-y-1">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Event Name</label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    className={`input-field ${createError ? 'border-red-400 focus:ring-red-300' : ''}`}
+                                    placeholder="e.g. AWS re:Invent 2026"
+                                    value={newEventName}
+                                    onChange={e => { setNewEventName(e.target.value); setCreateError('') }}
+                                    disabled={creating}
+                                />
+                                {createError && (
+                                    <p className="text-sm text-red-600 mt-1">{createError}</p>
+                                )}
+                            </div>
+                            <div className="p-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    disabled={creating}
+                                    className="px-4 py-2 text-neutral-600 font-medium hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!newEventName.trim() || creating}
+                                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {creating ? 'Creating…' : 'Create Event'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Event Details Modal */}
             {selectedEvent && (
