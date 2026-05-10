@@ -8,6 +8,7 @@ import {
   type TargetUpdate,
   type UpcomingEvent,
 } from '@/lib/intelligence-email'
+import { WebhookPayloadSchema } from '@/lib/intelligence-schema'
 import { sendPlainEmail } from '@/lib/email'
 import { Roles } from '@/lib/constants'
 import { signReportToken } from '@/lib/action-tokens'
@@ -23,32 +24,42 @@ function validateSecret(req: Request): boolean {
   return token === secret && token.length > 0
 }
 
-type WebhookPayload = {
-  runId: string
-  timestamp: string
-  updatedTargets: TargetUpdate[]
-  silent?: boolean
-}
-
 export async function POST(req: Request) {
   if (!validateSecret(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let payload: WebhookPayload
+  let rawPayload: unknown
   try {
-    payload = await req.json()
+    rawPayload = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
+  const parsed = WebhookPayloadSchema.safeParse(rawPayload)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Schema validation failed', issues: parsed.error.issues },
+      { status: 400 },
+    )
+  }
+  const payload = parsed.data
   const { runId, updatedTargets } = payload
-  if (!runId) {
-    return NextResponse.json({ error: 'runId required' }, { status: 400 })
-  }
-  if (!Array.isArray(updatedTargets)) {
-    return NextResponse.json({ error: 'updatedTargets must be an array' }, { status: 400 })
-  }
+
+  // Subscriber slicing for chunked digest delivery. The dispatcher loops
+  // over slices to stay under the 300s function timeout when the subscriber
+  // list is large. Without these params behavior is unchanged: process all
+  // subscribers, send the aggregate report, return.
+  const url = new URL(req.url)
+  const sliceRequested =
+    url.searchParams.get('subscriberOffset') !== null ||
+    url.searchParams.get('subscriberLimit') !== null
+  const subscriberOffset = Math.max(0, parseInt(url.searchParams.get('subscriberOffset') ?? '0', 10) || 0)
+  const subscriberLimit = (() => {
+    const raw = parseInt(url.searchParams.get('subscriberLimit') ?? '', 10)
+    if (!Number.isFinite(raw) || raw <= 0) return Number.MAX_SAFE_INTEGER
+    return Math.min(raw, 500)
+  })()
 
   // 1. Upsert reports — idempotent on runId+targetName
   try {
@@ -109,9 +120,17 @@ export async function POST(req: Request) {
     targetMap.set(t.name.toLowerCase(), t)
   }
 
-  // 4. Process each active subscriber
+  // 4. Process each active subscriber (sliced when subscriberOffset/Limit set).
+  // Stable ordering on a unique column (id) so chunked invocations cover the
+  // full set without overlap or gaps.
+  const totalSubscribers = await prisma.intelligenceSubscription.count({
+    where: { active: true },
+  })
   const subscribers = await prisma.intelligenceSubscription.findMany({
     where: { active: true },
+    orderBy: { id: 'asc' },
+    skip: subscriberOffset,
+    take: subscriberLimit === Number.MAX_SAFE_INTEGER ? undefined : subscriberLimit,
     include: {
       selectedAttendees: { select: { attendeeId: true } },
       selectedCompanies: { select: { companyId: true } },
@@ -129,10 +148,28 @@ export async function POST(req: Request) {
     },
   })
 
+  // Idempotency: skip subscribers already emailed for this runId.
+  const alreadySentLogs = subscribers.length > 0
+    ? await prisma.intelligenceEmailLog.findMany({
+        where: {
+          runId,
+          userId: { in: subscribers.map(s => s.userId) },
+          status: { in: ['sent', 'skipped'] },
+        },
+        select: { userId: true, status: true },
+      })
+    : []
+  const alreadyHandled = new Set(alreadySentLogs.map(l => l.userId))
+
   let emailsSent = 0
+  let emailsSkippedAlreadySent = 0
   const runDate = runId.replace('-cron', '')
 
   for (const subscriber of subscribers) {
+    if (alreadyHandled.has(subscriber.userId)) {
+      emailsSkippedAlreadySent++
+      continue
+    }
     try {
       // Direct selections: entity IDs → look up names
       const directAttendeeIds = subscriber.selectedAttendees.map(r => r.attendeeId)
@@ -306,9 +343,12 @@ export async function POST(req: Request) {
     }
   }
 
-  // 5. Aggregate report for root/marketing users (only when there is genuinely new intelligence)
+  // 5. Aggregate report for root/marketing users (only when there is genuinely new intelligence).
+  // Run on the FIRST slice only (or when the caller did not slice at all) so
+  // chunked dispatcher loops do not duplicate the aggregate email.
+  const isFirstOrUnsliced = !sliceRequested || subscriberOffset === 0
   let aggregateSent = 0
-  if (updatedTargets.length > 0 && process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+  if (isFirstOrUnsliced && updatedTargets.length > 0 && process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
     try {
       const client = await clerkClient()
       const allUsers = await client.users.getUserList({ limit: 500 })
@@ -342,5 +382,16 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ status: 'ok', emailsSent, aggregateSent })
+  const consumed = subscriberOffset + subscribers.length
+  const nextOffset = consumed >= totalSubscribers ? -1 : consumed
+  return NextResponse.json({
+    status: 'ok',
+    emailsSent,
+    aggregateSent,
+    emailsSkippedAlreadySent,
+    subscriberOffset,
+    subscribersInSlice: subscribers.length,
+    nextOffset,
+    total: totalSubscribers,
+  })
 }

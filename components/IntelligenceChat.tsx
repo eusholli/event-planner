@@ -9,6 +9,7 @@ import remarkGfm from "remark-gfm";
 import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell, History } from "lucide-react";
 import clsx from "clsx";
 import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
+import type { TargetUpdate } from "@/lib/intelligence-schema";
 
 /* ── Typing indicator (three bouncing dots + optional status text) ── */
 function TypingIndicator({ statusMessage }: { statusMessage?: string | null }) {
@@ -37,7 +38,14 @@ type Message = {
     role: "user" | "assistant" | "system";
     content: string;
     id: string;
+    report?: TargetUpdate;
 };
+
+const STRUCTURED_REPORT_REGEX = /```json\s+STRUCTURED_REPORT\s*([\s\S]*?)```/i;
+
+function stripStructuredBlock(content: string): string {
+    return content.replace(STRUCTURED_REPORT_REGEX, "").trimEnd();
+}
 
 interface IntelligenceChatProps {
     eventId?: string;
@@ -187,6 +195,18 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                         } else if (data.type === "final") {
                             setIsWaitingForResponse(false);
                             setStatusMessage(null);
+                            const report = data.report as TargetUpdate | undefined;
+                            setMessages((prev) => {
+                                const lastIdx = prev.length - 1;
+                                if (lastIdx < 0) return prev;
+                                const last = prev[lastIdx];
+                                if (last.role !== "assistant") return prev;
+                                const cleaned = stripStructuredBlock(last.content);
+                                return [
+                                    ...prev.slice(0, lastIdx),
+                                    { ...last, content: cleaned, report: report ?? last.report },
+                                ];
+                            });
                         } else if (data.type === "session-cleared") {
                             setMessages([{ role: "user", content: "/new", id: Date.now().toString() }]);
                             setIsWaitingForResponse(true);
@@ -366,6 +386,30 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                                             : "bg-zinc-50 text-zinc-800 rounded-bl-none border border-zinc-100"
                                 )}
                             >
+                                {msg.role === "assistant" && msg.report && (
+                                    <div className="mb-3 p-3 rounded-xl bg-white border border-zinc-200 shadow-sm space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                                                {msg.report.type}
+                                            </span>
+                                            <span className="text-sm font-semibold text-zinc-900">{msg.report.name}</span>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Summary</div>
+                                            <div className="text-sm text-zinc-800">{msg.report.summary}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Sales Angle</div>
+                                            <div className="text-sm text-zinc-800">{msg.report.salesAngle}</div>
+                                        </div>
+                                        {msg.report.recommendedAction && (
+                                            <div>
+                                                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Recommended Action</div>
+                                                <div className="text-sm text-zinc-800">{msg.report.recommendedAction}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="prose prose-sm max-w-none break-words
                                     prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1
                                     prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5

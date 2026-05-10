@@ -1,17 +1,8 @@
 // lib/intelligence-email.ts
 import { generateContentWithLog } from '@/lib/gemini'
-import prisma from '@/lib/prisma'
+import type { TargetUpdate } from '@/lib/intelligence-schema'
 
-export type TargetUpdate = {
-  type: 'company' | 'attendee' | 'event'
-  name: string
-  summary: string
-  salesAngle: string
-  fullReport: string
-  recommendedAction?: string  // concrete, time-sensitive next step for the sales team
-  highlighted?: boolean       // true = user directly selected this entity
-  linkedEventName?: string    // set when this target came from a subscribed event
-}
+export type { TargetUpdate } from '@/lib/intelligence-schema'
 
 export type UpcomingEvent = {
   name: string
