@@ -333,3 +333,21 @@ model AILog {
   @@index([userEmail])
   @@index([functionName])
 }
+
+model ViberLinkCode {
+  code        String    @id
+  clerkUserId String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([clerkUserId])
+  @@index([expiresAt])
+}
+
+model ViberUser {
+  viberUserId String   @id
+  clerkUserId String   @unique
+  viberName   String
+  linkedAt    DateTime @default(now())
+}
