@@ -794,7 +794,7 @@ export default function EventsPage() {
                         {eventFilters.view === 'calendar' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
-                                <EventCalendar events={displayEvents} onEventClick={handleEventClick} />
+                                <EventCalendar events={displayEvents} onEventClick={handleEventClick} selectedRegions={eventFilters.regions as string[]} />
                             </div>
                         )}
 
