@@ -28,7 +28,9 @@ const isIntelligenceApiRoute = createRouteMatcher([
     '/api/intelligence/targets(.*)',
     '/api/intelligence/session(.*)',
     '/api/intelligence/actions(.*)',
-    '/api/webhooks/intel-report(.*)'
+    '/api/webhooks/intel-report(.*)',
+    '/api/viber/lookup(.*)',
+    '/api/viber/link/redeem(.*)'
 ]);
 
 export const proxy = clerkMiddleware(async (auth, req) => {

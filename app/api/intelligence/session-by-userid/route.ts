@@ -6,7 +6,7 @@
 //
 // Auth: CRON_SECRET_KEY Bearer (same as /api/intelligence/session).
 import { NextResponse } from 'next/server'
-import { createClerkClient } from '@clerk/backend'
+import { clerkClient } from '@clerk/nextjs/server'
 import { signActionToken, ACTION_TOKEN_TTL_MS } from '@/lib/action-tokens'
 import prisma from '@/lib/prisma'
 
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     }
 
     try {
-        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+        const clerk = await clerkClient()
         const user = await clerk.users.getUser(clerkUserId)
         const role = (user.publicMetadata?.role as string) ?? 'user'
         const email = user.emailAddresses[0]?.emailAddress ?? ''

@@ -4,7 +4,7 @@
 // Viber user starts a conversation with `context=<code>`. We consume the code
 // and persist the (viberUserId -> clerkUserId) mapping.
 import { NextResponse } from 'next/server'
-import { createClerkClient } from '@clerk/backend'
+import { clerkClient } from '@clerk/nextjs/server'
 import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -39,8 +39,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'invalid_or_expired' }, { status: 404 })
     }
 
-    // Upsert the mapping. If this Viber user was previously linked to a
-    // different Clerk identity, overwrite — re-linking is intentional.
+    // Re-linking is intentional. Enforce 1:1 by dropping any prior link
+    // owned by this Clerk user (their old Viber account) before upserting
+    // the (possibly new) Viber identity.
+    await prisma.viberUser.deleteMany({
+        where: { clerkUserId: linkCode.clerkUserId, NOT: { viberUserId } },
+    })
+
     await prisma.viberUser.upsert({
         where: { viberUserId },
         create: {
@@ -62,7 +67,7 @@ export async function POST(req: Request) {
 
     let clerkName = ''
     try {
-        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+        const clerk = await clerkClient()
         const user = await clerk.users.getUser(linkCode.clerkUserId)
         clerkName = [user.firstName, user.lastName].filter(Boolean).join(' ') ||
             user.emailAddresses[0]?.emailAddress || ''

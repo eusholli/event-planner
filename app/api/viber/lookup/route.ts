@@ -3,7 +3,7 @@
 // Server-to-server (CRON_SECRET_KEY Bearer): viber-proxy resolves a Viber
 // sender ID to a Clerk identity + role on every inbound message.
 import { NextResponse } from 'next/server'
-import { createClerkClient } from '@clerk/backend'
+import { clerkClient } from '@clerk/nextjs/server'
 import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     let role = 'user'
     let clerkName = link.viberName
     try {
-        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+        const clerk = await clerkClient()
         const user = await clerk.users.getUser(link.clerkUserId)
         role = (user.publicMetadata?.role as string) ?? 'user'
         clerkName = [user.firstName, user.lastName].filter(Boolean).join(' ') ||
