@@ -357,7 +357,8 @@ const EVENTS_FILTER_DEFAULTS = {
     search: '',
     statuses: [...STATUS_DISPLAY_ORDER] as string[],
     regions: [] as string[],
-    years: [] as string[],
+    dateFrom: '',
+    dateTo: '',
     view: 'list',
 }
 
@@ -475,9 +476,6 @@ export default function EventsPage() {
 
     // Derived Filter Data
     const availableRegions = Array.from(new Set(events.map(e => e.region ?? 'Global')))
-    const availableYears = Array.from(new Set(events.map(e => {
-        return e.startDate ? new Date(e.startDate).getFullYear().toString() : null
-    }).filter(Boolean))) as string[]
 
     const filteredEvents = events.filter(event => {
         // Search Filter
@@ -501,11 +499,15 @@ export default function EventsPage() {
             if (!(eventFilters.regions as string[]).includes(effectiveRegion)) return false
         }
 
-        // Year Filter
-        if ((eventFilters.years as string[]).length > 0) {
-            if (!event.startDate) return false
-            const year = new Date(event.startDate).getFullYear().toString()
-            if (!(eventFilters.years as string[]).includes(year)) return false
+        // Date Range Filter — include event if its range overlaps [dateFrom, dateTo]
+        const from = eventFilters.dateFrom as string
+        const to = eventFilters.dateTo as string
+        if (from || to) {
+            const eventStart = event.startDate
+            const eventEnd = event.endDate || event.startDate
+            if (!eventStart) return false
+            if (from && eventEnd && eventEnd < from) return false
+            if (to && eventStart > to) return false
         }
 
         return true
@@ -656,32 +658,30 @@ export default function EventsPage() {
                                 </div>
                             )}
 
-                            {/* Year */}
-                            {availableYears.length > 0 && (
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">Year</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {availableYears.sort().reverse().map(year => (
-                                            <button
-                                                key={year}
-                                                onClick={() => {
-                                                    const current = eventFilters.years as string[]
-                                                    setFilter('years', current.includes(year)
-                                                        ? current.filter(y => y !== year)
-                                                        : [...current, year]
-                                                    )
-                                                }}
-                                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${(eventFilters.years as string[]).includes(year)
-                                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                                    : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300'
-                                                    }`}
-                                            >
-                                                {year}
-                                            </button>
-                                        ))}
+                            {/* Date Range */}
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1.5 uppercase tracking-wider">Date Range</label>
+                                <div className="space-y-2">
+                                    <div>
+                                        <label className="block text-xs text-neutral-400 mb-1">From</label>
+                                        <input
+                                            type="date"
+                                            className="input-field text-sm"
+                                            value={eventFilters.dateFrom as string}
+                                            onChange={e => setFilter('dateFrom', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-neutral-400 mb-1">To</label>
+                                        <input
+                                            type="date"
+                                            className="input-field text-sm"
+                                            value={eventFilters.dateTo as string}
+                                            onChange={e => setFilter('dateTo', e.target.value)}
+                                        />
                                     </div>
                                 </div>
-                            )}
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -794,7 +794,7 @@ export default function EventsPage() {
                         {eventFilters.view === 'calendar' && (
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
                                 <h2 className="text-lg font-semibold mb-4">Annual Regional Schedule</h2>
-                                <EventCalendar events={displayEvents} onEventClick={handleEventClick} />
+                                <EventCalendar events={displayEvents} onEventClick={handleEventClick} selectedRegions={eventFilters.regions as string[]} />
                             </div>
                         )}
 

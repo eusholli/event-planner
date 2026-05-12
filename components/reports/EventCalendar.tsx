@@ -23,10 +23,14 @@ const abbreviateBudget = (v: number): string =>
     : v >= 1_000 ? `$${Math.round(v / 1_000)}K`
     : `$${v}`
 
-export function EventCalendar({ events, onEventClick }: { events: Event[], onEventClick?: (event: Event) => void }) {
+export function EventCalendar({ events, onEventClick, selectedRegions }: { events: Event[], onEventClick?: (event: Event) => void, selectedRegions?: string[] }) {
+    const visibleRegions = (selectedRegions && selectedRegions.length > 0)
+        ? REGIONS.filter(r => selectedRegions.includes(r))
+        : REGIONS
+
     // 1. Group by Region
     const regionGroups: Record<string, Event[]> = {}
-    REGIONS.forEach(r => regionGroups[r] = [])
+    visibleRegions.forEach(r => regionGroups[r] = [])
     events.forEach(e => {
         if (e.region && regionGroups[e.region]) {
             regionGroups[e.region].push(e)
@@ -62,7 +66,7 @@ export function EventCalendar({ events, onEventClick }: { events: Event[], onEve
                 </div>
 
                 {/* Region Rows */}
-                {REGIONS.map(region => {
+                {visibleRegions.map(region => {
                     const regionEvents = regionGroups[region] || []
 
                     // 2. Packing Algorithm
@@ -123,6 +127,7 @@ export function EventCalendar({ events, onEventClick }: { events: Event[], onEve
                             <div className="flex-1 relative">
                                 {eventsWithLayout.map(event => {
                                     const colors = getStatusColor(event.status)
+                                    const textColor = event.status === 'OCCURRED' ? '#ffffff' : colors.text
 
                                     return (
                                         <div
@@ -136,12 +141,12 @@ export function EventCalendar({ events, onEventClick }: { events: Event[], onEve
                                                 // maxWidth removed to allow full name display
                                                 backgroundColor: colors.bg,
                                                 borderColor: colors.border,
-                                                color: colors.text,
+                                                color: textColor,
                                                 zIndex: 5
                                             }}
                                             title={`${event.name} - ${event.status}${event.budget != null && event.budget > 0 ? ` · ${event.budget.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}` : ''}`}
                                         >
-                                            <div className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ backgroundColor: colors.text }}></div>
+                                            <div className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ backgroundColor: textColor }}></div>
                                             {event.name}{event.budget != null && event.budget > 0 ? ` · ${abbreviateBudget(event.budget)}` : ''}
                                         </div>
                                     )
