@@ -96,7 +96,8 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
             location,
             otherDetails,
             isApproved,
-            calendarInviteSent
+            calendarInviteSent,
+            pitchId
         } = body
 
         // Basic title validation for all meetings
@@ -219,6 +220,13 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
                 set: [], // Clear existing
                 connect: attendeeIds.length > 0 ? attendeeIds.map((id: string) => ({ id })) : [],
             }
+            // Auto-link attendees to the event if not already linked
+            if (attendeeIds.length > 0 && meeting.eventId) {
+                await prisma.event.update({
+                    where: { id: meeting.eventId },
+                    data: { attendees: { connect: attendeeIds.map((id: string) => ({ id })) } },
+                })
+            }
         }
 
         // Only update status if provided
@@ -235,6 +243,18 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
         if (status === 'CANCELED') {
             updateData.roomId = null;
             updateData.location = null;
+        }
+
+        if (pitchId !== undefined) {
+            if (pitchId === null) {
+                updateData.pitchId = null
+            } else if (meeting.eventId) {
+                const pitch = await prisma.pitch.findFirst({ where: { id: pitchId, eventId: meeting.eventId } })
+                if (!pitch) {
+                    return NextResponse.json({ error: 'Invalid pitchId for this event' }, { status: 400 })
+                }
+                updateData.pitchId = pitchId
+            }
         }
 
         const updatedMeetingResult = await prisma.meeting.update({

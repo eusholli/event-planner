@@ -38,6 +38,7 @@ export interface Meeting {
     otherDetails?: string
     isApproved?: boolean
     calendarInviteSent?: boolean
+    pitchId?: string | null
 }
 
 interface MeetingModalProps {

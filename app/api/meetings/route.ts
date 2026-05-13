@@ -120,7 +120,8 @@ export const POST = withAuth(async (request, { authCtx }) => {
             otherDetails,
             isApproved,
             calendarInviteSent,
-            eventId: rawEventId
+            eventId: rawEventId,
+            pitchId
         } = body
 
         const eventId = await resolveEventId(rawEventId)
@@ -268,6 +269,14 @@ export const POST = withAuth(async (request, { authCtx }) => {
             eventId
         }
 
+        if (pitchId) {
+            const pitch = await prisma.pitch.findFirst({ where: { id: pitchId, eventId } })
+            if (!pitch) {
+                return NextResponse.json({ error: 'Invalid pitchId for this event' }, { status: 400 })
+            }
+            meetingData.pitchId = pitchId
+        }
+
         // Only add room if provided
         if (roomId) {
             meetingData.roomId = roomId
@@ -278,6 +287,11 @@ export const POST = withAuth(async (request, { authCtx }) => {
             meetingData.attendees = {
                 connect: attendeeIds.map((id: string) => ({ id })),
             }
+            // Auto-link attendees to the event if not already linked
+            await prisma.event.update({
+                where: { id: eventId },
+                data: { attendees: { connect: attendeeIds.map((id: string) => ({ id })) } },
+            })
         }
 
         // Force clear room and location if status is CANCELED
