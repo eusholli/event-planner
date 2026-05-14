@@ -138,7 +138,19 @@ function ROIPage() {
     const eventId = params?.id as string
 
     const { user } = useUser()
-    const [activeTab, setActiveTab] = useState<'targets' | 'performance' | 'actuals'>('targets')
+    const [activeTab, setActiveTabState] = useState<'targets' | 'performance' | 'actuals'>('targets')
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(`roi-tab-${eventId}`)
+            if (saved === 'performance' || saved === 'actuals' || saved === 'targets') setActiveTabState(saved)
+        } catch {}
+    }, [eventId])
+
+    const setActiveTab = (tab: 'targets' | 'performance' | 'actuals') => {
+        setActiveTabState(tab)
+        try { localStorage.setItem(`roi-tab-${eventId}`, tab) } catch {}
+    }
     const [targets, setTargets] = useState<ROITargets>(emptyTargets)
     const [actuals, setActuals] = useState<ROIActuals | null>(null)
     const [linkedInDrafts, setLinkedInDrafts] = useState<LinkedInDraft[]>([])
@@ -415,6 +427,37 @@ function ROIPage() {
             window.removeEventListener('beforeunload', handleBeforeUnload)
         }
     }, [isDirty])
+
+    // Save scroll position as the user scrolls (not on unmount — avoids StrictMode writing scrollY=0)
+    useEffect(() => {
+        const key = `roi-scroll-${eventId}`
+        let rafId: number
+        const onScroll = () => {
+            cancelAnimationFrame(rafId)
+            rafId = requestAnimationFrame(() => {
+                sessionStorage.setItem(key, String(Math.round(window.scrollY)))
+            })
+        }
+        window.addEventListener('scroll', onScroll, { passive: true })
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            cancelAnimationFrame(rafId)
+        }
+    }, [eventId])
+
+    // Restore scroll position after data finishes loading
+    useEffect(() => {
+        if (loading) return
+        const key = `roi-scroll-${eventId}`
+        const saved = sessionStorage.getItem(key)
+        if (saved) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.scrollTo({ top: parseInt(saved), behavior: 'instant' })
+                })
+            })
+        }
+    }, [loading, eventId])
 
     // Read planWarning / planError from URL on mount, show message, clear params
     useEffect(() => {
