@@ -1343,11 +1343,11 @@ function ROIPage() {
                         </div>
                     </section>
 
-                    {/* Engagement */}
+                    {/* Event Executive Summary */}
                     <section>
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-rose-500 rounded-full" />
-                            Engagement
+                            Event Executive Summary
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <MetricCard label="LI Company Touches" tooltip="Number of event target companies engaged by POSTED LinkedIn campaigns." target={targets.targetCompanies.length} actual={linkedInSummary.targetCompaniesEngaged.length} />
@@ -1355,33 +1355,6 @@ function ROIPage() {
                             <MetricCard label="Event Scans" tooltip="Actual vs target contacts scanned or collected at the event." target={targets.targetEventScans || 0} actual={actuals.actualEventScans} />
                             <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} />
                             <MetricCard label="Speaking" tooltip="The actual vs target number of speaking sessions, panels, or presentations secured at the event." target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
-                        </div>
-                    </section>
-
-                    {/* Target Companies */}
-                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <CompanyChecklist targetCompanies={targets.targetCompanies} hitCompanyIds={actuals.targetCompaniesHit.map(c => c.id)} />
-                    </section>
-
-                    {/* Additional Companies */}
-                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
-                            <span className="w-1 h-5 bg-orange-400 rounded-full" />
-                            Additional Companies
-                            <span className="ml-1 text-sm font-normal text-zinc-500">({actuals.additionalCompanies.length})</span>
-                        </h3>
-                        <p className="text-sm text-zinc-500 mb-4">Companies of event attendees not in the target list.</p>
-                        <div className="flex flex-wrap gap-2">
-                            {actuals.additionalCompanies.length === 0 ? (
-                                <p className="text-sm text-zinc-400 italic">No additional companies recorded.</p>
-                            ) : (
-                                actuals.additionalCompanies.map(c => (
-                                    <span key={c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-50 text-orange-800 border border-orange-200">
-                                        {c.name}
-                                        {!!c.pipelineValue && <span className="text-xs opacity-60">(${c.pipelineValue.toLocaleString()})</span>}
-                                    </span>
-                                ))
-                            )}
                         </div>
                     </section>
 
@@ -1512,6 +1485,41 @@ function ROIPage() {
                                 </div>
                             </div>
                         )}
+                    </section>
+
+                    {/* Physical Event Execution */}
+                    <section className="space-y-4">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-violet-500 rounded-full" />
+                            Physical Event Execution
+                        </h3>
+
+                        {/* Target Companies */}
+                        <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <CompanyChecklist targetCompanies={targets.targetCompanies} hitCompanyIds={actuals.targetCompaniesHit.map(c => c.id)} />
+                        </section>
+
+                        {/* Additional Companies */}
+                        <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
+                                <span className="w-1 h-5 bg-orange-400 rounded-full" />
+                                Additional Companies
+                                <span className="ml-1 text-sm font-normal text-zinc-500">({actuals.additionalCompanies.length})</span>
+                            </h3>
+                            <p className="text-sm text-zinc-500 mb-4">Companies of event attendees not in the target list.</p>
+                            <div className="flex flex-wrap gap-2">
+                                {actuals.additionalCompanies.length === 0 ? (
+                                    <p className="text-sm text-zinc-400 italic">No additional companies recorded.</p>
+                                ) : (
+                                    actuals.additionalCompanies.map(c => (
+                                        <span key={c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-50 text-orange-800 border border-orange-200">
+                                            {c.name}
+                                            {!!c.pipelineValue && <span className="text-xs opacity-60">(${c.pipelineValue.toLocaleString()})</span>}
+                                        </span>
+                                    ))
+                                )}
+                            </div>
+                        </section>
                     </section>
 
                     {/* Pipeline Performance */}
