@@ -1,8 +1,8 @@
 -- Reset pitch data; the system-wide pitch model shipped briefly and is being replaced with a per-event model.
 -- Pitch data is expendable at this stage; production has not relied on it.
 UPDATE "Meeting" SET "pitchId" = NULL WHERE "pitchId" IS NOT NULL;
-TRUNCATE TABLE "PitchAttendee" CASCADE;
-TRUNCATE TABLE "Pitch" CASCADE;
+DELETE FROM "PitchAttendee";
+DELETE FROM "Pitch";
 
 -- Drop the M2M join table left over from the system-wide refactor
 DROP TABLE IF EXISTS "_EventPitches";
