@@ -167,7 +167,7 @@ function ROIPage() {
     // Aggregates POSTED drafts only. Returns null when no POSTED drafts exist.
     const linkedInSummary = useMemo(() => {
         const posted = linkedInDrafts.filter(d => d.status === 'POSTED')
-        if (posted.length === 0) return null
+        const draftCount = linkedInDrafts.filter(d => d.status === 'DRAFT').length
 
         const sum = (vals: (number | null)[]) => vals.reduce<number>((a, v) => a + (v ?? 0), 0)
 
@@ -190,32 +190,63 @@ function ROIPage() {
         const earliestStart = startDates.length ? new Date(Math.min(...startDates.map(d => new Date(d).getTime()))) : null
         const latestEnd = endDates.length ? new Date(Math.max(...endDates.map(d => new Date(d).getTime()))) : null
 
-        const draftCount = linkedInDrafts.filter(d => d.status === 'DRAFT').length
-
-        // Target-company touch counts: normalize both sides; one touch per draft per company.
-        const targetByNorm = new Map<string, string>() // normalized -> canonical name
+        // Bucket touched companies across POSTED drafts: target → known (system) → other.
+        // One touch per draft per canonical company.
+        const targetByNorm = new Map<string, string>()
         for (const c of targets.targetCompanies) {
             targetByNorm.set(normalizeCompany(c.name), c.name)
         }
-        const touchCounts = new Map<string, number>() // canonical -> count
+        const systemByNorm = new Map<string, string>()
+        for (const c of availableCompanies) {
+            systemByNorm.set(normalizeCompany(c.name), c.name)
+        }
+
+        const targetTouches = new Map<string, number>()
+        const knownTouches = new Map<string, number>()
+        const otherTouches = new Map<string, { name: string; count: number }>()
+
         for (const draft of posted) {
             if (!draft.topCompaniesByEngagement) continue
             const seenInDraft = new Set<string>()
             for (const rawLine of draft.topCompaniesByEngagement.split('\n')) {
-                // Strip trailing metrics: keep characters up to the first digit run; fallback to whole line.
                 const nameOnly = rawLine.replace(/[\t,;|].*$/, '').replace(/\s+\d.*$/, '').trim()
                 if (!nameOnly) continue
                 const norm = normalizeCompany(nameOnly)
-                const canonical = targetByNorm.get(norm)
-                if (!canonical) continue
-                if (seenInDraft.has(canonical)) continue
-                seenInDraft.add(canonical)
-                touchCounts.set(canonical, (touchCounts.get(canonical) ?? 0) + 1)
+                if (seenInDraft.has(norm)) continue
+                seenInDraft.add(norm)
+
+                const targetCanonical = targetByNorm.get(norm)
+                if (targetCanonical) {
+                    targetTouches.set(targetCanonical, (targetTouches.get(targetCanonical) ?? 0) + 1)
+                    continue
+                }
+                const knownCanonical = systemByNorm.get(norm)
+                if (knownCanonical) {
+                    knownTouches.set(knownCanonical, (knownTouches.get(knownCanonical) ?? 0) + 1)
+                    continue
+                }
+                const existing = otherTouches.get(norm)
+                if (existing) {
+                    existing.count += 1
+                } else {
+                    otherTouches.set(norm, { name: nameOnly, count: 1 })
+                }
             }
         }
-        const targetCompaniesEngaged = Array.from(touchCounts.entries())
+
+        const sortByCount = (a: { count: number }, b: { count: number }) => b.count - a.count
+        const targetCompaniesEngaged = Array.from(targetTouches.entries())
             .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count)
+            .sort(sortByCount)
+        const knownCompaniesEngaged = Array.from(knownTouches.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort(sortByCount)
+        const otherCompaniesEngaged = Array.from(otherTouches.values()).sort(sortByCount)
+
+        const totalTargets = targets.targetCompanies.length
+        const targetCoveragePct = totalTargets > 0
+            ? (targetCompaniesEngaged.length / totalTargets) * 100
+            : null
 
         return {
             postedCount: posted.length,
@@ -230,8 +261,11 @@ function ROIPage() {
             earliestStart,
             latestEnd,
             targetCompaniesEngaged,
+            knownCompaniesEngaged,
+            otherCompaniesEngaged,
+            targetCoveragePct,
         }
-    }, [linkedInDrafts, targets.targetCompanies])
+    }, [linkedInDrafts, targets.targetCompanies, availableCompanies])
 
     // Sparkle state
     const [sparkleLoading, setSparkleLoading] = useState<'financial' | 'events' | 'companies' | null>(null)
@@ -1297,33 +1331,91 @@ function ROIPage() {
                     </section>
 
                     {/* LinkedIn Campaigns Summary */}
-                    {linkedInSummary && (
-                        <section className="space-y-4">
-                            <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                                <span className="w-1 h-5 bg-blue-500 rounded-full" />
-                                LinkedIn Campaigns
-                            </h3>
+                    <section className="space-y-4">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-blue-500 rounded-full" />
+                            LinkedIn Campaigns
+                        </h3>
+                        <p className="text-xs text-zinc-500 mb-4">Numbers next to each company show how many POSTED campaigns engaged them.</p>
 
-                            {linkedInSummary.targetCompaniesEngaged.length > 0 && (
-                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                                    <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
-                                        <Tooltip content="Target companies engaged by your LinkedIn campaigns, ranked by number of POSTED campaigns each appeared in. Matching is case- and whitespace-insensitive.">
-                                            Target Companies Engaged
-                                        </Tooltip>
-                                        <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.targetCompaniesEngaged.length})</span>
-                                    </h4>
-                                    <p className="text-xs text-zinc-500 mb-4">From LinkedIn Campaign Manager engagement data, ranked by touch count across POSTED campaigns.</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {linkedInSummary.targetCompaniesEngaged.map(c => (
-                                            <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-teal-50 text-teal-800 border border-teal-200">
-                                                {c.name}
-                                                <span className="text-xs opacity-60">· {c.count}</span>
-                                            </span>
-                                        ))}
-                                    </div>
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                <Tooltip content="Target companies engaged by your LinkedIn campaigns, ranked by number of POSTED campaigns each appeared in. Matching is case- and whitespace-insensitive.">
+                                    Event Target Companies Engaged
+                                </Tooltip>
+                                <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.targetCompaniesEngaged.length})</span>
+                                {linkedInSummary.targetCoveragePct !== null && linkedInSummary.targetCompaniesEngaged.length > 0 && (
+                                    <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                                        {linkedInSummary.targetCoveragePct.toFixed(0)}% coverage
+                                    </span>
+                                )}
+                            </h4>
+                            <p className="text-xs text-zinc-500 mb-4">Event ROI target companies touched by your POSTED LinkedIn campaigns.</p>
+                            {linkedInSummary.targetCompaniesEngaged.length === 0 ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    None
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {linkedInSummary.targetCompaniesEngaged.map(c => (
+                                        <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-teal-50 text-teal-800 border border-teal-200">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· {c.count}</span>
+                                        </span>
+                                    ))}
                                 </div>
                             )}
+                        </div>
 
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                <Tooltip content="Companies engaged by your campaigns that exist in the system company directory but are not on this event's target list.">
+                                    Known Companies Engaged
+                                </Tooltip>
+                                <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.knownCompaniesEngaged.length})</span>
+                            </h4>
+                            <p className="text-xs text-zinc-500 mb-4">In the system company directory, but not event targets.</p>
+                            {linkedInSummary.knownCompaniesEngaged.length === 0 ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    None
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {linkedInSummary.knownCompaniesEngaged.map(c => (
+                                        <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· {c.count}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                <Tooltip content="Companies engaged by your campaigns that are neither event targets nor in the system company directory.">
+                                    Other Companies Engaged
+                                </Tooltip>
+                                <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.otherCompaniesEngaged.length})</span>
+                            </h4>
+                            <p className="text-xs text-zinc-500 mb-4">Not targets, not in the directory — potential new additions.</p>
+                            {linkedInSummary.otherCompaniesEngaged.length === 0 ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    None
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {linkedInSummary.otherCompaniesEngaged.map(c => (
+                                        <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-700 border border-zinc-300">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· {c.count}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {linkedInSummary.postedCount > 0 && (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
                                     <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total POSTED campaigns. Sub-line shows POSTED vs DRAFT counts.">Campaigns</Tooltip></h4>
@@ -1364,8 +1456,8 @@ function ROIPage() {
                                     <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.weightedEngagement !== null ? `${linkedInSummary.weightedEngagement.toFixed(1)}s` : '—'}</div>
                                 </div>
                             </div>
-                        </section>
-                    )}
+                        )}
+                    </section>
 
                     {/* Financial Overview */}
                     <section>
