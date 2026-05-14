@@ -8,7 +8,7 @@ import TagCheckboxGrid from '@/components/TagCheckboxGrid'
 import MeetingModal, { Meeting } from '@/components/MeetingModal'
 import MeetingDetailsModal from '@/components/MeetingDetailsModal'
 import MeetingCard from '@/components/MeetingCard'
-import PitchTargetsTable, { type PitchTarget } from '@/components/PitchTargetsTable'
+import PitchTargetsTable, { type PitchTarget, type PitchMeetingForCounts } from '@/components/PitchTargetsTable'
 
 interface AttendeeMini {
     id: string
@@ -408,6 +408,7 @@ export default function PitchDetailPage() {
                         <PitchTargetsTable
                             pitchId={pitchId}
                             targets={pitch.targets}
+                            meetings={pitch.meetings as unknown as PitchMeetingForCounts[]}
                             onChange={(targets) => setPitch({ ...pitch, targets })}
                             onRemove={removeTarget}
                         />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Megaphone, Plus, Users, Calendar as CalendarIcon, Trash2, Copy, Pencil, ArrowUp, ArrowDown, Search, Library } from 'lucide-react'
+import { Megaphone, Plus, Users, Trash2, Copy, Pencil, ArrowUp, ArrowDown, Search, Library } from 'lucide-react'
 import Pagination from '@/components/Pagination'
 
 interface PitchRow {
@@ -14,6 +14,9 @@ interface PitchRow {
     modified: string
     targetsCount: number
     meetingsCount: number
+    pipelineCount: number
+    committedCount: number
+    occurredCount: number
 }
 
 interface LibraryRow {
@@ -26,7 +29,7 @@ interface LibraryRow {
     sourceEvent: { id: string; name: string; slug: string } | null
 }
 
-type SortBy = 'title' | 'modified' | 'createdAt'
+type SortBy = 'title' | 'modified' | 'createdAt' | 'targetsCount' | 'pipelineCount' | 'committedCount' | 'occurredCount'
 type NewPitchTab = 'blank' | 'library'
 
 const LIMIT = 20
@@ -377,8 +380,18 @@ export default function CommsPage() {
                                             Title {sortIcon('title')}
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Tags</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Targets</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Briefings</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('targetsCount')}>
+                                            Targets {sortIcon('targetsCount')}
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('pipelineCount')}>
+                                            Pipeline {sortIcon('pipelineCount')}
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('committedCount')}>
+                                            Committed {sortIcon('committedCount')}
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('occurredCount')}>
+                                            Occurred {sortIcon('occurredCount')}
+                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('modified')}>
                                             Modified {sortIcon('modified')}
                                         </th>
@@ -387,20 +400,19 @@ export default function CommsPage() {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-zinc-100">
                                     {loading ? (
-                                        <tr><td colSpan={6} className="px-4 py-16 text-center text-zinc-400">Loading…</td></tr>
+                                        <tr><td colSpan={8} className="px-4 py-16 text-center text-zinc-400">Loading…</td></tr>
                                     ) : items.length === 0 ? (
-                                        <tr><td colSpan={6} className="px-4 py-16 text-center text-zinc-500">
+                                        <tr><td colSpan={8} className="px-4 py-16 text-center text-zinc-500">
                                             {debouncedSearch ? 'No pitches match your search.' : 'No pitches for this event yet. Click New Pitch to start.'}
                                         </td></tr>
                                     ) : items.map(row => (
-                                        <tr key={row.id} className="hover:bg-zinc-50">
-                                            <td className="px-4 py-3">
-                                                <button
-                                                    onClick={() => router.push(`/events/${eventId}/comms/${row.id}`)}
-                                                    className="text-left font-medium text-zinc-900 hover:text-indigo-600 transition-colors"
-                                                >
-                                                    {row.title}
-                                                </button>
+                                        <tr
+                                            key={row.id}
+                                            onClick={() => router.push(`/events/${eventId}/comms/${row.id}`)}
+                                            className="hover:bg-zinc-50 cursor-pointer"
+                                        >
+                                            <td className="px-4 py-3 font-medium text-zinc-900">
+                                                {row.title}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-wrap gap-1">
@@ -412,30 +424,30 @@ export default function CommsPage() {
                                             <td className="px-4 py-3 text-sm text-zinc-600">
                                                 <span className="inline-flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{row.targetsCount}</span>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-zinc-600">
-                                                <span className="inline-flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" />{row.meetingsCount}</span>
-                                            </td>
+                                            <td className="px-4 py-3 text-sm text-zinc-600">{row.pipelineCount}</td>
+                                            <td className="px-4 py-3 text-sm text-zinc-600">{row.committedCount}</td>
+                                            <td className="px-4 py-3 text-sm text-zinc-600">{row.occurredCount}</td>
                                             <td className="px-4 py-3 text-sm text-zinc-500">
                                                 {new Date(row.modified).toLocaleDateString()}
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="inline-flex items-center gap-1">
                                                     <button
-                                                        onClick={() => router.push(`/events/${eventId}/comms/${row.id}`)}
+                                                        onClick={(e) => { e.stopPropagation(); router.push(`/events/${eventId}/comms/${row.id}`) }}
                                                         title="Edit"
                                                         className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => duplicate(row)}
+                                                        onClick={(e) => { e.stopPropagation(); duplicate(row) }}
                                                         title="Duplicate"
                                                         className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                                                     >
                                                         <Copy className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(row)}
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(row) }}
                                                         title="Delete"
                                                         className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                                                     >

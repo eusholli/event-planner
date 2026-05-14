@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Trash2, ExternalLink } from 'lucide-react'
+import type { MeetingStatus } from '@prisma/client'
 import type { BriefingStatusResult } from '@/lib/pitch-status'
+
+export interface PitchMeetingForCounts {
+    id: string
+    status: MeetingStatus
+    attendees: { id: string }[]
+}
 
 export interface PitchTarget {
     attendeeId: string
@@ -22,9 +29,12 @@ export interface PitchTarget {
 interface PitchTargetsTableProps {
     pitchId: string
     targets: PitchTarget[]
+    meetings: PitchMeetingForCounts[]
     onChange: (targets: PitchTarget[]) => void
     onRemove: (attendeeId: string) => void
 }
+
+const COUNT_STATUSES: MeetingStatus[] = ['PIPELINE', 'CONFIRMED', 'OCCURRED']
 
 const STATUS_STYLES: Record<string, string> = {
     NOT_SCHEDULED: 'bg-zinc-100 text-zinc-600 border-zinc-200',
@@ -42,7 +52,7 @@ const STATUS_LABELS: Record<string, string> = {
     CANCELED: 'Canceled',
 }
 
-export default function PitchTargetsTable({ pitchId, targets, onChange, onRemove }: PitchTargetsTableProps) {
+export default function PitchTargetsTable({ pitchId, targets, meetings, onChange, onRemove }: PitchTargetsTableProps) {
     if (targets.length === 0) {
         return (
             <div className="text-center py-12 text-zinc-500 bg-zinc-50/50 rounded-2xl border border-dashed border-zinc-200">
@@ -58,6 +68,7 @@ export default function PitchTargetsTable({ pitchId, targets, onChange, onRemove
                     key={target.attendeeId}
                     pitchId={pitchId}
                     target={target}
+                    meetings={meetings}
                     onPatch={(patch) => {
                         onChange(
                             targets.map(t => t.attendeeId === target.attendeeId ? { ...t, ...patch } : t)
@@ -73,11 +84,13 @@ export default function PitchTargetsTable({ pitchId, targets, onChange, onRemove
 function TargetRow({
     pitchId,
     target,
+    meetings,
     onPatch,
     onRemove,
 }: {
     pitchId: string
     target: PitchTarget
+    meetings: PitchMeetingForCounts[]
     onPatch: (patch: Partial<PitchTarget>) => void
     onRemove: () => void
 }) {
@@ -111,7 +124,12 @@ function TargetRow({
         }, 600)
     }
 
-    const statusKey = target.briefing.status
+    const counts: Record<MeetingStatus, number> = { PIPELINE: 0, CONFIRMED: 0, OCCURRED: 0, CANCELED: 0 }
+    for (const m of meetings) {
+        if (m.attendees.some(a => a.id === target.attendeeId)) {
+            counts[m.status] = (counts[m.status] ?? 0) + 1
+        }
+    }
     const urlList = (urls || '').split(',').map(u => u.trim()).filter(Boolean)
 
     return (
@@ -130,12 +148,16 @@ function TargetRow({
                     <div className="mt-1 text-xs text-zinc-400">{target.attendee.email}</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border ${STATUS_STYLES[statusKey]}`}>
-                        {STATUS_LABELS[statusKey]}
-                        {target.briefing.meetingCount > 1 && (
-                            <span className="opacity-70">({target.briefing.meetingCount} briefings)</span>
-                        )}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        {COUNT_STATUSES.map(s => (
+                            <span
+                                key={s}
+                                className={`inline-flex items-center text-xs px-2 py-1 rounded-full border ${STATUS_STYLES[s]} ${counts[s] === 0 ? 'opacity-50' : ''}`}
+                            >
+                                {STATUS_LABELS[s]} ({counts[s]})
+                            </span>
+                        ))}
+                    </div>
                     <button
                         onClick={onRemove}
                         title="Remove target"
