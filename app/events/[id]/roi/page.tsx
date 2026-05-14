@@ -1,6 +1,6 @@
 'use client'
 
-import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles, Upload } from 'lucide-react'
+import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles, Upload, Megaphone, ExternalLink } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
@@ -73,7 +73,32 @@ interface LinkedInDraft {
     topCompaniesByEngagement: string | null
 }
 
+interface MediaTargetRow {
+    attendee: {
+        id: string
+        name: string
+        email: string
+        title: string | null
+        isExternal: boolean
+        company: { id: string; name: string } | null
+    }
+    pipelineCount: number
+    committedCount: number
+    occurredCount: number
+    urls: string[]
+    pitchCount: number
+}
+
 const normalizeCompany = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+
+const urlHostname = (u: string) => {
+    try {
+        const parsed = new URL(u)
+        return parsed.hostname.replace(/^www\./, '')
+    } catch {
+        return u
+    }
+}
 
 const emptyTargets: ROITargets = {
     budget: null,
@@ -116,6 +141,7 @@ function ROIPage() {
     const [targets, setTargets] = useState<ROITargets>(emptyTargets)
     const [actuals, setActuals] = useState<ROIActuals | null>(null)
     const [linkedInDrafts, setLinkedInDrafts] = useState<LinkedInDraft[]>([])
+    const [mediaTargets, setMediaTargets] = useState<MediaTargetRow[]>([])
     const [eventStatus, setEventStatus] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -315,6 +341,15 @@ function ROIPage() {
         fetch(`/api/social/drafts?eventId=${eventId}`)
             .then(res => res.ok ? res.json() : [])
             .then(data => setLinkedInDrafts(Array.isArray(data) ? data : []))
+            .catch(() => { /* non-critical — section just hides */ })
+    }, [eventId])
+
+    // Fetch pitch targets for Media/PR Performance section
+    useEffect(() => {
+        if (!eventId) return
+        fetch(`/api/events/${eventId}/pitch-targets`)
+            .then(res => res.ok ? res.json() : { items: [] })
+            .then(data => setMediaTargets(Array.isArray(data.items) ? data.items : []))
             .catch(() => { /* non-critical — section just hides */ })
     }, [eventId])
 
@@ -1485,6 +1520,93 @@ function ROIPage() {
                                 </div>
                             </div>
                         )}
+                    </section>
+
+                    {/* Media/PR Performance */}
+                    <section className="space-y-4">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-indigo-500 rounded-full" />
+                            <Megaphone className="w-5 h-5 text-indigo-600" />
+                            Media/PR Performance
+                        </h3>
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-zinc-100">
+                                <p className="text-sm text-zinc-500">Pitch targets across all event pitches.</p>
+                            </div>
+                            {mediaTargets.length === 0 ? (
+                                <div className="px-6 py-10 text-center text-zinc-500">
+                                    No pitch targets yet for this event.
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-zinc-200">
+                                        <thead className="bg-zinc-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Target</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Pipeline</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Committed</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Occurred</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Resulting URLs</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-zinc-100">
+                                            {mediaTargets.map(row => (
+                                                <tr key={row.attendee.id} className="hover:bg-zinc-50">
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="text-sm font-medium text-zinc-900">{row.attendee.name}</div>
+                                                        <div className="text-xs text-zinc-500">
+                                                            {row.attendee.title ? `${row.attendee.title} · ` : ''}
+                                                            {row.attendee.company?.name ?? row.attendee.email}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top text-sm text-zinc-700">{row.pipelineCount}</td>
+                                                    <td className="px-4 py-3 align-top text-sm text-zinc-700">{row.committedCount}</td>
+                                                    <td className="px-4 py-3 align-top text-sm text-zinc-700">{row.occurredCount}</td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        {row.urls.length === 0 ? (
+                                                            <span className="text-xs text-zinc-400">—</span>
+                                                        ) : (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {row.urls.map(u => (
+                                                                    <a
+                                                                        key={u}
+                                                                        href={u}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                                                                        title={u}
+                                                                    >
+                                                                        {urlHostname(u)}
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot className="bg-zinc-50 border-t border-zinc-200">
+                                            <tr>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">Totals</td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.pipelineCount, 0)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.committedCount, 0)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.occurredCount, 0)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.urls.length, 0)}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     </section>
 
                     {/* Physical Event Execution */}

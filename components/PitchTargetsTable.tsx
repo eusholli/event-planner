@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { Trash2, ExternalLink } from 'lucide-react'
 import type { MeetingStatus } from '@prisma/client'
 import type { BriefingStatusResult } from '@/lib/pitch-status'
@@ -26,12 +25,18 @@ export interface PitchTarget {
     briefing: BriefingStatusResult
 }
 
+export interface TargetEdit {
+    resultingUrls: string
+    additionalNotes: string
+}
+
 interface PitchTargetsTableProps {
-    pitchId: string
     targets: PitchTarget[]
     meetings: PitchMeetingForCounts[]
-    onChange: (targets: PitchTarget[]) => void
+    edits: Record<string, TargetEdit>
+    onEditChange: (attendeeId: string, patch: Partial<TargetEdit>) => void
     onRemove: (attendeeId: string) => void
+    removeDisabled?: boolean
 }
 
 const COUNT_STATUSES: MeetingStatus[] = ['PIPELINE', 'CONFIRMED', 'OCCURRED']
@@ -52,7 +57,7 @@ const STATUS_LABELS: Record<string, string> = {
     CANCELED: 'Canceled',
 }
 
-export default function PitchTargetsTable({ pitchId, targets, meetings, onChange, onRemove }: PitchTargetsTableProps) {
+export default function PitchTargetsTable({ targets, meetings, edits, onEditChange, onRemove, removeDisabled = false }: PitchTargetsTableProps) {
     if (targets.length === 0) {
         return (
             <div className="text-center py-12 text-zinc-500 bg-zinc-50/50 rounded-2xl border border-dashed border-zinc-200">
@@ -63,74 +68,49 @@ export default function PitchTargetsTable({ pitchId, targets, meetings, onChange
 
     return (
         <div className="space-y-3">
-            {targets.map(target => (
-                <TargetRow
-                    key={target.attendeeId}
-                    pitchId={pitchId}
-                    target={target}
-                    meetings={meetings}
-                    onPatch={(patch) => {
-                        onChange(
-                            targets.map(t => t.attendeeId === target.attendeeId ? { ...t, ...patch } : t)
-                        )
-                    }}
-                    onRemove={() => onRemove(target.attendeeId)}
-                />
-            ))}
+            {targets.map(target => {
+                const edit = edits[target.attendeeId] ?? {
+                    resultingUrls: target.resultingUrls ?? '',
+                    additionalNotes: target.additionalNotes ?? '',
+                }
+                return (
+                    <TargetRow
+                        key={target.attendeeId}
+                        target={target}
+                        meetings={meetings}
+                        edit={edit}
+                        onEditChange={(patch) => onEditChange(target.attendeeId, patch)}
+                        onRemove={() => onRemove(target.attendeeId)}
+                        removeDisabled={removeDisabled}
+                    />
+                )
+            })}
         </div>
     )
 }
 
 function TargetRow({
-    pitchId,
     target,
     meetings,
-    onPatch,
+    edit,
+    onEditChange,
     onRemove,
+    removeDisabled,
 }: {
-    pitchId: string
     target: PitchTarget
     meetings: PitchMeetingForCounts[]
-    onPatch: (patch: Partial<PitchTarget>) => void
+    edit: TargetEdit
+    onEditChange: (patch: Partial<TargetEdit>) => void
     onRemove: () => void
+    removeDisabled: boolean
 }) {
-    const [urls, setUrls] = useState(target.resultingUrls ?? '')
-    const [notes, setNotes] = useState(target.additionalNotes ?? '')
-    const [saving, setSaving] = useState(false)
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    useEffect(() => { setUrls(target.resultingUrls ?? '') }, [target.resultingUrls])
-    useEffect(() => { setNotes(target.additionalNotes ?? '') }, [target.additionalNotes])
-
-    const schedulePersist = (next: { resultingUrls?: string; additionalNotes?: string }) => {
-        if (timerRef.current) clearTimeout(timerRef.current)
-        timerRef.current = setTimeout(async () => {
-            setSaving(true)
-            try {
-                const res = await fetch(`/api/pitches/${pitchId}/targets/${target.attendeeId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(next),
-                })
-                if (res.ok) {
-                    onPatch({
-                        resultingUrls: next.resultingUrls ?? target.resultingUrls,
-                        additionalNotes: next.additionalNotes ?? target.additionalNotes,
-                    })
-                }
-            } finally {
-                setSaving(false)
-            }
-        }, 600)
-    }
-
     const counts: Record<MeetingStatus, number> = { PIPELINE: 0, CONFIRMED: 0, OCCURRED: 0, CANCELED: 0 }
     for (const m of meetings) {
         if (m.attendees.some(a => a.id === target.attendeeId)) {
             counts[m.status] = (counts[m.status] ?? 0) + 1
         }
     }
-    const urlList = (urls || '').split(',').map(u => u.trim()).filter(Boolean)
+    const urlList = (edit.resultingUrls || '').split(',').map(u => u.trim()).filter(Boolean)
 
     return (
         <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
@@ -160,8 +140,9 @@ function TargetRow({
                     </div>
                     <button
                         onClick={onRemove}
-                        title="Remove target"
-                        className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        disabled={removeDisabled}
+                        title={removeDisabled ? 'Save your changes first' : 'Remove target'}
+                        className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:bg-transparent"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
@@ -174,8 +155,8 @@ function TargetRow({
                         Resulting URLs <span className="text-zinc-400">(comma-separated)</span>
                     </label>
                     <textarea
-                        value={urls}
-                        onChange={e => { setUrls(e.target.value); schedulePersist({ resultingUrls: e.target.value }) }}
+                        value={edit.resultingUrls}
+                        onChange={e => onEditChange({ resultingUrls: e.target.value })}
                         placeholder="https://…, https://…"
                         rows={2}
                         className="input-field text-sm resize-none"
@@ -200,15 +181,14 @@ function TargetRow({
                 <div>
                     <label className="block text-xs font-medium text-zinc-600 mb-1">Additional notes</label>
                     <textarea
-                        value={notes}
-                        onChange={e => { setNotes(e.target.value); schedulePersist({ additionalNotes: e.target.value }) }}
+                        value={edit.additionalNotes}
+                        onChange={e => onEditChange({ additionalNotes: e.target.value })}
                         placeholder="Coverage angle, follow-ups, etc."
                         rows={2}
                         className="input-field text-sm resize-none"
                     />
                 </div>
             </div>
-            {saving && <div className="mt-2 text-xs text-zinc-400">Saving…</div>}
         </div>
     )
 }

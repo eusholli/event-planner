@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut, useUser } from '@/components/auth'
 import { Roles } from '@/lib/constants'
 import { ChevronDown } from 'lucide-react'
+import { shouldAllowNavigation } from '@/lib/nav-guard'
 
 // Internal Dropdown Component
 function NavDropdown({ label, items, isActive }: { label: string, items: any[], isActive: boolean }) {
@@ -136,8 +137,18 @@ export default function Navigation() {
     const isActive = (path: string) => pathname === path || pathname?.startsWith(`${path}/`)
     const isGroupActive = (items: any[]) => items.some(item => isActive(item.href))
 
+    const handleNavClickCapture = (e: React.MouseEvent<HTMLElement>) => {
+        const target = e.target as HTMLElement | null
+        if (!target) return
+        if (!target.closest('a[href]')) return
+        if (!shouldAllowNavigation()) {
+            e.preventDefault()
+            e.stopPropagation()
+        }
+    }
+
     return (
-        <nav className="fixed top-0 w-full z-50 glass">
+        <nav className="fixed top-0 w-full z-50 glass" onClickCapture={handleNavClickCapture}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex">
