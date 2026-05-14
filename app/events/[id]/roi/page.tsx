@@ -372,7 +372,6 @@ function ROIPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     actualSpeaking: targets.actualSpeaking,
-                    actualMediaPR: targets.actualMediaPR,
                     actualEventScans: targets.actualEventScans,
                     actualCost: targets.actualCost,
                 }),
@@ -1161,30 +1160,6 @@ function ROIPage() {
             {/* ======================== TAB 2: PERFORMANCE ======================== */}
             {activeTab === 'performance' && actuals && (
                 <div className="space-y-8">
-                    {/* Financial Overview */}
-                    <section>
-                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                            <span className="w-1 h-5 bg-indigo-500 rounded-full" />
-                            Financial Performance
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <MetricCard label="Pipeline" tooltip="The actual sales pipeline generated from the event so far." target={targets.expectedPipeline || 0} actual={actuals.actualPipeline} variant="ring" formatValue={currency} size="lg" />
-                            <MetricCard label="Revenue" tooltip="The actual closed-won revenue generated from the event so far." target={targets.expectedRevenue || 0} actual={actuals.actualRevenue} variant="ring" formatValue={currency} size="lg" />
-                            <MetricCard label="Budget vs Actual Cost" tooltip="Planned budget vs actual spend for this event." target={targets.budget || 0} actual={actuals.actualCost} variant="ring" formatValue={currency} size="lg" invertColors />
-                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center">
-                                <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3"><Tooltip content="The ratio of actual Pipeline generated divided by the actual Investment spent. Uses Actual Cost if entered, otherwise falls back to Budget.">ROI Ratio</Tooltip></h4>
-                                <div className="text-4xl font-bold text-zinc-900">
-                                    {(actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment) > 0 ? `${((actuals.actualPipeline / (actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment)) * 100).toFixed(0)}%` : '—'}
-                                </div>
-                                <p className="text-sm text-zinc-400 mt-2">Pipeline / Investment</p>
-                                <div className="mt-3 text-xs text-zinc-500">
-                                    Investment: {currency(actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment)}
-                                    <span className="ml-1 text-zinc-400">{actuals.actualCost > 0 ? '(actual)' : '(budget)'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
                     {/* Engagement */}
                     <section>
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
@@ -1223,6 +1198,30 @@ function ROIPage() {
                                     </span>
                                 ))
                             )}
+                        </div>
+                    </section>
+
+                    {/* Financial Overview */}
+                    <section>
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-indigo-500 rounded-full" />
+                            Financial Performance
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <MetricCard label="Pipeline" tooltip="The actual sales pipeline generated from the event so far." target={targets.expectedPipeline || 0} actual={actuals.actualPipeline} variant="ring" formatValue={currency} size="lg" />
+                            <MetricCard label="Revenue" tooltip="The actual closed-won revenue generated from the event so far." target={targets.expectedRevenue || 0} actual={actuals.actualRevenue} variant="ring" formatValue={currency} size="lg" />
+                            <MetricCard label="Budget vs Actual Cost" tooltip="Planned budget vs actual spend for this event." target={targets.budget || 0} actual={actuals.actualCost} variant="ring" formatValue={currency} size="lg" invertColors />
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center">
+                                <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3"><Tooltip content="The ratio of actual Pipeline generated divided by the actual Investment spent. Uses Actual Cost if entered, otherwise falls back to Budget.">ROI Ratio</Tooltip></h4>
+                                <div className="text-4xl font-bold text-zinc-900">
+                                    {(actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment) > 0 ? `${((actuals.actualPipeline / (actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment)) * 100).toFixed(0)}%` : '—'}
+                                </div>
+                                <p className="text-sm text-zinc-400 mt-2">Pipeline / Investment</p>
+                                <div className="mt-3 text-xs text-zinc-500">
+                                    Investment: {currency(actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment)}
+                                    <span className="ml-1 text-zinc-400">{actuals.actualCost > 0 ? '(actual)' : '(budget)'}</span>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -1280,16 +1279,6 @@ function ROIPage() {
                                 <FormattedInput
                                     value={targets.actualSpeaking}
                                     onChange={val => setTargets(prev => ({ ...prev, actualSpeaking: val }))}
-                                    readOnly={isActualsLocked || !canEdit}
-                                    placeholder="0"
-                                    focusRingColor="rose"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The actual number of media interviews, press mentions, or PR activities.">Media / PR</Tooltip></label>
-                                <FormattedInput
-                                    value={targets.actualMediaPR}
-                                    onChange={val => setTargets(prev => ({ ...prev, actualMediaPR: val }))}
                                     readOnly={isActualsLocked || !canEdit}
                                     placeholder="0"
                                     focusRingColor="rose"

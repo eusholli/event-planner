@@ -199,10 +199,18 @@ export async function getROITargets(eventId: string) {
 }
 
 export async function getROIActuals(eventId: string): Promise<ROIActuals> {
-    const [meetings, eventWithAttendees, roiTargets] = await Promise.all([
+    const [meetings, occurredPitchMeetings, eventWithAttendees, roiTargets] = await Promise.all([
         prisma.meeting.findMany({
             where: { eventId, status: { in: ['CONFIRMED', 'OCCURRED'] } },
             include: { attendees: { include: { company: true } } },
+        }),
+        prisma.meeting.findMany({
+            where: { eventId, status: 'OCCURRED', pitchId: { not: null } },
+            select: {
+                pitchId: true,
+                attendees: { select: { id: true } },
+                pitch: { select: { targets: { select: { attendeeId: true } } } },
+            },
         }),
         prisma.event.findUnique({
             where: { id: eventId },
@@ -257,6 +265,19 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
 
     const actualCustomerMeetings = externalAttendeeCount
 
+    const pitchHits = new Map<string, Set<string>>()
+    for (const mtg of occurredPitchMeetings) {
+        if (!mtg.pitchId) continue
+        const targetIds = new Set(mtg.pitch?.targets.map(t => t.attendeeId) ?? [])
+        let hits = pitchHits.get(mtg.pitchId)
+        if (!hits) { hits = new Set(); pitchHits.set(mtg.pitchId, hits) }
+        for (const att of mtg.attendees) {
+            if (targetIds.has(att.id)) hits.add(att.id)
+        }
+    }
+    let actualMediaPR = 0
+    for (const hits of pitchHits.values()) actualMediaPR += hits.size
+
     return {
         actualInvestment: eventWithAttendees?.budget || 0,
         actualPipeline,
@@ -267,7 +288,7 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         additionalCompanies,
         actualErta: roiTargets?.actualErta || 0,
         actualSpeaking: roiTargets?.actualSpeaking || 0,
-        actualMediaPR: roiTargets?.actualMediaPR || 0,
+        actualMediaPR,
         actualEventScans: roiTargets?.actualEventScans || 0,
         actualCost: roiTargets?.actualCost || 0,
     }
