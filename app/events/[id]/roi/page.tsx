@@ -2,6 +2,7 @@
 
 import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles, Upload, Megaphone, ExternalLink } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
+import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
 import MetricCard from '@/components/roi/MetricCard'
@@ -683,6 +684,10 @@ function ROIPage() {
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">ROI Dashboard</h1>
+                        <Link href={`/events/${eventId}/checklist`} title="Marketing Execution Checklist"
+                            className="text-zinc-400 hover:text-zinc-700 transition-colors">
+                            <ExternalLink className="w-4 h-4" />
+                        </Link>
                         {isDirty && <UnsavedBadge />}
                     </div>
                     <p className="mt-1 text-zinc-500">Set targets, track performance, and measure event ROI.</p>
@@ -1385,19 +1390,23 @@ function ROIPage() {
                             Event Executive Summary
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <MetricCard label="LI Company Touches" tooltip="Number of event target companies engaged by POSTED LinkedIn campaigns." target={targets.targetCompanies.length} actual={linkedInSummary.targetCompaniesEngaged.length} />
-                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
+                            <MetricCard label="LI Company Touches" tooltip="Number of event target companies engaged by POSTED LinkedIn campaigns." target={targets.targetCompanies.length} actual={linkedInSummary.targetCompaniesEngaged.length} href="#section-linkedin" />
+                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} href="#section-media-pr" />
                             <MetricCard label="Event Scans" tooltip="Actual vs target contacts scanned or collected at the event." target={targets.targetEventScans || 0} actual={actuals.actualEventScans} />
-                            <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} />
+                            <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} href={`/events/${eventId}/dashboard`} />
                             <MetricCard label="Speaking" tooltip="The actual vs target number of speaking sessions, panels, or presentations secured at the event." target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
                         </div>
                     </section>
 
                     {/* LinkedIn Campaigns Summary */}
-                    <section className="space-y-4">
+                    <section id="section-linkedin" className="space-y-4">
                         <h3 className="text-lg font-semibold text-zinc-900 mb-1 flex items-center gap-2">
                             <span className="w-1 h-5 bg-blue-500 rounded-full" />
                             LinkedIn Campaigns
+                            <Link href={`/events/${eventId}/linkedin-campaigns`}
+                                className="text-zinc-400 hover:text-blue-600 transition-colors" title="View LinkedIn Campaigns">
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
                         </h3>
                         <p className="text-xs text-zinc-500 mb-4">Numbers next to each company show how many POSTED campaigns engaged them.</p>
 
@@ -1523,11 +1532,15 @@ function ROIPage() {
                     </section>
 
                     {/* Media/PR Performance */}
-                    <section className="space-y-4">
+                    <section id="section-media-pr" className="space-y-4">
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                             <Megaphone className="w-5 h-5 text-indigo-600" />
                             Media/PR Performance
+                            <Link href={`/events/${eventId}/comms`}
+                                className="text-zinc-400 hover:text-indigo-600 transition-colors" title="View Pitches">
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
                         </h3>
                         <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-zinc-100">
