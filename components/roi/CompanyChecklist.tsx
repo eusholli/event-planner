@@ -30,7 +30,7 @@ export default function CompanyChecklist({ targetCompanies, hitCompanyIds }: Com
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Target Companies</h4>
+                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Event Target Companies</h4>
                 <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-zinc-900">{hitRate}%</span>
                     <span className="text-xs text-zinc-400">hit rate</span>

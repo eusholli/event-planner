@@ -1289,17 +1289,72 @@ function ROIPage() {
             {/* ======================== TAB 2: PERFORMANCE ======================== */}
             {activeTab === 'performance' && actuals && (
                 <div className="space-y-8">
+                    {/* Budget Performance */}
+                    <section>
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-emerald-500 rounded-full" />
+                            Budget Performance
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
+                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Budget</h4>
+                                <div className="text-3xl font-bold text-zinc-900">{targets.budget ? currency(targets.budget) : '—'}</div>
+                                <p className="text-sm mt-2 text-zinc-400">Planned spend</p>
+                            </div>
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
+                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Actual</h4>
+                                <div className="text-3xl font-bold text-zinc-900">{actuals.actualCost ? currency(actuals.actualCost) : '—'}</div>
+                                <p className="text-sm mt-2 text-zinc-400">Actual spend</p>
+                            </div>
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
+                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">% of Budget</h4>
+                                {(() => {
+                                    const budget = targets.budget || 0
+                                    const actual = actuals.actualCost
+                                    if (budget === 0 && actual === 0) {
+                                        return (
+                                            <>
+                                                <div className="text-3xl font-bold text-zinc-300">—</div>
+                                                <p className="text-sm mt-2 text-zinc-400">No data</p>
+                                            </>
+                                        )
+                                    }
+                                    if (budget === 0) {
+                                        return (
+                                            <>
+                                                <div className="text-3xl font-bold text-red-600">—</div>
+                                                <p className="text-sm mt-2 text-red-500">No budget set</p>
+                                            </>
+                                        )
+                                    }
+                                    const pct = (actual / budget) * 100
+                                    const overBy = pct - 100
+                                    const colorClass = overBy <= 0 ? 'text-emerald-600' : overBy <= 5 ? 'text-amber-600' : 'text-red-600'
+                                    const labelClass = overBy <= 0 ? 'text-emerald-500' : overBy <= 5 ? 'text-amber-500' : 'text-red-500'
+                                    const label = overBy <= 0 ? 'Under / on budget' : overBy <= 5 ? 'Slightly over budget' : 'Over budget'
+                                    return (
+                                        <>
+                                            <div className={`text-3xl font-bold ${colorClass}`}>{pct.toFixed(1)}%</div>
+                                            <p className={`text-sm mt-2 ${labelClass}`}>{label}</p>
+                                        </>
+                                    )
+                                })()}
+                            </div>
+                        </div>
+                    </section>
+
                     {/* Engagement */}
                     <section>
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-rose-500 rounded-full" />
                             Engagement
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <MetricCard label="LI Company Touches" tooltip="Number of event target companies engaged by POSTED LinkedIn campaigns." target={targets.targetCompanies.length} actual={linkedInSummary.targetCompaniesEngaged.length} />
+                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
                             <MetricCard label="Event Scans" tooltip="Actual vs target contacts scanned or collected at the event." target={targets.targetEventScans || 0} actual={actuals.actualEventScans} />
                             <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} />
                             <MetricCard label="Speaking" tooltip="The actual vs target number of speaking sessions, panels, or presentations secured at the event." target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
-                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
                         </div>
                     </section>
 
@@ -1459,16 +1514,15 @@ function ROIPage() {
                         )}
                     </section>
 
-                    {/* Financial Overview */}
+                    {/* Pipeline Performance */}
                     <section>
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
-                            Financial Performance
+                            Pipeline Performance
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <MetricCard label="Pipeline" tooltip="The actual sales pipeline generated from the event so far." target={targets.expectedPipeline || 0} actual={actuals.actualPipeline} variant="ring" formatValue={currency} size="lg" />
                             <MetricCard label="Revenue" tooltip="The actual closed-won revenue generated from the event so far." target={targets.expectedRevenue || 0} actual={actuals.actualRevenue} variant="ring" formatValue={currency} size="lg" />
-                            <MetricCard label="Budget vs Actual Cost" tooltip="Planned budget vs actual spend for this event." target={targets.budget || 0} actual={actuals.actualCost} variant="ring" formatValue={currency} size="lg" invertColors />
                             <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center">
                                 <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3"><Tooltip content="The ratio of actual Pipeline generated divided by the actual Investment spent. Uses Actual Cost if entered, otherwise falls back to Budget.">ROI Ratio</Tooltip></h4>
                                 <div className="text-4xl font-bold text-zinc-900">
