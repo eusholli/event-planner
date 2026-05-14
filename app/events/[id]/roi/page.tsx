@@ -60,6 +60,21 @@ interface ROIActuals {
     actualCost: number
 }
 
+interface LinkedInDraft {
+    id: string
+    status: string
+    budget: number | null
+    impressions: number | null
+    clicks: number | null
+    activeUsers: number | null
+    avgEngagementTimePerActiveUser: number | null
+    adStartDate: string | null
+    adEndDate: string | null
+    topCompaniesByEngagement: string | null
+}
+
+const normalizeCompany = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+
 const emptyTargets: ROITargets = {
     budget: null,
     requesterEmail: '',
@@ -100,6 +115,7 @@ function ROIPage() {
     const [activeTab, setActiveTab] = useState<'targets' | 'performance' | 'actuals'>('targets')
     const [targets, setTargets] = useState<ROITargets>(emptyTargets)
     const [actuals, setActuals] = useState<ROIActuals | null>(null)
+    const [linkedInDrafts, setLinkedInDrafts] = useState<LinkedInDraft[]>([])
     const [eventStatus, setEventStatus] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -147,6 +163,76 @@ function ROIPage() {
 
     const isDirty = isFinancialDirty || isEventTargetsDirty || isCompaniesDirty || isMarketingPlanDirty
 
+    // Consolidated LinkedIn campaign summary for the Performance Tracker tab.
+    // Aggregates POSTED drafts only. Returns null when no POSTED drafts exist.
+    const linkedInSummary = useMemo(() => {
+        const posted = linkedInDrafts.filter(d => d.status === 'POSTED')
+        if (posted.length === 0) return null
+
+        const sum = (vals: (number | null)[]) => vals.reduce<number>((a, v) => a + (v ?? 0), 0)
+
+        const totalBudget = sum(posted.map(d => d.budget))
+        const totalImpressions = sum(posted.map(d => d.impressions))
+        const totalClicks = sum(posted.map(d => d.clicks))
+        const totalActiveUsers = sum(posted.map(d => d.activeUsers))
+
+        const blendedCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null
+        const blendedCpc = totalClicks > 0 ? totalBudget / totalClicks : null
+
+        const weightedEngagementNumerator = posted.reduce<number>(
+            (a, d) => a + ((d.activeUsers ?? 0) * (d.avgEngagementTimePerActiveUser ?? 0)),
+            0
+        )
+        const weightedEngagement = totalActiveUsers > 0 ? weightedEngagementNumerator / totalActiveUsers : null
+
+        const startDates = posted.map(d => d.adStartDate).filter((v): v is string => !!v)
+        const endDates = posted.map(d => d.adEndDate).filter((v): v is string => !!v)
+        const earliestStart = startDates.length ? new Date(Math.min(...startDates.map(d => new Date(d).getTime()))) : null
+        const latestEnd = endDates.length ? new Date(Math.max(...endDates.map(d => new Date(d).getTime()))) : null
+
+        const draftCount = linkedInDrafts.filter(d => d.status === 'DRAFT').length
+
+        // Target-company touch counts: normalize both sides; one touch per draft per company.
+        const targetByNorm = new Map<string, string>() // normalized -> canonical name
+        for (const c of targets.targetCompanies) {
+            targetByNorm.set(normalizeCompany(c.name), c.name)
+        }
+        const touchCounts = new Map<string, number>() // canonical -> count
+        for (const draft of posted) {
+            if (!draft.topCompaniesByEngagement) continue
+            const seenInDraft = new Set<string>()
+            for (const rawLine of draft.topCompaniesByEngagement.split('\n')) {
+                // Strip trailing metrics: keep characters up to the first digit run; fallback to whole line.
+                const nameOnly = rawLine.replace(/[\t,;|].*$/, '').replace(/\s+\d.*$/, '').trim()
+                if (!nameOnly) continue
+                const norm = normalizeCompany(nameOnly)
+                const canonical = targetByNorm.get(norm)
+                if (!canonical) continue
+                if (seenInDraft.has(canonical)) continue
+                seenInDraft.add(canonical)
+                touchCounts.set(canonical, (touchCounts.get(canonical) ?? 0) + 1)
+            }
+        }
+        const targetCompaniesEngaged = Array.from(touchCounts.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+
+        return {
+            postedCount: posted.length,
+            draftCount,
+            totalBudget,
+            totalImpressions,
+            totalClicks,
+            totalActiveUsers,
+            blendedCtr,
+            blendedCpc,
+            weightedEngagement,
+            earliestStart,
+            latestEnd,
+            targetCompaniesEngaged,
+        }
+    }, [linkedInDrafts, targets.targetCompanies])
+
     // Sparkle state
     const [sparkleLoading, setSparkleLoading] = useState<'financial' | 'events' | 'companies' | null>(null)
     const [confirmPanel, setConfirmPanel] = useState<{
@@ -187,6 +273,15 @@ function ROIPage() {
                 console.error('Failed to load ROI data', err)
                 setLoading(false)
             })
+    }, [eventId])
+
+    // Fetch LinkedIn drafts for Performance Tracker summary
+    useEffect(() => {
+        if (!eventId) return
+        fetch(`/api/social/drafts?eventId=${eventId}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setLinkedInDrafts(Array.isArray(data) ? data : []))
+            .catch(() => { /* non-critical — section just hides */ })
     }, [eventId])
 
     // Fetch companies for selector
@@ -1200,6 +1295,77 @@ function ROIPage() {
                             )}
                         </div>
                     </section>
+
+                    {/* LinkedIn Campaigns Summary */}
+                    {linkedInSummary && (
+                        <section className="space-y-4">
+                            <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                <span className="w-1 h-5 bg-blue-500 rounded-full" />
+                                LinkedIn Campaigns
+                            </h3>
+
+                            {linkedInSummary.targetCompaniesEngaged.length > 0 && (
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                                    <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                        <Tooltip content="Target companies engaged by your LinkedIn campaigns, ranked by number of POSTED campaigns each appeared in. Matching is case- and whitespace-insensitive.">
+                                            Target Companies Engaged
+                                        </Tooltip>
+                                        <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.targetCompaniesEngaged.length})</span>
+                                    </h4>
+                                    <p className="text-xs text-zinc-500 mb-4">From LinkedIn Campaign Manager engagement data, ranked by touch count across POSTED campaigns.</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {linkedInSummary.targetCompaniesEngaged.map(c => (
+                                            <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-teal-50 text-teal-800 border border-teal-200">
+                                                {c.name}
+                                                <span className="text-xs opacity-60">· {c.count}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total POSTED campaigns. Sub-line shows POSTED vs DRAFT counts.">Campaigns</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.postedCount}</div>
+                                    <p className="text-xs text-zinc-400 mt-1">{linkedInSummary.postedCount} posted · {linkedInSummary.draftCount} drafts</p>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Sum of budget across POSTED campaigns. Sub-line shows the campaign date range.">Total Ad Spend</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{currency(linkedInSummary.totalBudget)}</div>
+                                    <p className="text-xs text-zinc-400 mt-1">
+                                        {linkedInSummary.earliestStart ? linkedInSummary.earliestStart.toLocaleDateString() : '—'}
+                                        {' → '}
+                                        {linkedInSummary.latestEnd ? linkedInSummary.latestEnd.toLocaleDateString() : 'ongoing'}
+                                    </p>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total ad impressions across POSTED campaigns.">Impressions</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.totalImpressions.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total link clicks across POSTED campaigns.">Clicks</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.totalClicks.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Blended click-through rate: total clicks divided by total impressions. More accurate than averaging per-campaign rates.">Aggregate CTR</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.blendedCtr !== null ? `${linkedInSummary.blendedCtr.toFixed(2)}%` : '—'}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Blended cost per click: total spend divided by total clicks.">Aggregate CPC</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.blendedCpc !== null ? `$${linkedInSummary.blendedCpc.toFixed(2)}` : '—'}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total unique active users who engaged across POSTED campaigns.">Active Users</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.totalActiveUsers.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Average engagement time per active user, weighted by active-user count of each campaign.">Avg Engagement Time</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.weightedEngagement !== null ? `${linkedInSummary.weightedEngagement.toFixed(1)}s` : '—'}</div>
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Financial Overview */}
                     <section>
