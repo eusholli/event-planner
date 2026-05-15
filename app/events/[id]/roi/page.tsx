@@ -1,6 +1,6 @@
 'use client'
 
-import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles, Upload, Megaphone, ExternalLink } from 'lucide-react'
+import { Save, Send, CheckCircle, CheckCircle2, Circle, X, TrendingUp, Target, Mic, Sparkles, Upload, Megaphone, ExternalLink } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
@@ -144,18 +144,19 @@ function ROIPage() {
         try {
             const saved = localStorage.getItem(`roi-tab-${eventId}`)
             if (saved === 'performance' || saved === 'actuals' || saved === 'targets') setActiveTabState(saved)
-        } catch {}
+        } catch { }
     }, [eventId])
 
     const setActiveTab = (tab: 'targets' | 'performance' | 'actuals') => {
         setActiveTabState(tab)
-        try { localStorage.setItem(`roi-tab-${eventId}`, tab) } catch {}
+        try { localStorage.setItem(`roi-tab-${eventId}`, tab) } catch { }
     }
     const [targets, setTargets] = useState<ROITargets>(emptyTargets)
     const [actuals, setActuals] = useState<ROIActuals | null>(null)
     const [linkedInDrafts, setLinkedInDrafts] = useState<LinkedInDraft[]>([])
     const [mediaTargets, setMediaTargets] = useState<MediaTargetRow[]>([])
     const [eventStatus, setEventStatus] = useState<string | null>(null)
+    const [checklistData, setChecklistData] = useState<{ completedCount: number; finalReport: string; nextYearDecision: string } | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
@@ -346,6 +347,31 @@ function ROIPage() {
                 console.error('Failed to load ROI data', err)
                 setLoading(false)
             })
+    }, [eventId])
+
+    // Fetch checklist completion data for wrap-up status card
+    useEffect(() => {
+        if (!eventId) return
+        const CHECKLIST_KEYS = [
+            'eventRecommendation', 'eventROICompleted', 'approval', 'eventPlanning',
+            'campaignPlanning', 'campaignActivation', 'campaignEvaluation', 'internalAttendeesAdded',
+            'liveCoverage', 'leadManagement', 'eventDataCapture', 'eventWrapUp',
+            'contentAmplification', 'crmUpdate', 'reportingActivations', 'debriefOnTeamMeeting',
+            'eventCompleted',
+        ] as const
+        fetch(`/api/events/${eventId}/checklist`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (!data?.checklist) return
+                const cl = data.checklist
+                const completedCount = CHECKLIST_KEYS.filter(k => cl[k] === true).length
+                setChecklistData({
+                    completedCount,
+                    finalReport: cl.finalReport ?? '',
+                    nextYearDecision: cl.nextYearDecision ?? '',
+                })
+            })
+            .catch(() => { /* non-critical */ })
     }, [eventId])
 
     // Fetch LinkedIn drafts for Performance Tracker summary
@@ -727,10 +753,6 @@ function ROIPage() {
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">ROI Dashboard</h1>
-                        <Link href={`/events/${eventId}/checklist`} title="Marketing Execution Checklist"
-                            className="text-zinc-400 hover:text-zinc-700 transition-colors">
-                            <ExternalLink className="w-4 h-4" />
-                        </Link>
                         {isDirty && <UnsavedBadge />}
                     </div>
                     <p className="mt-1 text-zinc-500">Set targets, track performance, and measure event ROI.</p>
@@ -740,6 +762,84 @@ function ROIPage() {
                     {statusStyle.label}
                 </div>
             </div>
+
+            {/* Post-Event Wrap-Up Status */}
+            {(() => {
+                const CHECKLIST_TOTAL = 17
+                const checklistComplete = (checklistData?.completedCount ?? 0) >= CHECKLIST_TOTAL
+                const reportComplete = (checklistData?.finalReport ?? '').trim().length > 0
+                const nextYearComplete = (checklistData?.nextYearDecision ?? '').length > 0
+                const statusComplete = eventStatus === 'OCCURRED'
+                const doneCount = [checklistComplete, reportComplete, nextYearComplete, statusComplete].filter(Boolean).length
+                const allComplete = doneCount === 4
+                const readyForOccurred = checklistComplete && reportComplete && nextYearComplete
+
+                const steps = [
+                    {
+                        label: 'Checklist Items',
+                        detail: checklistComplete
+                            ? `${CHECKLIST_TOTAL} / ${CHECKLIST_TOTAL} complete`
+                            : `${checklistData?.completedCount ?? 0} / ${CHECKLIST_TOTAL} complete`,
+                        done: checklistComplete,
+                    },
+                    {
+                        label: 'Final Report',
+                        detail: reportComplete ? 'Submitted' : 'Not yet written',
+                        done: reportComplete,
+                    },
+                    {
+                        label: 'Next Year Decision',
+                        detail: nextYearComplete
+                            ? (checklistData?.nextYearDecision ?? '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                            : 'No selection made',
+                        done: nextYearComplete,
+                    },
+                    {
+                        label: 'Event Status',
+                        detail: statusComplete ? 'OCCURRED' : (eventStatus ?? '—'),
+                        done: statusComplete,
+                        hint: !statusComplete && readyForOccurred ? 'Set status to OCCURRED in Event Settings' : undefined,
+                        hintLink: !statusComplete && readyForOccurred ? `/events/${eventId}/settings` : undefined,
+                    },
+                ]
+
+                return (
+                    <div className={`bg-white border rounded-xl overflow-hidden ${allComplete ? 'border-teal-300' : 'border-zinc-200'}`}>
+                        <div className={`px-5 py-3 border-b flex items-center justify-between ${allComplete ? 'bg-teal-50 border-teal-200' : 'bg-zinc-50 border-zinc-100'}`}>
+                            <div className="flex items-center gap-2">
+                                <h2 className={`text-sm font-semibold uppercase tracking-wide ${allComplete ? 'text-teal-700' : 'text-zinc-700'}`}>
+                                    {allComplete ? 'All Wrap-Up Tasks Complete' : 'Event Execution Status'}
+                                </h2>
+                                <Link href={`/events/${eventId}/checklist`} title="Marketing Execution Checklist"
+                                    className={`transition-colors ${allComplete ? 'text-teal-400 hover:text-teal-600' : 'text-zinc-400 hover:text-zinc-600'}`}>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${allComplete ? 'bg-teal-100 text-teal-700 border-teal-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
+                                {doneCount} / 4 done
+                            </span>
+                        </div>
+                        <ul className="divide-y divide-zinc-100">
+                            {steps.map((step, i) => (
+                                <li key={i} className="flex items-center gap-3 px-5 py-3">
+                                    {step.done
+                                        ? <CheckCircle2 className="h-5 w-5 text-teal-500 shrink-0" />
+                                        : <Circle className="h-5 w-5 text-zinc-300 shrink-0" />
+                                    }
+                                    <span className={`text-sm font-medium w-44 shrink-0 ${step.done ? 'text-zinc-500' : 'text-zinc-900'}`}>{step.label}</span>
+                                    <span className={`text-sm flex-1 ${step.done ? 'text-zinc-400' : 'text-zinc-600'}`}>{step.detail}</span>
+                                    {step.done
+                                        ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">Complete</span>
+                                        : step.hint && step.hintLink
+                                            ? <Link href={step.hintLink} className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap">{step.hint}</Link>
+                                            : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
+                                    }
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
+            })()}
 
             {/* Tabs */}
             <div className="border-b border-zinc-200">
@@ -1214,13 +1314,11 @@ function ROIPage() {
                                     <span
                                         key={company.id}
                                         onClick={!(isLocked || !canEdit) ? () => toggleLinkedInSelection(company.id) : undefined}
-                                        className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                                            !(isLocked || !canEdit) ? 'cursor-pointer' : ''
-                                        } ${
-                                            isSelected
+                                        className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${!(isLocked || !canEdit) ? 'cursor-pointer' : ''
+                                            } ${isSelected
                                                 ? 'bg-blue-50 text-blue-800 border-blue-400 ring-2 ring-blue-200'
                                                 : 'bg-teal-50 text-teal-800 border-teal-200 hover:border-teal-400'
-                                        }`}
+                                            }`}
                                     >
                                         {isSelected && (
                                             <span className="w-3 h-3 rounded-sm bg-blue-600 flex items-center justify-center text-white" style={{ fontSize: '8px' }}>✓</span>
@@ -1252,7 +1350,7 @@ function ROIPage() {
                                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                                         >
                                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                                             </svg>
                                             Draft LinkedIn Article ({selectedForLinkedIn.size} {selectedForLinkedIn.size === 1 ? 'company' : 'companies'})
                                         </button>
@@ -1314,11 +1412,10 @@ function ROIPage() {
                             onChange={e => setTargets(prev => ({ ...prev, marketingPlan: e.target.value }))}
                             rows={12}
                             placeholder="Use the ✦ sparkle icon above to generate a marketing plan, or type one here."
-                            className={`w-full px-3 py-2.5 rounded-xl border text-sm resize-y ${
-                                (isLocked || !canEdit)
+                            className={`w-full px-3 py-2.5 rounded-xl border text-sm resize-y ${(isLocked || !canEdit)
                                     ? 'bg-zinc-50 border-zinc-100 text-zinc-600'
                                     : 'border-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
-                            }`}
+                                }`}
                         />
                     </section>
 
