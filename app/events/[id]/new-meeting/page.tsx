@@ -124,35 +124,6 @@ function NewMeetingContent({ eventId }: { eventId: string }) {
             eventId
         }
 
-        // Validation based on status
-        if (formData.status === 'OCCURRED') {
-            if (!formData.date || !formData.startTime) {
-                setError('Date and Start Time are required for occurred meetings')
-                setLoading(false)
-                return
-            }
-            if (!formData.roomId) {
-                setError('Room is required for occurred meetings')
-                setLoading(false)
-                return
-            }
-            if (formData.roomId === 'external' && !formData.location) {
-                setError('Location is required for external meetings')
-                setLoading(false)
-                return
-            }
-            if (formData.attendeeIds.length === 0) {
-                setError('At least one attendee is required for occurred meetings')
-                setLoading(false)
-                return
-            }
-            if (!formData.duration) {
-                setError('Duration is required for occurred meetings')
-                setLoading(false)
-                return
-            }
-        }
-
         // Only add times if date and startTime are provided
         if (formData.date && formData.startTime) {
             // Validate against event settings

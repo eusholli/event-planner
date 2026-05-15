@@ -100,14 +100,6 @@ async function postHandler(request: Request) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
         }
 
-        // LOCK CHECK
-        const { isEventEditable } = await import('@/lib/events')
-        if (!await isEventEditable(eventId)) {
-            return NextResponse.json({
-                error: 'Event has occurred and is read-only.'
-            }, { status: 403 })
-        }
-
         // Resolve email: generate placeholder if not provided
         let resolvedEmail = (email || '').trim()
         let emailMissing = false

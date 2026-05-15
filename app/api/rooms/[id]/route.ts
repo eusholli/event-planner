@@ -15,8 +15,6 @@ const putHandler = withAuth(
             const body = await request.json()
             const { name, capacity } = body
 
-            // LOCK CHECK
-            const { isEventEditable } = await import('@/lib/events')
             const currentRoom = await prisma.room.findUnique({ where: { id }, select: { eventId: true } })
 
             if (!currentRoom) {
@@ -30,12 +28,6 @@ const putHandler = withAuth(
                 })
                 if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
                     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-                }
-
-                if (!await isEventEditable(currentRoom.eventId)) {
-                    return NextResponse.json({
-                        error: 'Event has occurred and is read-only.'
-                    }, { status: 403 })
                 }
             }
 
@@ -62,8 +54,6 @@ const deleteHandler = withAuth(
     ) => {
         const id = (await params).id
         try {
-            // LOCK CHECK
-            const { isEventEditable } = await import('@/lib/events')
             const currentRoom = await prisma.room.findUnique({ where: { id }, select: { eventId: true } })
 
             if (!currentRoom) {
@@ -77,12 +67,6 @@ const deleteHandler = withAuth(
                 })
                 if (!event || !hasEventAccess(event, authCtx.userId, authCtx.role)) {
                     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-                }
-
-                if (!await isEventEditable(currentRoom.eventId)) {
-                    return NextResponse.json({
-                        error: 'Event has occurred and is read-only.'
-                    }, { status: 403 })
                 }
             }
 

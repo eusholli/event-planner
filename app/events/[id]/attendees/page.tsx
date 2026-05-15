@@ -42,10 +42,9 @@ function AttendeesContent({ eventId }: { eventId: string }) {
     const [reportableNames, setReportableNames] = useState<Set<string>>(new Set())
     const [attendeeTypes, setAttendeeTypes] = useState<string[]>([])
     const { user } = useUser()
-    const [isLocked, setIsLocked] = useState(false)
     const role = user?.publicMetadata?.role as string
     const userPermissionReadOnly = !hasWriteAccess(role)
-    const readOnly = userPermissionReadOnly || isLocked
+    const readOnly = userPermissionReadOnly
     const canCreate = hasCreateAccess(role)
     const userEmail = user?.primaryEmailAddress?.emailAddress
     const searchParams = useSearchParams()
@@ -150,9 +149,6 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                 const eventRes = await fetch(`/api/events/${eventId}`)
                 if (eventRes.ok) {
                     const eventData = await eventRes.json()
-                    if (eventData.status === 'OCCURRED') {
-                        setIsLocked(true)
-                    }
                     if (eventData.attendeeTypes && Array.isArray(eventData.attendeeTypes)) {
                         types = eventData.attendeeTypes
                     }
@@ -633,7 +629,7 @@ function AttendeesContent({ eventId }: { eventId: string }) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Add Attendee Form */}
                 <div className="lg:col-span-1">
-                    {(!isLocked && canCreate) && <AddAttendeeForm onSuccess={fetchAttendees} eventId={eventId} />}
+                    {canCreate && <AddAttendeeForm onSuccess={fetchAttendees} eventId={eventId} />}
                 </div>
 
                 {/* Attendees List */}

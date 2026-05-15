@@ -290,8 +290,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
 
 
 
-    const isLocked = event?.status === 'OCCURRED'
-
     if (loading || !event) return <div className="p-10 text-center">Loading settings...</div>
 
     return (
@@ -306,20 +304,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                     <p className="text-neutral-500">Manage lifecycle, details, and data scope.</p>
                 </div>
             </div>
-
-            {isLocked && (
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
-                    <div className="flex items-start">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 mr-3" />
-                        <div>
-                            <h3 className="text-sm font-medium text-amber-800">Event is Read-Only</h3>
-                            <p className="text-sm text-amber-700 mt-1">
-                                This event has occurred and is locked. To make changes, switch the status back to <strong>Committed</strong> or <strong>Pipeline</strong>.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <form onSubmit={handleSave} className="space-y-8">
                 {/* Section 1: Core Details */}
@@ -336,7 +320,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="name"
                                 type="text"
-                                disabled={isLocked}
                                 value={event.name}
                                 onChange={e => {
                                     const newName = e.target.value
@@ -356,7 +339,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <label className="block text-sm font-medium text-neutral-700">Event URL</label>
                             <input
                                 type="url"
-                                disabled={isLocked}
                                 value={event.url || ''}
                                 onChange={e => setEvent({ ...event, url: e.target.value })}
                                 placeholder="https://example.com"
@@ -371,7 +353,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <textarea
                                 id="description"
                                 rows={3}
-                                disabled={isLocked}
                                 value={event.description || ''}
                                 onChange={e => setEvent({ ...event, description: e.target.value })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -389,7 +370,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 <input
                                     type="text"
                                     id="slug"
-                                    disabled={isLocked}
                                     value={event.slug || ''}
                                     onChange={e => setEvent({ ...event, slug: sanitizeSlug(e.target.value) })}
                                     className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-neutral-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -405,7 +385,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 type="text"
                                 id="password"
-                                disabled={isLocked}
                                 value={event.password || ''}
                                 onChange={e => setEvent({ ...event, password: e.target.value })}
                                 placeholder="Leave empty for public access"
@@ -421,7 +400,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 currentData={event}
                                 onFill={handleAIFill}
                                 className="w-full"
-                                disabled={isLocked}
                             />
                             <p className="text-xs text-neutral-500 text-center mt-2 italic">
                                 💡 Tip: Enter an Event Name or URL, then click above to auto-fill details using AI.
@@ -451,7 +429,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 id="region"
                                 value={event.region || ''}
                                 onChange={e => setEvent({ ...event, region: e.target.value })}
-                                disabled={isLocked}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             >
                                 <option value="">Select Region...</option>
@@ -470,7 +447,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="startDate"
                                 type="date"
-                                disabled={isLocked}
                                 value={event.startDate || ''}
                                 onChange={e => setEvent({ ...event, startDate: e.target.value || null })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -482,7 +458,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="endDate"
                                 type="date"
-                                disabled={isLocked}
                                 value={event.endDate || ''}
                                 onChange={e => setEvent({ ...event, endDate: e.target.value || null })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -494,7 +469,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="address"
                                 type="text"
-                                disabled={isLocked}
                                 value={event.address || ''}
                                 onChange={e => setEvent({ ...event, address: e.target.value })}
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -506,7 +480,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                             <input
                                 id="boothLocation"
                                 type="text"
-                                disabled={isLocked}
                                 value={event.boothLocation || ''}
                                 onChange={e => setEvent({ ...event, boothLocation: e.target.value })}
                                 placeholder="e.g. Hall B, Booth 123"
@@ -527,7 +500,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Meeting Tags</label>
                         <input
                             type="text"
-                            disabled={isLocked}
                             value={tagsInput}
                             onChange={e => setTagsInput(e.target.value)}
                             className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -538,7 +510,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Meeting Types</label>
                         <input
                             type="text"
-                            disabled={isLocked}
                             value={meetingTypesInput}
                             onChange={e => setMeetingTypesInput(e.target.value)}
                             className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -549,7 +520,6 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         <label className="block text-sm font-medium text-neutral-700">Attendee Types</label>
                         <input
                             type="text"
-                            disabled={isLocked}
                             value={attendeeTypesInput}
                             onChange={e => setAttendeeTypesInput(e.target.value)}
                             className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
@@ -613,7 +583,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                                             type="checkbox"
                                                             id={`user-${user.id}`}
                                                             checked={isSelected || isGlobal}
-                                                            disabled={isGlobal || isLocked}
+                                                            disabled={isGlobal}
                                                             onChange={() => toggleUserAccess(user.id)}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-neutral-300 rounded"
                                                         />
@@ -713,8 +683,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                         </button>
                     </div>
 
-                    {!isLocked && (
-                        <>
+                    <>
                             <div className="border border-neutral-200 p-4 rounded-lg bg-white">
                                 <h3 className="font-medium text-neutral-900">Import Data</h3>
                                 <p className="text-sm text-neutral-500 mb-4">Restore or merge data from JSON.</p>
@@ -800,8 +769,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                     <Trash2 className="w-4 h-4" /> Reset Event
                                 </button>
                             </div>
-                        </>
-                    )}
+                    </>
                 </div>
             </section>
         </div >

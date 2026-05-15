@@ -65,20 +65,10 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
 
         const body = await request.json()
 
-        // LOCK CHECK
-        const { isEventEditable } = await import('@/lib/events')
         const currentMeeting = await prisma.meeting.findUnique({ where: { id }, select: { eventId: true } })
 
         if (!currentMeeting) {
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
-        }
-
-        if (currentMeeting.eventId) {
-            if (!await isEventEditable(currentMeeting.eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
-            }
         }
 
         const {
@@ -316,16 +306,6 @@ export const DELETE = withAuth(async (request, { params, authCtx }) => {
         // Ownership/write check (user role can only delete meetings they created)
         if (!await isOwnerOrCanWrite(authCtx, meeting.createdBy)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        // LOCK CHECK
-        if (meeting.eventId) {
-            const { isEventEditable } = await import('@/lib/events')
-            if (!await isEventEditable(meeting.eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
-            }
         }
 
         if (meeting && meeting.date && meeting.startTime && meeting.endTime) {

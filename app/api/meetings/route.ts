@@ -139,14 +139,6 @@ export const POST = withAuth(async (request, { authCtx }) => {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // LOCK CHECK
-        const { isEventEditable } = await import('@/lib/events')
-        if (!await isEventEditable(eventId)) {
-            return NextResponse.json({
-                error: 'Event has occurred and is read-only.'
-            }, { status: 403 })
-        }
-
         let createdBy = null
         if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
             createdBy = 'test-user@example.com'
@@ -158,19 +150,6 @@ export const POST = withAuth(async (request, { authCtx }) => {
         // Basic title validation for all meetings
         if (!title || title.trim() === '') {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 })
-        }
-
-        // Validate COMMITTED/COMPLETED status requirements
-        if (['COMMITTED', 'COMPLETED'].includes(status)) {
-            if (!date || !startTime || !endTime) {
-                return NextResponse.json({ error: 'Date, Start time, and End time are required for committed/completed meetings' }, { status: 400 })
-            }
-            if (!roomId && !location) {
-                return NextResponse.json({ error: 'Room or Location is required for committed/completed meetings' }, { status: 400 })
-            }
-            if (!attendeeIds || attendeeIds.length === 0) {
-                return NextResponse.json({ error: 'At least one attendee is required for committed/completed meetings' }, { status: 400 })
-            }
         }
 
         // Validate times if provided

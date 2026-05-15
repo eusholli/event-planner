@@ -178,32 +178,6 @@ export default function MeetingModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Client-side validation for CONFIRMED/OCCURRED status
-        if (['CONFIRMED', 'OCCURRED'].includes(event.status || '')) {
-            const statusLabel = event.status === 'OCCURRED' ? 'occurred' : 'confirmed'
-
-            if (!event.title || event.title.trim() === '') {
-                setLocalError(`Title is required for ${statusLabel} meetings`)
-                return
-            }
-            if (!event.date || !event.startTime || !event.endTime) {
-                setLocalError(`Date and time are required for ${statusLabel} meetings`)
-                return
-            }
-            if (!event.resourceId) {
-                setLocalError(`Room is required for ${statusLabel} meetings`)
-                return
-            }
-            if (event.resourceId === 'external' && !event.location) {
-                setLocalError('Location is required for external meetings')
-                return
-            }
-            if (!event.attendees || event.attendees.length === 0) {
-                setLocalError(`At least one attendee is required for ${statusLabel} meetings`)
-                return
-            }
-        }
-
         await onSave(e)
     }
 
@@ -548,11 +522,10 @@ export default function MeetingModal({
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                    Date{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                    Date
                                 </label>
                                 <input
                                     type="date"
-                                    required={['CONFIRMED', 'OCCURRED'].includes(event.status || '')}
                                     disabled={readOnly}
                                     className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     value={event.date || ''}
@@ -562,11 +535,10 @@ export default function MeetingModal({
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                    Start Time{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                    Start Time
                                 </label>
                                 <input
                                     type="time"
-                                    required={['CONFIRMED', 'OCCURRED'].includes(event.status || '')}
                                     disabled={readOnly}
                                     className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     value={event.startTime || ''}
@@ -640,12 +612,11 @@ export default function MeetingModal({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                Room{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                Room
                             </label>
                             <select
                                 className={`input-field ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 disabled={readOnly}
-                                required={['CONFIRMED', 'OCCURRED'].includes(event.status || '')}
                                 value={event.resourceId || ''}
                                 onChange={e => onEventChange({ ...event, resourceId: e.target.value })}
                             >
@@ -755,7 +726,7 @@ export default function MeetingModal({
                                 </div>
                             </div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                                Internal Attendees{['CONFIRMED', 'OCCURRED'].includes(event.status || '') && <span className="text-red-500">*</span>}
+                                Internal Attendees
                             </label>
                             <div className="h-32 overflow-y-auto border border-zinc-200 rounded-2xl p-3 space-y-1 bg-zinc-50/50">
                                 {allAttendees.filter(a => !a.isExternal && (a.name.toLowerCase().includes(searchQuery.toLowerCase()) || (a.company?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).map(attendee => (
