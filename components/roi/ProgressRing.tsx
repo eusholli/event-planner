@@ -75,7 +75,7 @@ export default function ProgressRing({
                     />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-lg font-bold text-zinc-900">{Math.round(percentage)}%</span>
+                    <span className="text-base font-bold text-zinc-900">{displayValue}</span>
                 </div>
             </div>
             {label && (
@@ -84,8 +84,7 @@ export default function ProgressRing({
                 </span>
             )}
             <div className="text-center">
-                <span className="text-sm font-semibold text-zinc-900">{displayValue}</span>
-                <span className="text-xs text-zinc-400"> / {displayMax}</span>
+                <span className="text-xs text-zinc-900">Target: {displayMax}</span>
             </div>
         </div>
     )

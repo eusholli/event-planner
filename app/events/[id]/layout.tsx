@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
+import type { Metadata } from 'next'
 import prisma from '@/lib/prisma'
 import { resolveEventId } from '@/lib/events'
 import { hasEventAccess } from '@/lib/access'
@@ -7,6 +8,24 @@ import { redirect, notFound } from 'next/navigation'
 import { Roles } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ id: string }>
+}): Promise<Metadata> {
+    const { id: rawId } = await params
+    const id = await resolveEventId(rawId)
+    if (!id) return {}
+    const event = await prisma.event.findUnique({ where: { id }, select: { name: true } })
+    if (!event) return {}
+    return {
+        title: {
+            template: `%s | ${event.name} | Event Planner`,
+            default: `${event.name} | Event Planner`,
+        },
+    }
+}
 
 export default async function EventLayout({
     children,

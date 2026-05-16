@@ -199,11 +199,7 @@ export async function getROITargets(eventId: string) {
 }
 
 export async function getROIActuals(eventId: string): Promise<ROIActuals> {
-    const [meetings, occurredPitchMeetings, eventWithAttendees, roiTargets] = await Promise.all([
-        prisma.meeting.findMany({
-            where: { eventId, status: { in: ['CONFIRMED', 'OCCURRED'] } },
-            include: { attendees: { include: { company: true } } },
-        }),
+    const [occurredPitchMeetings, eventWithAttendees, roiTargets] = await Promise.all([
         prisma.meeting.findMany({
             where: { eventId, status: 'OCCURRED', pitchId: { not: null } },
             select: {
@@ -230,18 +226,6 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         }),
     ])
 
-    // Pipeline: Deduplicate by company, take the company's pipelineValue
-    const companyValues = new Map<string, number>()
-    for (const mtg of meetings) {
-        for (const att of mtg.attendees) {
-            if (att.isExternal && att.company.pipelineValue) {
-                const existing = companyValues.get(att.companyId) || 0
-                companyValues.set(att.companyId, Math.max(existing, att.company.pipelineValue))
-            }
-        }
-    }
-    const actualPipeline = [...companyValues.values()].reduce((sum, val) => sum + val, 0)
-
     // Target companies hit: any event attendee from that company counts
     const targetCompanyIds = roiTargets?.targetCompanies?.map(c => c.id) || []
     const targetCompanyIdSet = new Set(targetCompanyIds)
@@ -262,6 +246,21 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         }
     }
     const additionalCompanies = [...additionalCompanyMap.values()]
+
+    // actualPipeline: Physical Event Execution companies only (event attendees, no LinkedIn)
+    const seenPipeline = new Set<string>()
+    let actualPipeline = 0
+    for (const c of targetCompaniesHit) {
+        if (seenPipeline.has(c.id)) continue
+        seenPipeline.add(c.id)
+        const tc = roiTargets?.targetCompanies.find(t => t.id === c.id)
+        if (tc?.pipelineValue) actualPipeline += tc.pipelineValue
+    }
+    for (const c of additionalCompanies) {
+        if (seenPipeline.has(c.id)) continue
+        seenPipeline.add(c.id)
+        if (c.pipelineValue) actualPipeline += c.pipelineValue
+    }
 
     const actualCustomerMeetings = externalAttendeeCount
 

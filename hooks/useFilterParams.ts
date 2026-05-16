@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { isAtDefault, FilterParamDefault } from '@/lib/filter-params'
 
 type FilterDefaults = Record<string, FilterParamDefault>
@@ -31,24 +31,27 @@ function useFilterParams<T extends FilterDefaults>(storageKey: string, defaults:
     const [filters, setFiltersState] = useState<ParsedFilters<T>>(
         defaults as unknown as ParsedFilters<T>
     )
-    const hydratedRef = useRef(false)
+    const [restored, setRestored] = useState(false)
 
     // Restore saved filter state from localStorage after hydration
     useEffect(() => {
-        hydratedRef.current = true
         setFiltersState(readFromStorage(storageKey, defaults))
+        setRestored(true)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [storageKey])
 
-    // Persist every state change to localStorage (skip the initial pre-hydration render)
+    // Persist every state change to localStorage. Gated on `restored` (a state
+    // flag, not a ref) so the first commit — where `filters` is still defaults
+    // because the restore setState hasn't been applied yet — does not clobber
+    // the saved state with defaults.
     useEffect(() => {
-        if (!hydratedRef.current) return
+        if (!restored) return
         try {
             localStorage.setItem(`filterState_${storageKey}`, JSON.stringify(filters))
         } catch {
             // localStorage unavailable (private browsing, quota exceeded) — ignore
         }
-    }, [storageKey, filters])
+    }, [storageKey, filters, restored])
 
     const setFilter = useCallback((key: keyof T & string, value: FilterParamDefault) => {
         setFiltersState(prev => ({ ...prev, [key]: value }))

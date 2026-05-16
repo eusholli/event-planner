@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign, Info } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign, Info, TrendingUp } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import Link from 'next/link'
@@ -13,6 +13,7 @@ import { canManageEvents, hasWriteAccess } from '@/lib/role-utils'
 import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 import useFilterParams from '@/hooks/useFilterParams'
 import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
+import { RoiDashboardView } from '@/components/events/RoiDashboardView'
 interface Event {
     id: string
     name: string
@@ -359,7 +360,7 @@ const EVENTS_FILTER_DEFAULTS = {
     regions: [] as string[],
     dateFrom: '',
     dateTo: '',
-    view: 'list',
+    view: 'list' as 'list' | 'calendar' | 'map' | 'budget' | 'roi',
 }
 
 export default function EventsPage() {
@@ -568,6 +569,13 @@ export default function EventsPage() {
                                 title="Budget View"
                             >
                                 <DollarSign className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setFilter('view', 'roi')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'roi' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                title="ROI Performance View"
+                            >
+                                <TrendingUp className="w-5 h-5" />
                             </button>
                         </div>
                         {canManage && (
@@ -817,6 +825,10 @@ export default function EventsPage() {
 
                         {eventFilters.view === 'budget' && (
                             <BudgetPivotTable events={displayEvents} />
+                        )}
+
+                        {eventFilters.view === 'roi' && (
+                            <RoiDashboardView events={displayEvents} />
                         )}
                     </div>
                 </div>

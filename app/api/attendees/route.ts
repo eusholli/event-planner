@@ -62,14 +62,17 @@ async function getHandler(request: Request) {
             where,
             include: {
                 company: true,
-                eventReports: { where: { eventId } }
+                eventReports: { where: { eventId } },
+                _count: { select: { events: true } }
             },
             orderBy: { name: 'asc' }
         })
         const mapped = attendees.map(a => ({
             ...a,
             reportText: a.eventReports[0]?.reportText ?? null,
-            eventReports: undefined
+            eventCount: a._count.events,
+            eventReports: undefined,
+            _count: undefined
         }))
         return NextResponse.json(mapped)
     } catch (error) {
