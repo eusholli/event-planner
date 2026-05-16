@@ -93,6 +93,11 @@ const RIGHT_W = BOX_W - 2 * PAD - LEFT_W - COL_GAP // 760
 const BODY_Y = PAD + HEADER_H + BODY_GAP
 const BODY_H = BOX_H - PAD - BODY_Y // 572
 
+// Left column fixed section heights — avoids flex-ratio overflow when tiles have intrinsic min-heights
+const LEFT_SECTION_GAP = 12 // matches gap-3
+const OUTCOME_TILES_H = 390 // 3 tiles × ~122px + 2 gaps × 12px
+const KEY_METRICS_LEFT_H = BODY_H - LEFT_SECTION_GAP - OUTCOME_TILES_H // 170
+
 // Right column: 3 stacked panels (gaps 12), 45/30/25 split
 const PANEL_GAP = 12
 const RIGHT_CONTENT_H = BODY_H - 2 * PANEL_GAP // 548
@@ -188,20 +193,20 @@ function OutcomeTile({ label, actual, target }: { label: string; actual: number 
     const pct = pctOf(actual ?? 0, target)
     const barW = pct != null ? Math.min(100, pct) : 0
     return (
-        <div className="flex-1 bg-white rounded-xl border border-neutral-200 px-5 py-4 flex flex-col justify-center">
+        <div className="flex-1 bg-white rounded-xl border border-neutral-200 px-5 py-3 flex flex-col justify-center">
             <div className="text-[13px] font-bold uppercase tracking-widest text-neutral-400">{label}</div>
             <div className={`text-[34px] leading-none font-bold tabular-nums mt-1 ${kpiColor(pct)}`}>
                 {fmtCurrency(actual, true)}
             </div>
             {target != null && target > 0 && (
                 <>
-                    <div className="mt-3 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="mt-2 h-2 bg-neutral-100 rounded-full overflow-hidden">
                         <div
                             className={`h-full rounded-full ${pct != null && pct >= 100 ? 'bg-emerald-500' : pct != null && pct >= 70 ? 'bg-amber-400' : 'bg-red-400'}`}
                             style={{ width: `${barW}%` }}
                         />
                     </div>
-                    <div className="mt-1.5 flex items-center justify-between text-[13px]">
+                    <div className="mt-1 flex items-center justify-between text-[13px]">
                         <span className="text-neutral-400">target {fmtCurrency(target, true)}</span>
                         {pct != null && <span className={`font-bold ${kpiColor(pct)}`}>{pct}%</span>}
                     </div>
@@ -345,6 +350,11 @@ function EventSlide({ event, data, slideRef }: { event: Event; data: EventRoiDat
     const visibleMedia = media.slice(0, MAX_MEDIA)
     const mediaOverflow = media.length - visibleMedia.length
 
+    const investActual = (actuals?.actualCost ?? 0) > 0 ? (actuals?.actualCost ?? 0) : (actuals?.actualInvestment ?? 0)
+    const investPct = targets?.budget && targets.budget > 0 ? Math.round((investActual / targets.budget) * 100) : null
+    const investColor = investPct == null ? 'text-neutral-900' : investPct <= 100 ? 'text-emerald-600' : 'text-red-500'
+    const investBarColor = investPct == null ? 'bg-neutral-300' : investPct > 100 ? 'bg-red-400' : 'bg-emerald-500'
+
     return (
         <div ref={slideRef} className="bg-neutral-50 overflow-hidden" style={{ width: BOX_W, height: BOX_H, padding: PAD }}>
             {/* HEADER */}
@@ -381,31 +391,32 @@ function EventSlide({ event, data, slideRef }: { event: Event; data: EventRoiDat
             {/* BODY */}
             <div className="flex" style={{ marginTop: BODY_GAP, height: BODY_H, gap: COL_GAP }}>
                 {/* LEFT — COCKPIT */}
-                <div className="flex flex-col" style={{ width: LEFT_W }}>
-                    <div className="flex flex-col gap-3" style={{ flex: 3 }}>
+                <div className="flex flex-col gap-3" style={{ width: LEFT_W }}>
+                    <div className="flex flex-col gap-3 overflow-hidden" style={{ height: OUTCOME_TILES_H }}>
                         <OutcomeTile label="Pipeline" actual={calculatedPipeline} target={targets?.expectedPipeline ?? null} />
                         <OutcomeTile label="Revenue" actual={calculatedRevenue} target={targets?.expectedRevenue ?? null} />
-                        <div className="flex-1 bg-white rounded-xl border border-neutral-200 px-5 py-4 flex flex-col justify-center">
+                        <div className="flex-1 bg-white rounded-xl border border-neutral-200 px-5 py-3 flex flex-col justify-center">
                             <div className="text-[13px] font-bold uppercase tracking-widest text-neutral-400">Investment</div>
-                            <div className="text-[34px] leading-none font-bold tabular-nums mt-1 text-neutral-900">
-                                {fmtCurrency((actuals?.actualCost ?? 0) > 0 ? (actuals?.actualCost ?? null) : (actuals?.actualInvestment ?? null), true)}
+                            <div className={`text-[34px] leading-none font-bold tabular-nums mt-1 ${investColor}`}>
+                                {fmtCurrency(investActual > 0 ? investActual : null, true)}
                             </div>
                             {targets?.budget != null && targets.budget > 0 && (
                                 <>
-                                    <div className="mt-3 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                                    <div className="mt-2 h-2 bg-neutral-100 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full rounded-full bg-blue-400"
-                                            style={{ width: `${Math.min(100, (((actuals?.actualCost ?? 0) > 0 ? (actuals?.actualCost ?? 0) : (actuals?.actualInvestment ?? 0)) / targets.budget) * 100)}%` }}
+                                            className={`h-full rounded-full ${investBarColor}`}
+                                            style={{ width: `${Math.min(100, investPct ?? 0)}%` }}
                                         />
                                     </div>
-                                    <div className="mt-1.5 text-[13px] text-neutral-400">
-                                        budget {fmtCurrency(targets.budget, true)}
+                                    <div className="mt-1 flex items-center justify-between text-[13px]">
+                                        <span className="text-neutral-400">budget {fmtCurrency(targets.budget, true)}</span>
+                                        {investPct != null && <span className={`font-bold ${investColor}`}>{investPct}%</span>}
                                     </div>
                                 </>
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-col mt-3" style={{ flex: 2 }}>
+                    <div className="flex flex-col" style={{ height: KEY_METRICS_LEFT_H }}>
                         <div className="text-[12px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Key Metrics</div>
                         <div className="grid grid-cols-3 gap-2 flex-1 content-start">
                             <GaugeChip label="LI Touches" actual={data?.linkedInTargetCompanies.length ?? null} target={targets?.targetCompanies.length ?? null} />
