@@ -61,8 +61,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
     const role = user?.publicMetadata?.role as string
     const userPermissionReadOnly = !hasWriteAccess(role)
     const canCreate = hasCreateAccess(role)
-    const [isLocked, setIsLocked] = useState(false)
-    const readOnly = userPermissionReadOnly || isLocked
+    const readOnly = userPermissionReadOnly
     const searchParams = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
@@ -106,9 +105,6 @@ function DashboardContent({ eventId }: { eventId: string }) {
             setRooms(roomsData)
             setAllAttendees(attendeesData)
             if (eventData) {
-                if (eventData.status === 'OCCURRED') {
-                    setIsLocked(true)
-                }
                 if (eventData.tags) setAvailableTags(eventData.tags)
                 if (eventData.meetingTypes) setMeetingTypes(eventData.meetingTypes)
                 setEventSettings({
@@ -922,7 +918,7 @@ function DashboardContent({ eventId }: { eventId: string }) {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
-                readOnly={!selectedEvent?.id ? false : (isLocked || (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress)))}
+                readOnly={!selectedEvent?.id ? false : (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress))}
             />
 
             <MeetingDetailsModal

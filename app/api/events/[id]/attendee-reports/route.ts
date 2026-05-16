@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { resolveEventId, isEventEditable } from '@/lib/events'
+import { resolveEventId } from '@/lib/events'
 import { withAuth, isOwnerOrCanWrite } from '@/lib/with-auth'
-import { hasWriteAccess } from '@/lib/role-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,11 +40,6 @@ const PUTHandler = withAuth(async (request, ctx) => {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        // Enforce event lock for write-role users; attendees can update their own report post-event
-        if (hasWriteAccess(ctx.authCtx.role) && !await isEventEditable(eventId)) {
-            return NextResponse.json({ error: 'Event has occurred and is read-only.' }, { status: 403 })
-        }
-
         const { reportText } = await request.json()
         if (typeof reportText !== 'string') {
             return NextResponse.json({ error: 'reportText must be a string' }, { status: 400 })
@@ -77,11 +71,6 @@ const DELETEHandler = withAuth(async (request, ctx) => {
         const attendeeRecord = await prisma.attendee.findUnique({ where: { id: attendeeId }, select: { email: true } })
         if (!await isOwnerOrCanWrite(ctx.authCtx, attendeeRecord?.email ?? null)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        // Enforce event lock for write-role users; attendees can delete their own report post-event
-        if (hasWriteAccess(ctx.authCtx.role) && !await isEventEditable(eventId)) {
-            return NextResponse.json({ error: 'Event has occurred and is read-only.' }, { status: 403 })
         }
 
         await prisma.attendeeEventReport.deleteMany({ where: { eventId, attendeeId } })

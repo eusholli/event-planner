@@ -70,11 +70,10 @@ function CalendarContent({ eventId }: { eventId: string }) {
     const [eventSettings, setEventSettings] = useState<{ startDate: string, endDate: string } | null>(null)
     const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const { user } = useUser()
-    const [isLocked, setIsLocked] = useState(false)
     const role = user?.publicMetadata?.role as string
     const userPermissionReadOnly = !hasWriteAccess(role)
     const canCreate = hasCreateAccess(role)
-    const readOnly = userPermissionReadOnly || isLocked
+    const readOnly = userPermissionReadOnly
 
     useEffect(() => {
         if (!eventId) return
@@ -143,10 +142,6 @@ function CalendarContent({ eventId }: { eventId: string }) {
 
             // Set calendar range based on settings
             if (eventData) {
-                if (eventData.status === 'OCCURRED') {
-                    setIsLocked(true)
-                }
-
                 if (eventData.startDate) {
                     setEventSettings(eventData)
                     setDate(moment(eventData.startDate).toDate())
@@ -286,7 +281,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
 
     const onEventDrop = useCallback(({ event, start, end, resourceId }: any) => {
         const userEmail = user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
-        if (isLocked || (userPermissionReadOnly && event.createdBy !== userEmail)) {
+        if (userPermissionReadOnly && event.createdBy !== userEmail) {
             alert('You do not have permission to edit this meeting.');
             return;
         }
@@ -302,7 +297,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
             endTime: moment(end).format('HH:mm')
         }
         handleEventUpdate(updatedEvent)
-    }, [handleEventUpdate, isLocked, userPermissionReadOnly, user])
+    }, [handleEventUpdate, userPermissionReadOnly, user])
 
     const handleDoubleClickEvent = (event: Meeting) => {
         setSelectedEvent(event)
@@ -535,8 +530,8 @@ function CalendarContent({ eventId }: { eventId: string }) {
                     resources={rooms.map(r => ({ id: r.id, title: r.name }))}
                     resourceIdAccessor={(resource: any) => resource.id}
                     resourceTitleAccessor={(resource: any) => resource.title}
-                    onSelectSlot={(slotInfo) => !isLocked && canCreate && handleSelectSlot(slotInfo)}
-                    selectable={!isLocked && canCreate}
+                    onSelectSlot={(slotInfo) => canCreate && handleSelectSlot(slotInfo)}
+                    selectable={canCreate}
                     onEventDrop={(args) => onEventDrop(args)}
                     onDoubleClickEvent={(event: any) => {
                         if (clickTimeoutRef.current) {
@@ -598,7 +593,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 conflicts={conflicts}
                 suggestions={suggestions}
                 error={error}
-                readOnly={isCreating ? false : (isLocked || (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress)))}
+                readOnly={isCreating ? false : (userPermissionReadOnly && selectedEvent?.createdBy !== (user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress))}
             />
 
             {/* View Modal */}
@@ -607,7 +602,7 @@ function CalendarContent({ eventId }: { eventId: string }) {
                 onClose={() => setIsViewModalOpen(false)}
                 meeting={viewEvent}
                 rooms={rooms}
-                onEdit={(!isLocked && canCreate) ? () => {
+                onEdit={canCreate ? () => {
                     setIsViewModalOpen(false)
                     if (viewEvent) handleDoubleClickEvent(viewEvent as Meeting)
                 } : undefined}

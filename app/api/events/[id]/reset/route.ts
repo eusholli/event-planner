@@ -13,14 +13,6 @@ const POSTHandler = withAuth(async (request, ctx) => {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 })
         }
 
-        // LOCK CHECK
-        const { isEventEditable } = await import('@/lib/events')
-        if (!await isEventEditable(id)) {
-            return NextResponse.json({
-                error: 'Event has occurred and is read-only.'
-            }, { status: 403 })
-        }
-
         await resetEventData(id)
 
         return NextResponse.json({ success: true })

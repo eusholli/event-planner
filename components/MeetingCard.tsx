@@ -5,11 +5,14 @@ import { generateBriefingBook } from '@/lib/briefing-book'
 import moment from 'moment'
 import { useRouter, useParams } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
+import { useState } from 'react'
 
 interface Room {
     id: string
     name: string
 }
+
+type MeetingStatus = 'PIPELINE' | 'CONFIRMED' | 'OCCURRED' | 'CANCELED'
 
 interface MeetingCardProps {
     meeting: Meeting & {
@@ -24,25 +27,64 @@ interface MeetingCardProps {
     onDoubleClick?: (e: React.MouseEvent) => void
     className?: string
     hasConflict?: boolean
+    onStatusChange?: (meetingId: string, newStatus: MeetingStatus) => void | Promise<void>
 }
 
-export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '', hasConflict = false }: MeetingCardProps) {
+const STATUS_LABELS: Record<MeetingStatus, string> = {
+    PIPELINE: 'Pipeline',
+    CONFIRMED: 'Confirmed',
+    OCCURRED: 'Occurred',
+    CANCELED: 'Canceled',
+}
+
+const STATUS_COLORS: Record<MeetingStatus, string> = {
+    PIPELINE: 'bg-blue-50 text-blue-700 border-blue-200',
+    CONFIRMED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    OCCURRED: 'bg-green-50 text-green-700 border-green-200',
+    CANCELED: 'bg-gray-50 text-gray-700 border-gray-200',
+}
+
+export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '', hasConflict = false, onStatusChange }: MeetingCardProps) {
     const router = useRouter()
     const params = useParams()
     const eventId = params?.id as string
+    const [savingStatus, setSavingStatus] = useState(false)
 
-    const getStatusBadge = (status: string) => {
-        const statusConfig: Record<string, { label: string; className: string }> = {
-            PIPELINE: { label: 'Pipeline', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-            CONFIRMED: { label: 'Confirmed', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-            OCCURRED: { label: 'Occurred', className: 'bg-green-50 text-green-700 border-green-200' },
-            CANCELED: { label: 'Canceled', className: 'bg-gray-50 text-gray-700 border-gray-200' },
+    const renderStatus = (status: string) => {
+        const key = (STATUS_COLORS[status as MeetingStatus] ? status : 'PIPELINE') as MeetingStatus
+        const colorClass = STATUS_COLORS[key]
+
+        if (!onStatusChange || !meeting.id) {
+            return (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClass}`}>
+                    {STATUS_LABELS[key]}
+                </span>
+            )
         }
-        const config = statusConfig[status] || statusConfig.PIPELINE
+
         return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
-                {config.label}
-            </span>
+            <select
+                value={key}
+                disabled={savingStatus}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onChange={async (e) => {
+                    e.stopPropagation()
+                    const next = e.target.value as MeetingStatus
+                    if (next === key) return
+                    setSavingStatus(true)
+                    try {
+                        await onStatusChange(meeting.id!, next)
+                    } finally {
+                        setSavingStatus(false)
+                    }
+                }}
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border cursor-pointer appearance-none bg-transparent pr-6 focus:outline-none disabled:opacity-50 ${colorClass}`}
+            >
+                {(Object.keys(STATUS_LABELS) as MeetingStatus[]).map(s => (
+                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                ))}
+            </select>
         )
     }
 
@@ -96,7 +138,7 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                             </>
                         )}
                         <span className="text-zinc-300">•</span>
-                        {getStatusBadge(meeting.status)}
+                        {renderStatus(meeting.status)}
                     </div>
 
                     <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors truncate flex items-center gap-2">

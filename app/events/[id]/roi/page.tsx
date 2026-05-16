@@ -1,7 +1,8 @@
 'use client'
 
-import { Save, Send, CheckCircle, X, TrendingUp, Target, Mic, Sparkles, Upload } from 'lucide-react'
+import { Save, Send, CheckCircle, CheckCircle2, Circle, X, TrendingUp, Target, Mic, Sparkles, Upload, Megaphone, ExternalLink } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
+import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
 import MetricCard from '@/components/roi/MetricCard'
@@ -14,6 +15,7 @@ import LinkedInModal from '@/components/roi/LinkedInModal'
 interface Company {
     id: string
     name: string
+    description?: string | null
     pipelineValue?: number | null
 }
 
@@ -60,6 +62,46 @@ interface ROIActuals {
     actualCost: number
 }
 
+interface LinkedInDraft {
+    id: string
+    status: string
+    budget: number | null
+    impressions: number | null
+    clicks: number | null
+    activeUsers: number | null
+    avgEngagementTimePerActiveUser: number | null
+    adStartDate: string | null
+    adEndDate: string | null
+    topCompaniesByEngagement: string | null
+}
+
+interface MediaTargetRow {
+    attendee: {
+        id: string
+        name: string
+        email: string
+        title: string | null
+        isExternal: boolean
+        company: { id: string; name: string } | null
+    }
+    pipelineCount: number
+    committedCount: number
+    occurredCount: number
+    urls: string[]
+    pitchCount: number
+}
+
+const normalizeCompany = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+
+const urlHostname = (u: string) => {
+    try {
+        const parsed = new URL(u)
+        return parsed.hostname.replace(/^www\./, '')
+    } catch {
+        return u
+    }
+}
+
 const emptyTargets: ROITargets = {
     budget: null,
     requesterEmail: '',
@@ -97,10 +139,25 @@ function ROIPage() {
     const eventId = params?.id as string
 
     const { user } = useUser()
-    const [activeTab, setActiveTab] = useState<'targets' | 'performance' | 'actuals'>('targets')
+    const [activeTab, setActiveTabState] = useState<'targets' | 'performance' | 'actuals'>('targets')
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(`roi-tab-${eventId}`)
+            if (saved === 'performance' || saved === 'actuals' || saved === 'targets') setActiveTabState(saved)
+        } catch { }
+    }, [eventId])
+
+    const setActiveTab = (tab: 'targets' | 'performance' | 'actuals') => {
+        setActiveTabState(tab)
+        try { localStorage.setItem(`roi-tab-${eventId}`, tab) } catch { }
+    }
     const [targets, setTargets] = useState<ROITargets>(emptyTargets)
     const [actuals, setActuals] = useState<ROIActuals | null>(null)
+    const [linkedInDrafts, setLinkedInDrafts] = useState<LinkedInDraft[]>([])
+    const [mediaTargets, setMediaTargets] = useState<MediaTargetRow[]>([])
     const [eventStatus, setEventStatus] = useState<string | null>(null)
+    const [checklistData, setChecklistData] = useState<{ completedCount: number; finalReport: string; nextYearDecision: string } | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
@@ -147,6 +204,133 @@ function ROIPage() {
 
     const isDirty = isFinancialDirty || isEventTargetsDirty || isCompaniesDirty || isMarketingPlanDirty
 
+    // Consolidated LinkedIn campaign summary for the Performance Tracker tab.
+    // Aggregates POSTED drafts only. Returns null when no POSTED drafts exist.
+    const linkedInSummary = useMemo(() => {
+        const posted = linkedInDrafts.filter(d => d.status === 'POSTED')
+        const draftCount = linkedInDrafts.filter(d => d.status === 'DRAFT').length
+
+        const sum = (vals: (number | null)[]) => vals.reduce<number>((a, v) => a + (v ?? 0), 0)
+
+        const totalBudget = sum(posted.map(d => d.budget))
+        const totalImpressions = sum(posted.map(d => d.impressions))
+        const totalClicks = sum(posted.map(d => d.clicks))
+        const totalActiveUsers = sum(posted.map(d => d.activeUsers))
+
+        const blendedCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null
+        const blendedCpc = totalClicks > 0 ? totalBudget / totalClicks : null
+
+        const weightedEngagementNumerator = posted.reduce<number>(
+            (a, d) => a + ((d.activeUsers ?? 0) * (d.avgEngagementTimePerActiveUser ?? 0)),
+            0
+        )
+        const weightedEngagement = totalActiveUsers > 0 ? weightedEngagementNumerator / totalActiveUsers : null
+
+        const startDates = posted.map(d => d.adStartDate).filter((v): v is string => !!v)
+        const endDates = posted.map(d => d.adEndDate).filter((v): v is string => !!v)
+        const earliestStart = startDates.length ? new Date(Math.min(...startDates.map(d => new Date(d).getTime()))) : null
+        const latestEnd = endDates.length ? new Date(Math.max(...endDates.map(d => new Date(d).getTime()))) : null
+
+        // Bucket touched companies across POSTED drafts: target → known (system) → other.
+        // One touch per draft per canonical company.
+        const targetByNorm = new Map<string, Company>()
+        for (const c of targets.targetCompanies) {
+            targetByNorm.set(normalizeCompany(c.name), c)
+        }
+        const systemByNorm = new Map<string, Company>()
+        for (const c of availableCompanies) {
+            systemByNorm.set(normalizeCompany(c.name), c)
+        }
+
+        const targetTouches = new Map<string, { company: Company; count: number }>()
+        const knownTouches = new Map<string, { company: Company; count: number }>()
+        const otherTouches = new Map<string, { name: string; count: number }>()
+
+        for (const draft of posted) {
+            if (!draft.topCompaniesByEngagement) continue
+            const seenInDraft = new Set<string>()
+            for (const rawLine of draft.topCompaniesByEngagement.split('\n')) {
+                const nameOnly = rawLine.replace(/[\t,;|].*$/, '').replace(/\s+\d.*$/, '').trim()
+                if (!nameOnly) continue
+                const norm = normalizeCompany(nameOnly)
+                if (seenInDraft.has(norm)) continue
+                seenInDraft.add(norm)
+
+                const targetCompany = targetByNorm.get(norm)
+                if (targetCompany) {
+                    const entry = targetTouches.get(targetCompany.name)
+                    if (entry) { entry.count += 1 } else { targetTouches.set(targetCompany.name, { company: targetCompany, count: 1 }) }
+                    continue
+                }
+                const knownCompany = systemByNorm.get(norm)
+                if (knownCompany) {
+                    const entry = knownTouches.get(knownCompany.name)
+                    if (entry) { entry.count += 1 } else { knownTouches.set(knownCompany.name, { company: knownCompany, count: 1 }) }
+                    continue
+                }
+                const existing = otherTouches.get(norm)
+                if (existing) {
+                    existing.count += 1
+                } else {
+                    otherTouches.set(norm, { name: nameOnly, count: 1 })
+                }
+            }
+        }
+
+        const sortByCount = (a: { count: number }, b: { count: number }) => b.count - a.count
+        const targetCompaniesEngaged = Array.from(targetTouches.values())
+            .map(({ company, count }) => ({ name: company.name, id: company.id, pipelineValue: company.pipelineValue, count }))
+            .sort(sortByCount)
+        const knownCompaniesEngaged = Array.from(knownTouches.values())
+            .map(({ company, count }) => ({ name: company.name, id: company.id, pipelineValue: company.pipelineValue, count }))
+            .sort(sortByCount)
+        const otherCompaniesEngaged = Array.from(otherTouches.values()).sort(sortByCount)
+
+        const totalTargets = targets.targetCompanies.length
+        const targetCoveragePct = totalTargets > 0
+            ? (targetCompaniesEngaged.length / totalTargets) * 100
+            : null
+
+        return {
+            postedCount: posted.length,
+            draftCount,
+            totalBudget,
+            totalImpressions,
+            totalClicks,
+            totalActiveUsers,
+            blendedCtr,
+            blendedCpc,
+            weightedEngagement,
+            earliestStart,
+            latestEnd,
+            targetCompaniesEngaged,
+            knownCompaniesEngaged,
+            otherCompaniesEngaged,
+            targetCoveragePct,
+        }
+    }, [linkedInDrafts, targets.targetCompanies, availableCompanies])
+
+    // Pipeline derived from Physical Event Execution companies only
+    const calculatedPipeline = useMemo(() => {
+        if (!actuals) return 0
+        const seen = new Set<string>()
+        let total = 0
+        for (const c of actuals.targetCompaniesHit) {
+            if (seen.has(c.id)) continue
+            seen.add(c.id)
+            const targetCompany = targets.targetCompanies.find(t => t.id === c.id)
+            if (targetCompany?.pipelineValue) total += targetCompany.pipelineValue
+        }
+        for (const c of actuals.additionalCompanies) {
+            if (seen.has(c.id)) continue
+            seen.add(c.id)
+            if (c.pipelineValue) total += c.pipelineValue
+        }
+        return total
+    }, [actuals, targets.targetCompanies])
+
+    const calculatedRevenue = calculatedPipeline * (targets.winRate || 0)
+
     // Sparkle state
     const [sparkleLoading, setSparkleLoading] = useState<'financial' | 'events' | 'companies' | null>(null)
     const [confirmPanel, setConfirmPanel] = useState<{
@@ -164,6 +348,66 @@ function ROIPage() {
     // LinkedIn multi-company selection
     const [selectedForLinkedIn, setSelectedForLinkedIn] = useState<Set<string>>(new Set())
     const [linkedInModalOpen, setLinkedInModalOpen] = useState(false)
+
+    // Company edit modal
+    const [editingCompany, setEditingCompany] = useState<Company | null>(null)
+    const [editCompanyForm, setEditCompanyForm] = useState({ name: '', description: '', pipelineValue: '' })
+    const [isCompanyEditModalOpen, setIsCompanyEditModalOpen] = useState(false)
+
+    const openCompanyEditModal = (company: Company) => {
+        const full = availableCompanies.find(c => c.id === company.id) ?? company
+        setEditingCompany(full)
+        setEditCompanyForm({
+            name: full.name,
+            description: full.description ?? '',
+            pipelineValue: full.pipelineValue != null ? full.pipelineValue.toString() : '',
+        })
+        setIsCompanyEditModalOpen(true)
+    }
+
+    const handleCompanyUpdate = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingCompany) return
+        const res = await fetch(`/api/companies/${editingCompany.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: editCompanyForm.name,
+                description: editCompanyForm.description || null,
+                pipelineValue: editCompanyForm.pipelineValue ? parseFloat(editCompanyForm.pipelineValue) : null,
+            }),
+        })
+        if (!res.ok) {
+            const data = await res.json()
+            alert(data.error || 'Failed to update company')
+            return
+        }
+        setIsCompanyEditModalOpen(false)
+        setEditingCompany(null)
+        const [companiesRes, roiRes] = await Promise.all([
+            fetch('/api/companies').then(r => r.json()),
+            fetch(`/api/events/${eventId}/roi`).then(r => r.json()),
+        ])
+        if (Array.isArray(companiesRes)) setAvailableCompanies(companiesRes)
+        if (roiRes.targets) { setTargets(roiRes.targets); savedTargetsRef.current = roiRes.targets }
+        if (roiRes.actuals) setActuals(roiRes.actuals)
+    }
+
+    const createAndEditCompany = async (name: string) => {
+        const res = await fetch('/api/companies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+        })
+        if (!res.ok) {
+            const data = await res.json()
+            alert(data.error || 'Failed to create company')
+            return
+        }
+        const created: Company = await res.json()
+        setAvailableCompanies(prev => [...prev, created])
+        openCompanyEditModal(created)
+    }
 
     const role = user?.publicMetadata?.role as string
     const canEdit = role === 'root' || role === 'marketing'
@@ -187,6 +431,49 @@ function ROIPage() {
                 console.error('Failed to load ROI data', err)
                 setLoading(false)
             })
+    }, [eventId])
+
+    // Fetch checklist completion data for wrap-up status card
+    useEffect(() => {
+        if (!eventId) return
+        const CHECKLIST_KEYS = [
+            'eventRecommendation', 'eventROICompleted', 'approval', 'eventPlanning',
+            'campaignPlanning', 'campaignActivation', 'campaignEvaluation', 'internalAttendeesAdded',
+            'liveCoverage', 'leadManagement', 'eventDataCapture', 'eventWrapUp',
+            'contentAmplification', 'crmUpdate', 'reportingActivations', 'debriefOnTeamMeeting',
+            'eventCompleted',
+        ] as const
+        fetch(`/api/events/${eventId}/checklist`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (!data?.checklist) return
+                const cl = data.checklist
+                const completedCount = CHECKLIST_KEYS.filter(k => cl[k] === true).length
+                setChecklistData({
+                    completedCount,
+                    finalReport: cl.finalReport ?? '',
+                    nextYearDecision: cl.nextYearDecision ?? '',
+                })
+            })
+            .catch(() => { /* non-critical */ })
+    }, [eventId])
+
+    // Fetch LinkedIn drafts for Performance Tracker summary
+    useEffect(() => {
+        if (!eventId) return
+        fetch(`/api/social/drafts?eventId=${eventId}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setLinkedInDrafts(Array.isArray(data) ? data : []))
+            .catch(() => { /* non-critical — section just hides */ })
+    }, [eventId])
+
+    // Fetch pitch targets for Media/PR Performance section
+    useEffect(() => {
+        if (!eventId) return
+        fetch(`/api/events/${eventId}/pitch-targets`)
+            .then(res => res.ok ? res.json() : { items: [] })
+            .then(data => setMediaTargets(Array.isArray(data.items) ? data.items : []))
+            .catch(() => { /* non-critical — section just hides */ })
     }, [eventId])
 
     // Fetch companies for selector
@@ -250,6 +537,37 @@ function ROIPage() {
             window.removeEventListener('beforeunload', handleBeforeUnload)
         }
     }, [isDirty])
+
+    // Save scroll position as the user scrolls (not on unmount — avoids StrictMode writing scrollY=0)
+    useEffect(() => {
+        const key = `roi-scroll-${eventId}`
+        let rafId: number
+        const onScroll = () => {
+            cancelAnimationFrame(rafId)
+            rafId = requestAnimationFrame(() => {
+                sessionStorage.setItem(key, String(Math.round(window.scrollY)))
+            })
+        }
+        window.addEventListener('scroll', onScroll, { passive: true })
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            cancelAnimationFrame(rafId)
+        }
+    }, [eventId])
+
+    // Restore scroll position after data finishes loading
+    useEffect(() => {
+        if (loading) return
+        const key = `roi-scroll-${eventId}`
+        const saved = sessionStorage.getItem(key)
+        if (saved) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.scrollTo({ top: parseInt(saved), behavior: 'instant' })
+                })
+            })
+        }
+    }, [loading, eventId])
 
     // Read planWarning / planError from URL on mount, show message, clear params
     useEffect(() => {
@@ -372,7 +690,6 @@ function ROIPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     actualSpeaking: targets.actualSpeaking,
-                    actualMediaPR: targets.actualMediaPR,
                     actualEventScans: targets.actualEventScans,
                     actualCost: targets.actualCost,
                 }),
@@ -529,6 +846,84 @@ function ROIPage() {
                     {statusStyle.label}
                 </div>
             </div>
+
+            {/* Post-Event Wrap-Up Status */}
+            {(() => {
+                const CHECKLIST_TOTAL = 17
+                const checklistComplete = (checklistData?.completedCount ?? 0) >= CHECKLIST_TOTAL
+                const reportComplete = (checklistData?.finalReport ?? '').trim().length > 0
+                const nextYearComplete = (checklistData?.nextYearDecision ?? '').length > 0
+                const statusComplete = eventStatus === 'OCCURRED'
+                const doneCount = [checklistComplete, reportComplete, nextYearComplete, statusComplete].filter(Boolean).length
+                const allComplete = doneCount === 4
+                const readyForOccurred = checklistComplete && reportComplete && nextYearComplete
+
+                const steps = [
+                    {
+                        label: 'Checklist Items',
+                        detail: checklistComplete
+                            ? `${CHECKLIST_TOTAL} / ${CHECKLIST_TOTAL} complete`
+                            : `${checklistData?.completedCount ?? 0} / ${CHECKLIST_TOTAL} complete`,
+                        done: checklistComplete,
+                    },
+                    {
+                        label: 'Final Report',
+                        detail: reportComplete ? 'Submitted' : 'Not yet written',
+                        done: reportComplete,
+                    },
+                    {
+                        label: 'Next Year Decision',
+                        detail: nextYearComplete
+                            ? (checklistData?.nextYearDecision ?? '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                            : 'No selection made',
+                        done: nextYearComplete,
+                    },
+                    {
+                        label: 'Event Status',
+                        detail: statusComplete ? 'OCCURRED' : (eventStatus ?? '—'),
+                        done: statusComplete,
+                        hint: !statusComplete && readyForOccurred ? 'Set status to OCCURRED in Event Settings' : undefined,
+                        hintLink: !statusComplete && readyForOccurred ? `/events/${eventId}/settings` : undefined,
+                    },
+                ]
+
+                return (
+                    <div className={`bg-white border rounded-xl overflow-hidden ${allComplete ? 'border-teal-300' : 'border-zinc-200'}`}>
+                        <div className={`px-5 py-3 border-b flex items-center justify-between ${allComplete ? 'bg-teal-50 border-teal-200' : 'bg-zinc-50 border-zinc-100'}`}>
+                            <div className="flex items-center gap-2">
+                                <h2 className={`text-sm font-semibold uppercase tracking-wide ${allComplete ? 'text-teal-700' : 'text-zinc-700'}`}>
+                                    {allComplete ? 'All Wrap-Up Tasks Complete' : 'Event Execution Status'}
+                                </h2>
+                                <Link href={`/events/${eventId}/checklist`} title="Marketing Execution Checklist"
+                                    className={`transition-colors ${allComplete ? 'text-teal-400 hover:text-teal-600' : 'text-zinc-400 hover:text-zinc-600'}`}>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${allComplete ? 'bg-teal-100 text-teal-700 border-teal-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
+                                {doneCount} / 4 done
+                            </span>
+                        </div>
+                        <ul className="divide-y divide-zinc-100">
+                            {steps.map((step, i) => (
+                                <li key={i} className="flex items-center gap-3 px-5 py-3">
+                                    {step.done
+                                        ? <CheckCircle2 className="h-5 w-5 text-teal-500 shrink-0" />
+                                        : <Circle className="h-5 w-5 text-zinc-300 shrink-0" />
+                                    }
+                                    <span className={`text-sm font-medium w-44 shrink-0 ${step.done ? 'text-zinc-500' : 'text-zinc-900'}`}>{step.label}</span>
+                                    <span className={`text-sm flex-1 ${step.done ? 'text-zinc-400' : 'text-zinc-600'}`}>{step.detail}</span>
+                                    {step.done
+                                        ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">Complete</span>
+                                        : step.hint && step.hintLink
+                                            ? <Link href={step.hintLink} className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap">{step.hint}</Link>
+                                            : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
+                                    }
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
+            })()}
 
             {/* Tabs */}
             <div className="border-b border-zinc-200">
@@ -1003,13 +1398,11 @@ function ROIPage() {
                                     <span
                                         key={company.id}
                                         onClick={!(isLocked || !canEdit) ? () => toggleLinkedInSelection(company.id) : undefined}
-                                        className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                                            !(isLocked || !canEdit) ? 'cursor-pointer' : ''
-                                        } ${
-                                            isSelected
+                                        className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${!(isLocked || !canEdit) ? 'cursor-pointer' : ''
+                                            } ${isSelected
                                                 ? 'bg-blue-50 text-blue-800 border-blue-400 ring-2 ring-blue-200'
                                                 : 'bg-teal-50 text-teal-800 border-teal-200 hover:border-teal-400'
-                                        }`}
+                                            }`}
                                     >
                                         {isSelected && (
                                             <span className="w-3 h-3 rounded-sm bg-blue-600 flex items-center justify-center text-white" style={{ fontSize: '8px' }}>✓</span>
@@ -1041,7 +1434,7 @@ function ROIPage() {
                                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                                         >
                                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                                             </svg>
                                             Draft LinkedIn Article ({selectedForLinkedIn.size} {selectedForLinkedIn.size === 1 ? 'company' : 'companies'})
                                         </button>
@@ -1103,11 +1496,10 @@ function ROIPage() {
                             onChange={e => setTargets(prev => ({ ...prev, marketingPlan: e.target.value }))}
                             rows={12}
                             placeholder="Use the ✦ sparkle icon above to generate a marketing plan, or type one here."
-                            className={`w-full px-3 py-2.5 rounded-xl border text-sm resize-y ${
-                                (isLocked || !canEdit)
-                                    ? 'bg-zinc-50 border-zinc-100 text-zinc-600'
-                                    : 'border-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
-                            }`}
+                            className={`w-full px-3 py-2.5 rounded-xl border text-sm resize-y ${(isLocked || !canEdit)
+                                ? 'bg-zinc-50 border-zinc-100 text-zinc-600'
+                                : 'border-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
+                                }`}
                         />
                     </section>
 
@@ -1161,20 +1553,73 @@ function ROIPage() {
             {/* ======================== TAB 2: PERFORMANCE ======================== */}
             {activeTab === 'performance' && actuals && (
                 <div className="space-y-8">
-                    {/* Financial Overview */}
+                    {/* Budget Performance */}
+                    <section>
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-emerald-500 rounded-full" />
+                            Budget Performance
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
+                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Budget</h4>
+                                <div className="text-3xl font-bold text-zinc-900">{targets.budget ? currency(targets.budget) : '—'}</div>
+                                <p className="text-sm mt-2 text-zinc-400">Planned spend</p>
+                            </div>
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
+                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Actual</h4>
+                                <div className="text-3xl font-bold text-zinc-900">{actuals.actualCost ? currency(actuals.actualCost) : '—'}</div>
+                                <p className="text-sm mt-2 text-zinc-400">Actual spend</p>
+                            </div>
+                            <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
+                                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">% of Budget</h4>
+                                {(() => {
+                                    const budget = targets.budget || 0
+                                    const actual = actuals.actualCost
+                                    if (budget === 0 && actual === 0) {
+                                        return (
+                                            <>
+                                                <div className="text-3xl font-bold text-zinc-300">—</div>
+                                                <p className="text-sm mt-2 text-zinc-400">No data</p>
+                                            </>
+                                        )
+                                    }
+                                    if (budget === 0) {
+                                        return (
+                                            <>
+                                                <div className="text-3xl font-bold text-red-600">—</div>
+                                                <p className="text-sm mt-2 text-red-500">No budget set</p>
+                                            </>
+                                        )
+                                    }
+                                    const pct = (actual / budget) * 100
+                                    const overBy = pct - 100
+                                    const colorClass = overBy <= 0 ? 'text-emerald-600' : overBy <= 5 ? 'text-amber-600' : 'text-red-600'
+                                    const labelClass = overBy <= 0 ? 'text-emerald-500' : overBy <= 5 ? 'text-amber-500' : 'text-red-500'
+                                    const label = overBy <= 0 ? 'Under / on budget' : overBy <= 5 ? 'Slightly over budget' : 'Over budget'
+                                    return (
+                                        <>
+                                            <div className={`text-3xl font-bold ${colorClass}`}>{pct.toFixed(1)}%</div>
+                                            <p className={`text-sm mt-2 ${labelClass}`}>{label}</p>
+                                        </>
+                                    )
+                                })()}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Pipeline Performance */}
                     <section>
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-indigo-500 rounded-full" />
-                            Financial Performance
+                            Pipeline Performance
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <MetricCard label="Pipeline" tooltip="The actual sales pipeline generated from the event so far." target={targets.expectedPipeline || 0} actual={actuals.actualPipeline} variant="ring" formatValue={currency} size="lg" />
-                            <MetricCard label="Revenue" tooltip="The actual closed-won revenue generated from the event so far." target={targets.expectedRevenue || 0} actual={actuals.actualRevenue} variant="ring" formatValue={currency} size="lg" />
-                            <MetricCard label="Budget vs Actual Cost" tooltip="Planned budget vs actual spend for this event." target={targets.budget || 0} actual={actuals.actualCost} variant="ring" formatValue={currency} size="lg" invertColors />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <MetricCard label="Pipeline" tooltip="The actual sales pipeline generated from the event so far." target={targets.expectedPipeline || 0} actual={calculatedPipeline} variant="ring" formatValue={currency} size="lg" />
+                            <MetricCard label="Revenue" tooltip="The actual closed-won revenue generated from the event so far." target={targets.expectedRevenue || 0} actual={calculatedRevenue} variant="ring" formatValue={currency} size="lg" />
                             <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center">
                                 <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3"><Tooltip content="The ratio of actual Pipeline generated divided by the actual Investment spent. Uses Actual Cost if entered, otherwise falls back to Budget.">ROI Ratio</Tooltip></h4>
                                 <div className="text-4xl font-bold text-zinc-900">
-                                    {(actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment) > 0 ? `${((actuals.actualPipeline / (actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment)) * 100).toFixed(0)}%` : '—'}
+                                    {(actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment) > 0 ? `${((calculatedPipeline / (actuals.actualCost > 0 ? actuals.actualCost : actuals.actualInvestment)) * 100).toFixed(0)}%` : '—'}
                                 </div>
                                 <p className="text-sm text-zinc-400 mt-2">Pipeline / Investment</p>
                                 <div className="mt-3 text-xs text-zinc-500">
@@ -1185,46 +1630,303 @@ function ROIPage() {
                         </div>
                     </section>
 
-                    {/* Engagement */}
+                    {/* Event Executive Summary */}
                     <section>
                         <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                             <span className="w-1 h-5 bg-rose-500 rounded-full" />
-                            Engagement
+                            Event Execution Summary
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <MetricCard label="LI Company Touches" tooltip="Number of event target companies engaged by POSTED LinkedIn campaigns." target={targets.targetCompanies.length} actual={linkedInSummary.targetCompaniesEngaged.length} href="#section-linkedin" />
+                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} href="#section-media-pr" />
                             <MetricCard label="Event Scans" tooltip="Actual vs target contacts scanned or collected at the event." target={targets.targetEventScans || 0} actual={actuals.actualEventScans} />
-                            <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} />
+                            <MetricCard label="External Leads" tooltip="Actual vs target number of confirmed/occurred external leads." target={targets.targetCustomerMeetings || 0} actual={actuals.actualCustomerMeetings} href={`/events/${eventId}/dashboard`} />
                             <MetricCard label="Speaking" tooltip="The actual vs target number of speaking sessions, panels, or presentations secured at the event." target={targets.targetSpeaking || 0} actual={actuals.actualSpeaking} />
-                            <MetricCard label="Media / PR" tooltip="The actual vs target number of media interviews, press mentions, or PR activities." target={targets.targetMediaPR || 0} actual={actuals.actualMediaPR} />
                         </div>
                     </section>
 
-                    {/* Target Companies */}
-                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <CompanyChecklist targetCompanies={targets.targetCompanies} hitCompanyIds={actuals.targetCompaniesHit.map(c => c.id)} />
+                    {/* Physical Event Execution */}
+                    <section className="space-y-4">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-violet-500 rounded-full" />
+                            Physical Event Execution
+                        </h3>
+
+                        {/* Target Companies */}
+                        <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <CompanyChecklist targetCompanies={targets.targetCompanies} hitCompanyIds={actuals.targetCompaniesHit.map(c => c.id)} onEdit={canEdit ? openCompanyEditModal : undefined} />
+                        </section>
+
+                        {/* Additional Companies */}
+                        <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
+                                <span className="w-1 h-5 bg-orange-400 rounded-full" />
+                                Additional Companies
+                                <span className="ml-1 text-sm font-normal text-zinc-500">({actuals.additionalCompanies.length})</span>
+                            </h3>
+                            <p className="text-sm text-zinc-500 mb-4">Companies of event attendees not in the target list.</p>
+                            <div className="flex flex-wrap gap-2">
+                                {actuals.additionalCompanies.length === 0 ? (
+                                    <p className="text-sm text-zinc-400 italic">No additional companies recorded.</p>
+                                ) : (
+                                    actuals.additionalCompanies.map(c => (
+                                        <span key={c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-50 text-orange-800 border border-orange-200">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· ${(c.pipelineValue ?? 0).toLocaleString()}</span>
+                                            {canEdit && (
+                                                <button onClick={() => openCompanyEditModal(c)} className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" title="Edit company">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                </button>
+                                            )}
+                                        </span>
+                                    ))
+                                )}
+                            </div>
+                        </section>
                     </section>
 
-                    {/* Additional Companies */}
-                    <section className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-zinc-900 mb-2 flex items-center gap-2">
-                            <span className="w-1 h-5 bg-orange-400 rounded-full" />
-                            Additional Companies
-                            <span className="ml-1 text-sm font-normal text-zinc-500">({actuals.additionalCompanies.length})</span>
+                    {/* LinkedIn Campaigns Summary */}
+                    <section id="section-linkedin" className="space-y-4">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-blue-500 rounded-full" />
+                            LinkedIn Campaigns
+                            <Link href={`/events/${eventId}/linkedin-campaigns`}
+                                className="text-zinc-400 hover:text-blue-600 transition-colors" title="View LinkedIn Campaigns">
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
                         </h3>
-                        <p className="text-sm text-zinc-500 mb-4">Companies of event attendees not in the target list.</p>
-                        <div className="flex flex-wrap gap-2">
-                            {actuals.additionalCompanies.length === 0 ? (
-                                <p className="text-sm text-zinc-400 italic">No additional companies recorded.</p>
-                            ) : (
-                                actuals.additionalCompanies.map(c => (
-                                    <span key={c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-50 text-orange-800 border border-orange-200">
-                                        {c.name}
-                                        {!!c.pipelineValue && <span className="text-xs opacity-60">(${c.pipelineValue.toLocaleString()})</span>}
+                        <p className="text-xs text-zinc-500 mb-4">Numbers next to each company show how many POSTED campaigns engaged them.</p>
+
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                <Tooltip content="Target companies engaged by your LinkedIn campaigns, ranked by number of POSTED campaigns each appeared in. Matching is case- and whitespace-insensitive.">
+                                    Event Target Companies Engaged
+                                </Tooltip>
+                                <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.targetCompaniesEngaged.length})</span>
+                                {linkedInSummary.targetCoveragePct !== null && linkedInSummary.targetCompaniesEngaged.length > 0 && (
+                                    <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                                        {linkedInSummary.targetCoveragePct.toFixed(0)}% coverage
                                     </span>
-                                ))
+                                )}
+                            </h4>
+                            <p className="text-xs text-zinc-500 mb-4">Event ROI target companies touched by your POSTED LinkedIn campaigns.</p>
+                            {linkedInSummary.targetCompaniesEngaged.length === 0 ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    None
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {linkedInSummary.targetCompaniesEngaged.map(c => (
+                                        <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-teal-50 text-teal-800 border border-teal-200">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· ${(c.pipelineValue ?? 0).toLocaleString()}</span>
+                                            <span className="text-xs opacity-60">· {c.count}</span>
+                                            {canEdit && (
+                                                <button onClick={() => openCompanyEditModal(c)} className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" title="Edit company">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                </button>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                <Tooltip content="Companies engaged by your campaigns that exist in the system company directory but are not on this event's target list.">
+                                    Known Companies Engaged
+                                </Tooltip>
+                                <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.knownCompaniesEngaged.length})</span>
+                            </h4>
+                            <p className="text-xs text-zinc-500 mb-4">In the system company directory, but not event targets.</p>
+                            {linkedInSummary.knownCompaniesEngaged.length === 0 ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    None
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {linkedInSummary.knownCompaniesEngaged.map(c => (
+                                        <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· ${(c.pipelineValue ?? 0).toLocaleString()}</span>
+                                            <span className="text-xs opacity-60">· {c.count}</span>
+                                            {canEdit && (
+                                                <button onClick={() => openCompanyEditModal(c)} className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" title="Edit company">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                </button>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-sm font-semibold text-zinc-900 mb-1 flex items-center gap-2">
+                                <Tooltip content="Companies engaged by your campaigns that are neither event targets nor in the system company directory.">
+                                    Other Companies Engaged
+                                </Tooltip>
+                                <span className="ml-1 text-xs font-normal text-zinc-500">({linkedInSummary.otherCompaniesEngaged.length})</span>
+                            </h4>
+                            <p className="text-xs text-zinc-500 mb-4">Not targets, not in the directory — potential new additions.</p>
+                            {linkedInSummary.otherCompaniesEngaged.length === 0 ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    None
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {linkedInSummary.otherCompaniesEngaged.map(c => (
+                                        <span key={c.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-700 border border-zinc-300">
+                                            {c.name}
+                                            <span className="text-xs opacity-60">· $0</span>
+                                            <span className="text-xs opacity-60">· {c.count}</span>
+                                            {canEdit && (
+                                                <button onClick={() => createAndEditCompany(c.name)} className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity" title="Add to company directory">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                                                </button>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {linkedInSummary.postedCount > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total POSTED campaigns. Sub-line shows POSTED vs DRAFT counts.">Campaigns</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.postedCount}</div>
+                                    <p className="text-xs text-zinc-400 mt-1">{linkedInSummary.postedCount} posted · {linkedInSummary.draftCount} drafts</p>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Sum of budget across POSTED campaigns. Sub-line shows the campaign date range.">Total Ad Spend</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{currency(linkedInSummary.totalBudget)}</div>
+                                    <p className="text-xs text-zinc-400 mt-1">
+                                        {linkedInSummary.earliestStart ? linkedInSummary.earliestStart.toLocaleDateString() : '—'}
+                                        {' → '}
+                                        {linkedInSummary.latestEnd ? linkedInSummary.latestEnd.toLocaleDateString() : 'ongoing'}
+                                    </p>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total ad impressions across POSTED campaigns.">Impressions</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.totalImpressions.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total link clicks across POSTED campaigns.">Clicks</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.totalClicks.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Blended click-through rate: total clicks divided by total impressions. More accurate than averaging per-campaign rates.">Aggregate CTR</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.blendedCtr !== null ? `${linkedInSummary.blendedCtr.toFixed(2)}%` : '—'}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Blended cost per click: total spend divided by total clicks.">Aggregate CPC</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.blendedCpc !== null ? `$${linkedInSummary.blendedCpc.toFixed(2)}` : '—'}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Total unique active users who engaged across POSTED campaigns.">Active Users</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.totalActiveUsers.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="flex items-center text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2"><Tooltip content="Average engagement time per active user, weighted by active-user count of each campaign.">Avg Engagement Time</Tooltip></h4>
+                                    <div className="text-2xl font-bold text-zinc-900">{linkedInSummary.weightedEngagement !== null ? `${linkedInSummary.weightedEngagement.toFixed(1)}s` : '—'}</div>
+                                </div>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Media/PR Performance */}
+                    <section id="section-media-pr" className="space-y-4">
+                        <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <span className="w-1 h-5 bg-indigo-500 rounded-full" />
+                            <Megaphone className="w-5 h-5 text-indigo-600" />
+                            Media/PR Performance
+                            <Link href={`/events/${eventId}/comms`}
+                                className="text-zinc-400 hover:text-indigo-600 transition-colors" title="View Pitches">
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
+                        </h3>
+                        <div className="bg-white/70 backdrop-blur-sm border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-zinc-100">
+                                <p className="text-sm text-zinc-500">Pitch targets across all event pitches.</p>
+                            </div>
+                            {mediaTargets.length === 0 ? (
+                                <div className="px-6 py-10 text-center text-zinc-500">
+                                    No pitch targets yet for this event.
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-zinc-200">
+                                        <thead className="bg-zinc-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Target</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Pipeline</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Committed</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Occurred</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Resulting URLs</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-zinc-100">
+                                            {mediaTargets.map(row => (
+                                                <tr key={row.attendee.id} className="hover:bg-zinc-50">
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="text-sm font-medium text-zinc-900">{row.attendee.name}</div>
+                                                        <div className="text-xs text-zinc-500">
+                                                            {row.attendee.title ? `${row.attendee.title} · ` : ''}
+                                                            {row.attendee.company?.name ?? row.attendee.email}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top text-sm text-zinc-700">{row.pipelineCount}</td>
+                                                    <td className="px-4 py-3 align-top text-sm text-zinc-700">{row.committedCount}</td>
+                                                    <td className="px-4 py-3 align-top text-sm text-zinc-700">{row.occurredCount}</td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        {row.urls.length === 0 ? (
+                                                            <span className="text-xs text-zinc-400">—</span>
+                                                        ) : (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {row.urls.map(u => (
+                                                                    <a
+                                                                        key={u}
+                                                                        href={u}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                                                                        title={u}
+                                                                    >
+                                                                        {urlHostname(u)}
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot className="bg-zinc-50 border-t border-zinc-200">
+                                            <tr>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">Totals</td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.pipelineCount, 0)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.committedCount, 0)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.occurredCount, 0)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                                                    {mediaTargets.reduce((s, r) => s + r.urls.length, 0)}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
                             )}
                         </div>
                     </section>
+
                 </div>
             )}
 
@@ -1285,16 +1987,6 @@ function ROIPage() {
                                     focusRingColor="rose"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1"><Tooltip content="The actual number of media interviews, press mentions, or PR activities.">Media / PR</Tooltip></label>
-                                <FormattedInput
-                                    value={targets.actualMediaPR}
-                                    onChange={val => setTargets(prev => ({ ...prev, actualMediaPR: val }))}
-                                    readOnly={isActualsLocked || !canEdit}
-                                    placeholder="0"
-                                    focusRingColor="rose"
-                                />
-                            </div>
                         </div>
                     </section>
 
@@ -1341,6 +2033,59 @@ function ROIPage() {
                                 Leave without saving
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Company Edit Modal */}
+            {isCompanyEditModalOpen && editingCompany && (
+                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-zinc-100">
+                            <h2 className="text-xl font-bold tracking-tight text-zinc-900">Edit Company</h2>
+                        </div>
+                        <form onSubmit={handleCompanyUpdate} className="p-6 space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Company Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    value={editCompanyForm.name}
+                                    onChange={e => setEditCompanyForm(f => ({ ...f, name: e.target.value }))}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Description</label>
+                                <textarea
+                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none h-24 resize-none"
+                                    value={editCompanyForm.description}
+                                    onChange={e => setEditCompanyForm(f => ({ ...f, description: e.target.value }))}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1.5">Pipeline Value ($)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    value={editCompanyForm.pipelineValue}
+                                    onChange={e => setEditCompanyForm(f => ({ ...f, pipelineValue: e.target.value }))}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCompanyEditModalOpen(false)}
+                                    className="px-4 py-2 text-zinc-600 font-medium hover:bg-zinc-100 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button type="submit" className="px-4 py-2 bg-zinc-900 text-white font-medium rounded-xl hover:bg-zinc-800 transition-colors">
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

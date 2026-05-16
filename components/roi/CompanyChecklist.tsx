@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, Pencil } from 'lucide-react'
 
 interface CompanyItem {
     id: string
@@ -11,9 +11,10 @@ interface CompanyItem {
 interface CompanyChecklistProps {
     targetCompanies: CompanyItem[]
     hitCompanyIds: string[]
+    onEdit?: (company: CompanyItem) => void
 }
 
-export default function CompanyChecklist({ targetCompanies, hitCompanyIds }: CompanyChecklistProps) {
+export default function CompanyChecklist({ targetCompanies, hitCompanyIds, onEdit }: CompanyChecklistProps) {
     if (targetCompanies.length === 0) {
         return (
             <div className="text-sm text-zinc-400 italic py-4 text-center">
@@ -30,7 +31,7 @@ export default function CompanyChecklist({ targetCompanies, hitCompanyIds }: Com
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Target Companies</h4>
+                <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Event Target Companies</h4>
                 <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-zinc-900">{hitRate}%</span>
                     <span className="text-xs text-zinc-400">hit rate</span>
@@ -55,10 +56,17 @@ export default function CompanyChecklist({ targetCompanies, hitCompanyIds }: Com
                             )}
                             <div className="flex-1 min-w-0">
                                 <span className="text-sm font-medium truncate block">{company.name}</span>
-                                {company.pipelineValue && (
-                                    <span className="text-xs text-zinc-400">${company.pipelineValue.toLocaleString()}</span>
-                                )}
+                                <span className="text-xs text-zinc-400">${(company.pipelineValue ?? 0).toLocaleString()}</span>
                             </div>
+                            {onEdit && (
+                                <button
+                                    onClick={() => onEdit(company)}
+                                    className="flex-shrink-0 p-1 opacity-40 hover:opacity-100 transition-opacity"
+                                    title="Edit company"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                            )}
                         </div>
                     )
                 })}

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign, Info, TrendingUp } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import Link from 'next/link'
@@ -13,6 +13,7 @@ import { canManageEvents, hasWriteAccess } from '@/lib/role-utils'
 import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 import useFilterParams from '@/hooks/useFilterParams'
 import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
+import { RoiDashboardView } from '@/components/events/RoiDashboardView'
 interface Event {
     id: string
     name: string
@@ -359,7 +360,7 @@ const EVENTS_FILTER_DEFAULTS = {
     regions: [] as string[],
     dateFrom: '',
     dateTo: '',
-    view: 'list',
+    view: 'list' as 'list' | 'calendar' | 'map' | 'budget' | 'roi',
 }
 
 export default function EventsPage() {
@@ -569,6 +570,13 @@ export default function EventsPage() {
                             >
                                 <DollarSign className="w-5 h-5" />
                             </button>
+                            <button
+                                onClick={() => setFilter('view', 'roi')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'roi' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                title="ROI Performance View"
+                            >
+                                <TrendingUp className="w-5 h-5" />
+                            </button>
                         </div>
                         {canManage && (
                             <button
@@ -693,7 +701,7 @@ export default function EventsPage() {
                                 {displayEvents.map((event) => (
                                     <div
                                         key={event.id}
-                                        onClick={() => handleEventClick(event)}
+                                        onClick={() => router.push(`/events/${event.slug || event.id}/roi`)}
                                         className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden cursor-pointer`}
                                     >
                                         <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: getStatusColor(event.status).bg }} />
@@ -711,6 +719,16 @@ export default function EventsPage() {
                                                     {event.status}
                                                 </span>
                                                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleEventClick(event)
+                                                            }}
+                                                            className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Details"
+                                                        >
+                                                            <Info className="w-4 h-4" />
+                                                        </button>
                                                         <SparkleMarketingPlanButton
                                                             eventId={event.id}
                                                             onHasPlan={() => router.push(`/events/${event.slug || event.id}/roi?planWarning=1`)}
@@ -807,6 +825,10 @@ export default function EventsPage() {
 
                         {eventFilters.view === 'budget' && (
                             <BudgetPivotTable events={displayEvents} />
+                        )}
+
+                        {eventFilters.view === 'roi' && (
+                            <RoiDashboardView events={displayEvents} />
                         )}
                     </div>
                 </div>

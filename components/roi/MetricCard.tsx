@@ -14,6 +14,7 @@ interface MetricCardProps {
     size?: 'sm' | 'lg'
     tooltip?: React.ReactNode
     invertColors?: boolean
+    href?: string
 }
 
 export default function MetricCard({
@@ -25,6 +26,7 @@ export default function MetricCard({
     size = 'sm',
     tooltip,
     invertColors = false,
+    href,
 }: MetricCardProps) {
     const fmt = formatValue || ((v: number) => v.toLocaleString())
 
@@ -51,6 +53,11 @@ export default function MetricCard({
                         <span className="text-sm text-zinc-400">/ {fmt(target)}</span>
                     </div>
                     <ProgressBar value={actual} max={target} label="" showValues={false} />
+                    {href && (
+                        <a href={href} className="mt-3 block text-xs text-zinc-400 hover:text-zinc-700 transition-colors">
+                            View details →
+                        </a>
+                    )}
                 </>
             )}
         </div>

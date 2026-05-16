@@ -179,17 +179,10 @@ async function deleteHandler(
 
         // If eventId provided, we are Unlinking
         if (rawEventId) {
-            const { isEventEditable, resolveEventId } = await import('@/lib/events')
+            const { resolveEventId } = await import('@/lib/events')
             const eventId = await resolveEventId(rawEventId)
             if (!eventId) {
                 return NextResponse.json({ error: 'Event not found' }, { status: 404 })
-            }
-
-            // LOCK CHECK for the specific event
-            if (!await isEventEditable(eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
             }
 
             // Disconnect

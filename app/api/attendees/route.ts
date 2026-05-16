@@ -62,14 +62,17 @@ async function getHandler(request: Request) {
             where,
             include: {
                 company: true,
-                eventReports: { where: { eventId } }
+                eventReports: { where: { eventId } },
+                _count: { select: { events: true } }
             },
             orderBy: { name: 'asc' }
         })
         const mapped = attendees.map(a => ({
             ...a,
             reportText: a.eventReports[0]?.reportText ?? null,
-            eventReports: undefined
+            eventCount: a._count.events,
+            eventReports: undefined,
+            _count: undefined
         }))
         return NextResponse.json(mapped)
     } catch (error) {
@@ -98,14 +101,6 @@ async function postHandler(request: Request) {
 
         if (!eventId) {
             return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
-        }
-
-        // LOCK CHECK
-        const { isEventEditable } = await import('@/lib/events')
-        if (!await isEventEditable(eventId)) {
-            return NextResponse.json({
-                error: 'Event has occurred and is read-only.'
-            }, { status: 403 })
         }
 
         // Resolve email: generate placeholder if not provided

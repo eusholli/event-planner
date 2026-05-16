@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useUser } from '@/components/auth'
-import { CheckSquare, Square, Save, AlertTriangle, Info, CheckCircle2 } from 'lucide-react'
+import { CheckSquare, Square, Save, AlertTriangle, Info, CheckCircle2, Circle } from 'lucide-react'
+import Link from 'next/link'
 
 type CheckboxKey =
     | 'eventRecommendation'
@@ -171,6 +172,7 @@ export default function ChecklistPage() {
     const [checklist, setChecklist] = useState<ChecklistState>(EMPTY_CHECKLIST)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [eventStatus, setEventStatus] = useState<string | null>(null)
     const [saveMessage, setSaveMessage] = useState<string | null>(null)
     const [toggleError, setToggleError] = useState<string | null>(null)
     const savedReportRef = useRef<string>('')
@@ -227,6 +229,14 @@ export default function ChecklistPage() {
             .catch(err => console.error('Failed to load checklist:', err))
             .finally(() => setLoading(false))
     }, [eventId, user, canEdit, router])
+
+    useEffect(() => {
+        if (!eventId) return
+        fetch(`/api/events/${eventId}/roi`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => { if (data?.eventStatus) setEventStatus(data.eventStatus) })
+            .catch(() => { /* non-critical */ })
+    }, [eventId])
 
     const reportDirty = checklist.finalReport !== savedReportRef.current
     const notesDirty = JSON.stringify(checklist.notes) !== JSON.stringify(savedNotesRef.current)
@@ -365,29 +375,76 @@ export default function ChecklistPage() {
                 </div>
             </div>
 
-            {/* Progress */}
-            <div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-zinc-700">Overall Progress</span>
-                    <span className="font-semibold text-zinc-900">{completedCount} / {TOTAL} complete</span>
-                </div>
-                <div className="w-full bg-zinc-100 rounded-full h-2.5">
-                    <div
-                        className="bg-teal-500 h-2.5 rounded-full transition-all duration-300"
-                        style={{ width: `${(completedCount / TOTAL) * 100}%` }}
-                    />
-                </div>
-                <div className="flex gap-4 text-xs text-zinc-500">
-                    {SECTIONS.map(section => {
-                        const done = section.items.filter(i => checklist[i.key]).length
-                        return (
-                            <span key={section.id}>
-                                {section.label}: <span className="font-medium text-zinc-700">{done}/{section.items.length}</span>
+            {/* Event Execution Status */}
+            {(() => {
+                const checklistComplete = completedCount >= TOTAL
+                const reportComplete = checklist.finalReport.trim().length > 0
+                const nextYearComplete = checklist.nextYearDecision.length > 0
+                const statusComplete = eventStatus === 'OCCURRED'
+                const doneCount = [checklistComplete, reportComplete, nextYearComplete, statusComplete].filter(Boolean).length
+                const allComplete = doneCount === 4
+                const readyForOccurred = checklistComplete && reportComplete && nextYearComplete
+
+                const steps = [
+                    {
+                        label: 'Checklist Items',
+                        detail: checklistComplete
+                            ? `${TOTAL} / ${TOTAL} complete`
+                            : `${completedCount} / ${TOTAL} complete`,
+                        done: checklistComplete,
+                    },
+                    {
+                        label: 'Final Report',
+                        detail: reportComplete ? 'Submitted' : 'Not yet written',
+                        done: reportComplete,
+                    },
+                    {
+                        label: 'Next Year Decision',
+                        detail: nextYearComplete
+                            ? checklist.nextYearDecision.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                            : 'No selection made',
+                        done: nextYearComplete,
+                    },
+                    {
+                        label: 'Event Status',
+                        detail: statusComplete ? 'OCCURRED' : (eventStatus ?? '—'),
+                        done: statusComplete,
+                        hint: !statusComplete && readyForOccurred ? 'Set status to OCCURRED in Event Settings' : undefined,
+                        hintLink: !statusComplete && readyForOccurred ? `/events/${eventId}/settings` : undefined,
+                    },
+                ]
+
+                return (
+                    <div className={`bg-white border rounded-xl overflow-hidden ${allComplete ? 'border-teal-300' : 'border-zinc-200'}`}>
+                        <div className={`px-5 py-3 border-b flex items-center justify-between ${allComplete ? 'bg-teal-50 border-teal-200' : 'bg-zinc-50 border-zinc-100'}`}>
+                            <h2 className={`text-sm font-semibold uppercase tracking-wide ${allComplete ? 'text-teal-700' : 'text-zinc-700'}`}>
+                                {allComplete ? 'All Wrap-Up Tasks Complete' : 'Event Execution Status'}
+                            </h2>
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${allComplete ? 'bg-teal-100 text-teal-700 border-teal-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
+                                {doneCount} / 4 done
                             </span>
-                        )
-                    })}
-                </div>
-            </div>
+                        </div>
+                        <ul className="divide-y divide-zinc-100">
+                            {steps.map((step, i) => (
+                                <li key={i} className="flex items-center gap-3 px-5 py-3">
+                                    {step.done
+                                        ? <CheckCircle2 className="h-5 w-5 text-teal-500 shrink-0" />
+                                        : <Circle className="h-5 w-5 text-zinc-300 shrink-0" />
+                                    }
+                                    <span className={`text-sm font-medium w-44 shrink-0 ${step.done ? 'text-zinc-500' : 'text-zinc-900'}`}>{step.label}</span>
+                                    <span className={`text-sm flex-1 ${step.done ? 'text-zinc-400' : 'text-zinc-600'}`}>{step.detail}</span>
+                                    {step.done
+                                        ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">Complete</span>
+                                        : step.hint && step.hintLink
+                                            ? <Link href={step.hintLink} className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap">{step.hint}</Link>
+                                            : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
+                                    }
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )
+            })()}
 
             {/* Toggle error */}
             {toggleError && (

@@ -199,10 +199,14 @@ export async function getROITargets(eventId: string) {
 }
 
 export async function getROIActuals(eventId: string): Promise<ROIActuals> {
-    const [meetings, eventWithAttendees, roiTargets] = await Promise.all([
+    const [occurredPitchMeetings, eventWithAttendees, roiTargets] = await Promise.all([
         prisma.meeting.findMany({
-            where: { eventId, status: { in: ['CONFIRMED', 'OCCURRED'] } },
-            include: { attendees: { include: { company: true } } },
+            where: { eventId, status: 'OCCURRED', pitchId: { not: null } },
+            select: {
+                pitchId: true,
+                attendees: { select: { id: true } },
+                pitch: { select: { targets: { select: { attendeeId: true } } } },
+            },
         }),
         prisma.event.findUnique({
             where: { id: eventId },
@@ -221,18 +225,6 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
             include: { targetCompanies: true }
         }),
     ])
-
-    // Pipeline: Deduplicate by company, take the company's pipelineValue
-    const companyValues = new Map<string, number>()
-    for (const mtg of meetings) {
-        for (const att of mtg.attendees) {
-            if (att.isExternal && att.company.pipelineValue) {
-                const existing = companyValues.get(att.companyId) || 0
-                companyValues.set(att.companyId, Math.max(existing, att.company.pipelineValue))
-            }
-        }
-    }
-    const actualPipeline = [...companyValues.values()].reduce((sum, val) => sum + val, 0)
 
     // Target companies hit: any event attendee from that company counts
     const targetCompanyIds = roiTargets?.targetCompanies?.map(c => c.id) || []
@@ -255,7 +247,35 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
     }
     const additionalCompanies = [...additionalCompanyMap.values()]
 
+    // actualPipeline: Physical Event Execution companies only (event attendees, no LinkedIn)
+    const seenPipeline = new Set<string>()
+    let actualPipeline = 0
+    for (const c of targetCompaniesHit) {
+        if (seenPipeline.has(c.id)) continue
+        seenPipeline.add(c.id)
+        const tc = roiTargets?.targetCompanies.find(t => t.id === c.id)
+        if (tc?.pipelineValue) actualPipeline += tc.pipelineValue
+    }
+    for (const c of additionalCompanies) {
+        if (seenPipeline.has(c.id)) continue
+        seenPipeline.add(c.id)
+        if (c.pipelineValue) actualPipeline += c.pipelineValue
+    }
+
     const actualCustomerMeetings = externalAttendeeCount
+
+    const pitchHits = new Map<string, Set<string>>()
+    for (const mtg of occurredPitchMeetings) {
+        if (!mtg.pitchId) continue
+        const targetIds = new Set(mtg.pitch?.targets.map(t => t.attendeeId) ?? [])
+        let hits = pitchHits.get(mtg.pitchId)
+        if (!hits) { hits = new Set(); pitchHits.set(mtg.pitchId, hits) }
+        for (const att of mtg.attendees) {
+            if (targetIds.has(att.id)) hits.add(att.id)
+        }
+    }
+    let actualMediaPR = 0
+    for (const hits of pitchHits.values()) actualMediaPR += hits.size
 
     return {
         actualInvestment: eventWithAttendees?.budget || 0,
@@ -267,7 +287,7 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
         additionalCompanies,
         actualErta: roiTargets?.actualErta || 0,
         actualSpeaking: roiTargets?.actualSpeaking || 0,
-        actualMediaPR: roiTargets?.actualMediaPR || 0,
+        actualMediaPR,
         actualEventScans: roiTargets?.actualEventScans || 0,
         actualCost: roiTargets?.actualCost || 0,
     }

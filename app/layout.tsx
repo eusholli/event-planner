@@ -8,7 +8,10 @@ import { RoleSynchronizer } from '@/components/auth/RoleSynchronizer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Event Planner',
+  title: {
+    template: '%s | Event Planner',
+    default: 'Event Planner',
+  },
   description: 'Manage your events efficiently',
 }
 

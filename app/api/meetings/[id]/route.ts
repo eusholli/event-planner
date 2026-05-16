@@ -65,20 +65,10 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
 
         const body = await request.json()
 
-        // LOCK CHECK
-        const { isEventEditable } = await import('@/lib/events')
         const currentMeeting = await prisma.meeting.findUnique({ where: { id }, select: { eventId: true } })
 
         if (!currentMeeting) {
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
-        }
-
-        if (currentMeeting.eventId) {
-            if (!await isEventEditable(currentMeeting.eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
-            }
         }
 
         const {
@@ -96,7 +86,8 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
             location,
             otherDetails,
             isApproved,
-            calendarInviteSent
+            calendarInviteSent,
+            pitchId
         } = body
 
         // Basic title validation for all meetings
@@ -219,6 +210,13 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
                 set: [], // Clear existing
                 connect: attendeeIds.length > 0 ? attendeeIds.map((id: string) => ({ id })) : [],
             }
+            // Auto-link attendees to the event if not already linked
+            if (attendeeIds.length > 0 && meeting.eventId) {
+                await prisma.event.update({
+                    where: { id: meeting.eventId },
+                    data: { attendees: { connect: attendeeIds.map((id: string) => ({ id })) } },
+                })
+            }
         }
 
         // Only update status if provided
@@ -235,6 +233,18 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
         if (status === 'CANCELED') {
             updateData.roomId = null;
             updateData.location = null;
+        }
+
+        if (pitchId !== undefined) {
+            if (pitchId === null) {
+                updateData.pitchId = null
+            } else if (meeting.eventId) {
+                const pitch = await prisma.pitch.findFirst({ where: { id: pitchId, eventId: meeting.eventId } })
+                if (!pitch) {
+                    return NextResponse.json({ error: 'Invalid pitchId for this event' }, { status: 400 })
+                }
+                updateData.pitchId = pitchId
+            }
         }
 
         const updatedMeetingResult = await prisma.meeting.update({
@@ -296,16 +306,6 @@ export const DELETE = withAuth(async (request, { params, authCtx }) => {
         // Ownership/write check (user role can only delete meetings they created)
         if (!await isOwnerOrCanWrite(authCtx, meeting.createdBy)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        // LOCK CHECK
-        if (meeting.eventId) {
-            const { isEventEditable } = await import('@/lib/events')
-            if (!await isEventEditable(meeting.eventId)) {
-                return NextResponse.json({
-                    error: 'Event has occurred and is read-only.'
-                }, { status: 403 })
-            }
         }
 
         if (meeting && meeting.date && meeting.startTime && meeting.endTime) {
