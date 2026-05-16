@@ -41,6 +41,11 @@ type RouteHandler = (
     ctx: RouteContext
 ) => Promise<Response>
 
+type NextRouteHandler = (
+    req: Request,
+    ctx: { params: Promise<Record<string, string>> }
+) => Promise<Response>
+
 function getRole(sessionClaims: Record<string, unknown> | null): string {
     return (sessionClaims?.metadata as Record<string, unknown>)?.role as string ?? ''
 }
@@ -59,7 +64,7 @@ function roleHasCapability(role: string, requireRole: AuthOptions['requireRole']
     }
 }
 
-export function withAuth(handler: RouteHandler, options: AuthOptions = {}): RouteHandler {
+export function withAuth(handler: RouteHandler, options: AuthOptions = {}): NextRouteHandler {
     const {
         requireAuth = true,
         requireRole,
