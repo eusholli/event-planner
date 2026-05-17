@@ -9,7 +9,8 @@ const isProtectedRoute = createRouteMatcher([
     '/admin(.*)',
     '/reports(.*)',
     '/intelligence(.*)',
-    '/api(.*)'
+    '/api(.*)',
+    '/account/link-viber(.*)'
 ]);
 
 const isRootRoute = createRouteMatcher([
