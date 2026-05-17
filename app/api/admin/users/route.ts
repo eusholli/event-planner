@@ -2,6 +2,7 @@ import { clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { Roles } from '@/lib/constants'
 import { withAuth, type AuthContext } from '@/lib/with-auth'
+import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,8 +40,31 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
         // Wait for all updates to complete (or at least fire them off)
         await Promise.all(updates)
 
+        const clerkUserIds = users.data.map(u => u.id)
+        const [linkedViber, pendingViber] = await Promise.all([
+            prisma.viberUser.findMany({
+                where: { clerkUserId: { in: clerkUserIds } },
+                select: { clerkUserId: true },
+            }),
+            prisma.viberLinkCode.findMany({
+                where: {
+                    clerkUserId: { in: clerkUserIds },
+                    consumedAt: null,
+                    expiresAt: { gt: new Date() },
+                },
+                select: { clerkUserId: true },
+                distinct: ['clerkUserId'],
+            }),
+        ])
+        const linkedSet = new Set(linkedViber.map(v => v.clerkUserId))
+        const pendingSet = new Set(pendingViber.map(v => v.clerkUserId))
+
         return NextResponse.json({
-            data: users.data,
+            data: users.data.map(u => ({
+                ...u,
+                viberLinked: linkedSet.has(u.id),
+                viberPending: !linkedSet.has(u.id) && pendingSet.has(u.id),
+            })),
             totalCount: users.totalCount,
         })
     } catch (error) {

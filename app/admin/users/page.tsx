@@ -12,6 +12,15 @@ interface User {
     publicMetadata: {
         role?: string
     }
+    viberLinked: boolean
+    viberPending: boolean
+}
+
+interface ViberRowState {
+    working?: boolean
+    deepLink?: string
+    copied?: boolean
+    emailSent?: boolean
 }
 
 export default function UserAdminPage() {
@@ -19,6 +28,8 @@ export default function UserAdminPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [updating, setUpdating] = useState<string | null>(null)
+    const [viberState, setViberState] = useState<Record<string, ViberRowState>>({})
+    const [viberLinkedOverrides, setViberLinkedOverrides] = useState<Record<string, boolean>>({})
     const [search, setSearch] = useState('')
     const [page, setPage] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
@@ -116,6 +127,74 @@ export default function UserAdminPage() {
         }
     }
 
+    const handleGrantViber = async (userId: string) => {
+        setViberState(s => ({ ...s, [userId]: { working: true } }))
+        try {
+            const res = await fetch('/api/admin/viber/grant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clerkUserId: userId, sendEmail: false }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setViberState(s => ({ ...s, [userId]: { deepLink: data.deepLink } }))
+            } else {
+                setViberState(s => ({ ...s, [userId]: {} }))
+                alert(data.error || 'Failed to grant Viber access')
+            }
+        } catch {
+            setViberState(s => ({ ...s, [userId]: {} }))
+        }
+    }
+
+    const handleEmailViber = async (userId: string) => {
+        setViberState(s => ({ ...s, [userId]: { ...s[userId], working: true, emailSent: false } }))
+        try {
+            const res = await fetch('/api/admin/viber/grant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clerkUserId: userId, sendEmail: true }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setViberState(s => ({ ...s, [userId]: { deepLink: data.deepLink, emailSent: true, working: false } }))
+            } else {
+                setViberState(s => ({ ...s, [userId]: { ...s[userId], working: false } }))
+                alert(data.error || 'Failed to send invite email')
+            }
+        } catch {
+            setViberState(s => ({ ...s, [userId]: { ...s[userId], working: false } }))
+        }
+    }
+
+    const handleCopyLink = async (userId: string, deepLink: string) => {
+        await navigator.clipboard.writeText(deepLink)
+        setViberState(s => ({ ...s, [userId]: { ...s[userId], copied: true } }))
+        setTimeout(() => setViberState(s => ({ ...s, [userId]: { ...s[userId], copied: false } })), 2000)
+    }
+
+    const handleRevokeViber = async (userId: string) => {
+        if (!confirm('Revoke Viber access for this user? They will no longer be able to use the bot.')) return
+        setUpdating(userId)
+        try {
+            const res = await fetch('/api/admin/viber/revoke', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clerkUserId: userId }),
+            })
+            if (res.ok) {
+                setViberLinkedOverrides(o => ({ ...o, [userId]: false }))
+                setViberState(s => ({ ...s, [userId]: {} }))
+            } else {
+                alert('Failed to revoke Viber access')
+            }
+        } catch {
+            alert('Failed to revoke Viber access')
+        } finally {
+            setUpdating(null)
+        }
+    }
+
     const getRoleColor = (role?: string) => {
         switch (role) {
             case Roles.Root:
@@ -187,6 +266,9 @@ export default function UserAdminPage() {
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Role
                                         </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Viber
+                                        </th>
                                         <th scope="col" className="relative px-6 py-3">
                                             <span className="sr-only">Actions</span>
                                         </th>
@@ -195,7 +277,7 @@ export default function UserAdminPage() {
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center">
+                                            <td colSpan={5} className="px-6 py-12 text-center">
                                                 <div className="flex justify-center">
                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                                                 </div>
@@ -203,7 +285,7 @@ export default function UserAdminPage() {
                                         </tr>
                                     ) : users.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                            <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                                                 No users found
                                             </td>
                                         </tr>
@@ -243,6 +325,90 @@ export default function UserAdminPage() {
                                                             </option>
                                                         ))}
                                                     </select>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    {(() => {
+                                                        const isLinked = viberLinkedOverrides[user.id] ?? user.viberLinked
+                                                        const vs = viberState[user.id] || {}
+                                                        const userEmail = user.emailAddresses[0]?.emailAddress
+
+                                                        if (isLinked) {
+                                                            return (
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                        Linked
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => handleRevokeViber(user.id)}
+                                                                        disabled={updating === user.id}
+                                                                        className="text-xs text-red-600 hover:text-red-800 disabled:opacity-50 underline"
+                                                                    >
+                                                                        Revoke
+                                                                    </button>
+                                                                </div>
+                                                            )
+                                                        }
+
+                                                        if (vs.deepLink) {
+                                                            return (
+                                                                <div className="flex flex-col gap-1 min-w-0">
+                                                                    <div className="flex items-center gap-1">
+                                                                        <input
+                                                                            readOnly
+                                                                            value={vs.deepLink}
+                                                                            className="text-xs border rounded px-1 py-0.5 w-36 truncate bg-gray-50"
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => handleCopyLink(user.id, vs.deepLink!)}
+                                                                            className="text-xs text-indigo-600 hover:text-indigo-800 whitespace-nowrap"
+                                                                        >
+                                                                            {vs.copied ? 'Copied!' : 'Copy'}
+                                                                        </button>
+                                                                    </div>
+                                                                    {userEmail && (
+                                                                        <button
+                                                                            onClick={() => handleEmailViber(user.id)}
+                                                                            disabled={vs.working}
+                                                                            className="text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 text-left"
+                                                                        >
+                                                                            {vs.emailSent ? 'Email sent!' : vs.working ? 'Sending…' : `Email to ${userEmail}`}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        }
+
+                                                        if (user.viberPending) {
+                                                            return (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                                            Pending
+                                                                        </span>
+                                                                    </div>
+                                                                    {userEmail && (
+                                                                        <button
+                                                                            onClick={() => handleEmailViber(user.id)}
+                                                                            disabled={vs.working}
+                                                                            className="text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 text-left"
+                                                                        >
+                                                                            {vs.emailSent ? 'Email sent!' : vs.working ? 'Sending…' : 'Resend invite'}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        }
+
+                                                        return (
+                                                            <button
+                                                                onClick={() => handleGrantViber(user.id)}
+                                                                disabled={vs.working}
+                                                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-colors"
+                                                            >
+                                                                {vs.working ? 'Working…' : 'Grant Viber'}
+                                                            </button>
+                                                        )
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <button
