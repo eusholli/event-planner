@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Image from "next/image";
 import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell, History } from "lucide-react";
 import clsx from "clsx";
 import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
@@ -304,6 +305,7 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-3">
+                        <Image src="/kenji-logo.svg" alt="Kenji" width={40} height={40} className="h-10 w-auto" />
                         <div className={clsx("w-3 h-3 rounded-full transition-colors", isConnected ? "bg-emerald-500" : "bg-red-400 animate-pulse")} />
                         <div>
                             <h2 className="text-base font-semibold text-zinc-900">OpenClaw Insights</h2>
