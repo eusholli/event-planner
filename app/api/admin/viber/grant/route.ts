@@ -51,7 +51,7 @@ async function handlePOST(req: Request, _ctx: any) {
     }
 
     const botUri = process.env.VIBER_BOT_URI
-    const botName = process.env.VIBER_BOT_NAME || 'Sales-Recon'
+    const botName = process.env.VIBER_BOT_NAME || process.env.APP_NAME || 'Sales-Recon'
     if (!botUri) {
         return NextResponse.json({ error: 'VIBER_BOT_URI not configured' }, { status: 500 })
     }

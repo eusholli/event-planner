@@ -70,6 +70,8 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       CRON_SECRET_KEY: ${CRON_SECRET_KEY:-}
       VIBER_BOT_URI: ${VIBER_BOT_URI:-}
+      VIBER_BOT_NAME: ${VIBER_BOT_NAME:-}
+      APP_NAME: ${APP_NAME:-}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
     depends_on:
       event-planner-migrate:
