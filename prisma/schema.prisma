@@ -12,6 +12,7 @@ model SystemSettings {
   defaultAttendeeTypes String[] @default([])
   defaultMeetingTypes  String[] @default([])
   defaultTags          String[] @default([])
+  defaultRegionTypes   String[] @default([])
 }
 
 model Event {
@@ -54,6 +55,8 @@ model Company {
   name            String            @unique
   description     String?
   pipelineValue   Float?
+  region          String?
+  subscribed      Boolean           @default(false)
   attendees         Attendee[]
   targetedByROI     EventROITargets[] @relation("TargetCompanies")
   subscriptionCount Int               @default(0)
@@ -394,4 +397,14 @@ model ViberUser {
   clerkUserId String   @unique
   viberName   String
   linkedAt    DateTime @default(now())
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  regions     String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([regions], type: Gin)
 }

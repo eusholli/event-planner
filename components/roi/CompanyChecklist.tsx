@@ -6,6 +6,7 @@ interface CompanyItem {
     id: string
     name: string
     pipelineValue?: number | null
+    region?: string | null
 }
 
 interface CompanyChecklistProps {

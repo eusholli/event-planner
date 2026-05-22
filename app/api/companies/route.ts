@@ -62,7 +62,7 @@ async function getHandler(request: Request) {
 async function postHandler(request: Request) {
     try {
         const json = await request.json()
-        const { name, description, pipelineValue } = json
+        const { name, description, pipelineValue, region } = json
 
         if (!name || !name.trim()) {
             return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
@@ -87,6 +87,7 @@ async function postHandler(request: Request) {
                 name: name.trim(),
                 description: description || null,
                 pipelineValue: pipelineValue ? parseFloat(pipelineValue) : null,
+                region: region || null,
             },
             include: {
                 _count: { select: { attendees: true } }

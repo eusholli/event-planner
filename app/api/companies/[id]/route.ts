@@ -36,12 +36,14 @@ async function putHandler(
     try {
         const { id } = await params
         const json = await request.json()
-        const { name, description, pipelineValue } = json
+        const { name, description, pipelineValue, region, subscribed } = json
 
         const updateData: any = {}
         if (name !== undefined) updateData.name = name.trim()
         if (description !== undefined) updateData.description = description || null
         if (pipelineValue !== undefined) updateData.pipelineValue = pipelineValue !== null && pipelineValue !== '' ? parseFloat(pipelineValue) : null
+        if (region !== undefined) updateData.region = region || null
+        if (subscribed !== undefined) updateData.subscribed = Boolean(subscribed)
 
         // Check for name uniqueness if name is being updated
         if (name) {

@@ -41,7 +41,7 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
         await Promise.all(updates)
 
         const clerkUserIds = users.data.map(u => u.id)
-        const [linkedViber, pendingViber] = await Promise.all([
+        const [linkedViber, pendingViber, profiles] = await Promise.all([
             prisma.viberUser.findMany({
                 where: { clerkUserId: { in: clerkUserIds } },
                 select: { clerkUserId: true },
@@ -55,15 +55,21 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
                 select: { clerkUserId: true },
                 distinct: ['clerkUserId'],
             }),
+            prisma.userProfile.findMany({
+                where: { clerkUserId: { in: clerkUserIds } },
+                select: { clerkUserId: true, regions: true },
+            }),
         ])
         const linkedSet = new Set(linkedViber.map(v => v.clerkUserId))
         const pendingSet = new Set(pendingViber.map(v => v.clerkUserId))
+        const profileMap = Object.fromEntries(profiles.map(p => [p.clerkUserId, p.regions]))
 
         return NextResponse.json({
             data: users.data.map(u => ({
                 ...u,
                 viberLinked: linkedSet.has(u.id),
                 viberPending: !linkedSet.has(u.id) && pendingSet.has(u.id),
+                regions: profileMap[u.id] ?? [],
             })),
             totalCount: users.totalCount,
         })
@@ -75,29 +81,37 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
 
 async function handlePOST(req: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
-        const { userId, role } = await req.json()
+        const { userId, role, regions } = await req.json()
 
-        if (!userId || !role) {
-            return NextResponse.json({ error: 'Missing userId or role' }, { status: 400 })
+        if (!userId) {
+            return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
         }
 
-        // Validate role
-        if (!Object.values(Roles).includes(role)) {
-            console.error(`Invalid role attempted: ${role}. Valid roles: ${Object.values(Roles).join(', ')}`)
-            return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 })
+        if (role === undefined && regions === undefined) {
+            return NextResponse.json({ error: 'Must provide role or regions to update' }, { status: 400 })
         }
 
-        const client = await clerkClient()
-        await client.users.updateUserMetadata(userId, {
-            publicMetadata: {
-                role,
-            },
-        })
+        if (role !== undefined) {
+            if (!Object.values(Roles).includes(role)) {
+                console.error(`Invalid role attempted: ${role}. Valid roles: ${Object.values(Roles).join(', ')}`)
+                return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 })
+            }
+            const client = await clerkClient()
+            await client.users.updateUserMetadata(userId, { publicMetadata: { role } })
+        }
+
+        if (regions !== undefined) {
+            await prisma.userProfile.upsert({
+                where: { clerkUserId: userId },
+                update: { regions },
+                create: { clerkUserId: userId, regions },
+            })
+        }
 
         return NextResponse.json({ success: true })
     } catch (error: any) {
-        console.error('Error updating user role:', error)
-        return NextResponse.json({ error: error.message || 'Failed to update user role' }, { status: 500 })
+        console.error('Error updating user metadata:', error)
+        return NextResponse.json({ error: error.message || 'Failed to update user metadata' }, { status: 500 })
     }
 }
 
@@ -108,6 +122,26 @@ async function handleDELETE(req: Request, ctx: { params: Promise<Record<string, 
         if (!userId) {
             return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
         }
+
+        // Clean up all DB records tied to this user
+        await Promise.all([
+            prisma.userProfile.deleteMany({ where: { clerkUserId: userId } }),
+            prisma.viberUser.deleteMany({ where: { clerkUserId: userId } }),
+            prisma.viberLinkCode.deleteMany({ where: { clerkUserId: userId } }),
+            prisma.intelligenceSubscription.deleteMany({ where: { userId } }),
+        ])
+
+        // Remove user from any event authorizedUserIds arrays
+        const eventsWithUser = await prisma.event.findMany({
+            where: { authorizedUserIds: { has: userId } },
+            select: { id: true, authorizedUserIds: true },
+        })
+        await Promise.all(eventsWithUser.map(event =>
+            prisma.event.update({
+                where: { id: event.id },
+                data: { authorizedUserIds: event.authorizedUserIds.filter(id => id !== userId) },
+            })
+        ))
 
         const client = await clerkClient()
         await client.users.deleteUser(userId)

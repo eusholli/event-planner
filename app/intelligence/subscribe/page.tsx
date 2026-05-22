@@ -9,7 +9,7 @@ import { ArrowLeft } from 'lucide-react'
 type EntityType = 'attendee' | 'company' | 'event'
 
 type AttendeeItem = { id: string; name: string; title: string; companyName: string }
-type CompanyItem = { id: string; name: string; description: string | null; pipelineValue: number | null }
+type CompanyItem = { id: string; name: string; description: string | null; pipelineValue: number | null; region: string | null; subscribed: boolean }
 type EventItem = { id: string; name: string; startDate: string | null; endDate: string | null; status: string }
 
 type SubState = {
@@ -84,20 +84,29 @@ function SubscribePage() {
   const [toggling, setToggling] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [reportableNames, setReportableNames] = useState<Set<string>>(new Set())
+  const [regionTypes, setRegionTypes] = useState<string[]>([])
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? null
+  const isRoot = user?.publicMetadata?.role === 'root'
 
   // Load subscription state + all entities
   useEffect(() => {
     if (!isLoaded) return
-    Promise.all([
+    const fetches: Promise<any>[] = [
       fetch('/api/intelligence/subscribe').then(r => r.json()),
       fetch('/api/attendees?all=true').then(r => r.json()),
       fetch('/api/companies').then(r => r.json()),
       fetch('/api/events').then(r => r.json()),
-    ])
-      .then(([subData, attendeeData, companyData, eventData]) => {
+    ]
+    if (isRoot) {
+      fetches.push(fetch('/api/admin/system').then(r => r.ok ? r.json() : {}).catch(() => ({})))
+    }
+    Promise.all(fetches)
+      .then(([subData, attendeeData, companyData, eventData, systemData]) => {
         setSub(subData)
+        if (isRoot && systemData?.defaultRegionTypes) {
+          setRegionTypes(systemData.defaultRegionTypes)
+        }
         // Normalize: handle both array and { attendees: [...] } response shapes
         const rawAttendees = Array.isArray(attendeeData) ? attendeeData : (attendeeData.attendees ?? [])
         const rawCompanies = Array.isArray(companyData) ? companyData : (companyData.companies ?? [])
@@ -113,6 +122,8 @@ function SubscribePage() {
           name: c.name,
           description: c.description ?? null,
           pipelineValue: c.pipelineValue ?? null,
+          region: c.region ?? null,
+          subscribed: c.subscribed ?? false,
         }))
         const mappedEvents: EventItem[] = rawEvents.map((e: any) => ({
           id: e.id,
@@ -146,7 +157,7 @@ function SubscribePage() {
         setError('Failed to load data')
         setLoading(false)
       })
-  }, [isLoaded])
+  }, [isLoaded, isRoot])
 
   const q = search.toLowerCase()
 
@@ -205,6 +216,22 @@ function SubscribePage() {
         }
       })
       setError('Failed to update selection')
+    }
+  }
+
+  async function updateCompanyField(id: string, field: 'region' | 'subscribed', value: string | boolean) {
+    const prev = companies.find(c => c.id === id)
+    setCompanies(cs => cs.map(c => c.id === id ? { ...c, [field]: value } : c))
+    try {
+      const res = await fetch(`/api/companies/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      })
+      if (!res.ok) throw new Error('Failed')
+    } catch {
+      if (prev) setCompanies(cs => cs.map(c => c.id === id ? { ...c, [field]: prev[field] } : c))
+      setError('Failed to update company')
     }
   }
 
@@ -371,12 +398,38 @@ function SubscribePage() {
                             className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
-                          <EntityActionButton name={c.name} type="company" hasReport={reportableNames.has(c.name)} onClick={e => e.stopPropagation()} />
-                          {c.pipelineValue ? (
-                            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
-                          ) : (
-                            <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Pipeline: Not Defined</span>
+                          {isRoot && (
+                            <>
+                              <select
+                                value={c.region || ''}
+                                onChange={e => updateCompanyField(c.id, 'region', e.target.value)}
+                                onClick={e => e.stopPropagation()}
+                                className="text-xs border border-zinc-200 rounded-md px-2 py-0.5 text-zinc-600 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-400 w-24 shrink-0"
+                              >
+                                <option value="">No region</option>
+                                {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                              </select>
+                              <button
+                                role="switch"
+                                aria-checked={c.subscribed}
+                                onClick={e => { e.preventDefault(); e.stopPropagation(); updateCompanyField(c.id, 'subscribed', !c.subscribed) }}
+                                title={c.subscribed ? 'Subscribed' : 'Not subscribed'}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${c.subscribed ? 'bg-indigo-600' : 'bg-zinc-300'}`}
+                              >
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${c.subscribed ? 'translate-x-5' : 'translate-x-1'}`} />
+                              </button>
+                            </>
                           )}
+                          <div className="w-28 shrink-0 flex justify-end">
+                            <EntityActionButton name={c.name} type="company" hasReport={reportableNames.has(c.name)} onClick={e => e.stopPropagation()} />
+                          </div>
+                          <div className="w-36 shrink-0 flex justify-end">
+                            {c.pipelineValue ? (
+                              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
+                            ) : (
+                              <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Pipeline: Not Defined</span>
+                            )}
+                          </div>
                         </label>
                       ))}
                     </div>
@@ -416,6 +469,14 @@ function SubscribePage() {
                   <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedCompanyIds.length} selected</span>
                 )}
               </h2>
+              <div className="flex items-center gap-3 px-2 py-1 mb-1 border-b border-zinc-100">
+                <div className="w-4 shrink-0" />
+                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide flex-1">Company</span>
+                {isRoot && <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide w-24 shrink-0">Region</span>}
+                {isRoot && <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide w-9 shrink-0">Sub</span>}
+                <div className="w-28 shrink-0" />
+                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide w-36 shrink-0">Pipeline</span>
+              </div>
               <div className="space-y-1">
                 {filteredCompanies.map(c => {
                   const isSelected = sub?.selectedCompanyIds.includes(c.id) ?? false
@@ -428,12 +489,38 @@ function SubscribePage() {
                         className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                       />
                       <span className="text-sm text-zinc-900 flex-1">{c.name}</span>
-                      <EntityActionButton name={c.name} type="company" hasReport={reportableNames.has(c.name)} onClick={e => e.stopPropagation()} />
-                      {c.pipelineValue ? (
-                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
-                      ) : (
-                        <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Pipeline: Not Defined</span>
+                      {isRoot && (
+                        <>
+                          <select
+                            value={c.region || ''}
+                            onChange={e => updateCompanyField(c.id, 'region', e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            className="text-xs border border-zinc-200 rounded-md px-2 py-0.5 text-zinc-600 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-400 w-24 shrink-0"
+                          >
+                            <option value="">No region</option>
+                            {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <button
+                            role="switch"
+                            aria-checked={c.subscribed}
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); updateCompanyField(c.id, 'subscribed', !c.subscribed) }}
+                            title={c.subscribed ? 'Subscribed' : 'Not subscribed'}
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${c.subscribed ? 'bg-indigo-600' : 'bg-zinc-300'}`}
+                          >
+                            <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${c.subscribed ? 'translate-x-5' : 'translate-x-1'}`} />
+                          </button>
+                        </>
                       )}
+                      <div className="w-28 shrink-0 flex justify-end">
+                        <EntityActionButton name={c.name} type="company" hasReport={reportableNames.has(c.name)} onClick={e => e.stopPropagation()} />
+                      </div>
+                      <div className="w-36 shrink-0 flex justify-end">
+                        {c.pipelineValue ? (
+                          <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Pipeline{formatCurrency(c.pipelineValue)}</span>
+                        ) : (
+                          <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Pipeline: Not Defined</span>
+                        )}
+                      </div>
                     </label>
                   )
                 })}

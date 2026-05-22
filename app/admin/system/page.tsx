@@ -10,12 +10,14 @@ export default function SystemAdminPage() {
         defaultTags: string[]
         defaultMeetingTypes: string[]
         defaultAttendeeTypes: string[]
+        defaultRegionTypes: string[]
     } | null>(null)
 
     // Local state for list inputs
     const [defaultTagsInput, setDefaultTagsInput] = useState('')
     const [defaultMeetingTypesInput, setDefaultMeetingTypesInput] = useState('')
     const [defaultAttendeeTypesInput, setDefaultAttendeeTypesInput] = useState('')
+    const [defaultRegionTypesInput, setDefaultRegionTypesInput] = useState('')
 
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -37,7 +39,8 @@ export default function SystemAdminPage() {
                     ...data,
                     defaultTags: data.defaultTags || [],
                     defaultMeetingTypes: data.defaultMeetingTypes || [],
-                    defaultAttendeeTypes: data.defaultAttendeeTypes || []
+                    defaultAttendeeTypes: data.defaultAttendeeTypes || [],
+                    defaultRegionTypes: data.defaultRegionTypes || []
                 }
                 setSettings(loadedSettings)
 
@@ -45,6 +48,7 @@ export default function SystemAdminPage() {
                 setDefaultTagsInput(loadedSettings.defaultTags.join(', '))
                 setDefaultMeetingTypesInput(loadedSettings.defaultMeetingTypes.join(', '))
                 setDefaultAttendeeTypesInput(loadedSettings.defaultAttendeeTypes.join(', '))
+                setDefaultRegionTypesInput(loadedSettings.defaultRegionTypes.join(', '))
 
                 setLoading(false)
             })
@@ -66,7 +70,8 @@ export default function SystemAdminPage() {
                 ...settings!,
                 defaultTags: defaultTagsInput.split(',').map(s => s.trim()).filter(Boolean),
                 defaultMeetingTypes: defaultMeetingTypesInput.split(',').map(s => s.trim()).filter(Boolean),
-                defaultAttendeeTypes: defaultAttendeeTypesInput.split(',').map(s => s.trim()).filter(Boolean)
+                defaultAttendeeTypes: defaultAttendeeTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                defaultRegionTypes: defaultRegionTypesInput.split(',').map(s => s.trim()).filter(Boolean)
             }
 
             const res = await fetch('/api/admin/system', {
@@ -276,6 +281,18 @@ export default function SystemAdminPage() {
                                     className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                                 />
                                 <p className="text-xs text-neutral-500 mt-1">Comma-separated list of attendee types automatically added to new events.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700">Default Region Types</label>
+                                <input
+                                    type="text"
+                                    value={defaultRegionTypesInput}
+                                    onChange={e => setDefaultRegionTypesInput(e.target.value)}
+                                    placeholder="e.g. APAC, EMEA, AMER"
+                                    className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                />
+                                <p className="text-xs text-neutral-500 mt-1">Comma-separated list of region types used to tag companies and users.</p>
                             </div>
                         </div>
                         <div className="flex justify-end">

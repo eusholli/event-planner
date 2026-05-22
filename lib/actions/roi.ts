@@ -215,7 +215,7 @@ export async function getROIActuals(eventId: string): Promise<ROIActuals> {
                 attendees: {
                     select: {
                         isExternal: true,
-                        company: { select: { id: true, name: true, pipelineValue: true } }
+                        company: { select: { id: true, name: true, pipelineValue: true, region: true } }
                     }
                 }
             }

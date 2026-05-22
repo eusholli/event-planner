@@ -17,6 +17,7 @@ interface Company {
     name: string
     description?: string | null
     pipelineValue?: number | null
+    region?: string | null
 }
 
 interface Attendee {

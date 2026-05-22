@@ -13,6 +13,7 @@ import type { HumanizeOptions } from '@/components/roi/HumanizeOptionsPanel'
 interface Company {
     id: string
     name: string
+    region?: string | null
 }
 
 interface LinkedInModalProps {

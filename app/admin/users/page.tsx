@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Roles } from '@/lib/constants'
 import Pagination from '@/components/Pagination'
 
@@ -12,6 +12,7 @@ interface User {
     publicMetadata: {
         role?: string
     }
+    regions: string[]
     viberLinked: boolean
     viberPending: boolean
 }
@@ -34,6 +35,16 @@ export default function UserAdminPage() {
     const [page, setPage] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
     const [limit] = useState(10)
+    const [regionTypes, setRegionTypes] = useState<string[]>([])
+    const [openRegionPicker, setOpenRegionPicker] = useState<string | null>(null)
+    const pickerRef = useRef<HTMLDivElement | null>(null)
+
+    useEffect(() => {
+        fetch('/api/admin/system')
+            .then(res => res.ok ? res.json() : {})
+            .then(data => setRegionTypes(data.defaultRegionTypes || []))
+            .catch(() => {})
+    }, [])
 
     // Debounce search
     useEffect(() => {
@@ -50,7 +61,20 @@ export default function UserAdminPage() {
         fetchUsers(page, search)
     }, [page])
 
+    // Close region picker on outside click
+    useEffect(() => {
+        if (!openRegionPicker) return
+        const handle = (e: MouseEvent) => {
+            if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+                setOpenRegionPicker(null)
+            }
+        }
+        document.addEventListener('mousedown', handle)
+        return () => document.removeEventListener('mousedown', handle)
+    }, [openRegionPicker])
+
     const fetchUsers = async (pageNum = page, searchTerm = search) => {
+        setOpenRegionPicker(null)
         setLoading(true)
         try {
             const params = new URLSearchParams({
@@ -95,6 +119,26 @@ export default function UserAdminPage() {
             await fetchUsers(page, search)
         } finally {
             setUpdating(null)
+        }
+    }
+
+    const handleRegionChange = async (userId: string, newRegions: string[]) => {
+        // Optimistic update — no re-fetch, no blink
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, regions: newRegions } : u))
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, regions: newRegions }),
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'Failed to update regions')
+            }
+        } catch (err) {
+            // Roll back by re-fetching on error
+            await fetchUsers(page, search)
+            alert(err instanceof Error ? err.message : 'Failed to update regions')
         }
     }
 
@@ -266,6 +310,11 @@ export default function UserAdminPage() {
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Role
                                         </th>
+                                        {regionTypes.length > 0 && (
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Region
+                                            </th>
+                                        )}
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Viber
                                         </th>
@@ -277,7 +326,7 @@ export default function UserAdminPage() {
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center">
+                                            <td colSpan={regionTypes.length > 0 ? 6 : 5} className="px-6 py-12 text-center">
                                                 <div className="flex justify-center">
                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                                                 </div>
@@ -285,7 +334,7 @@ export default function UserAdminPage() {
                                         </tr>
                                     ) : users.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                            <td colSpan={regionTypes.length > 0 ? 6 : 5} className="px-6 py-12 text-center text-gray-500">
                                                 No users found
                                             </td>
                                         </tr>
@@ -326,6 +375,41 @@ export default function UserAdminPage() {
                                                         ))}
                                                     </select>
                                                 </td>
+                                                {regionTypes.length > 0 && (
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div
+                                                            className="relative"
+                                                            ref={openRegionPicker === user.id ? pickerRef : null}
+                                                        >
+                                                            <button
+                                                                onClick={() => setOpenRegionPicker(openRegionPicker === user.id ? null : user.id)}
+                                                                className="text-sm text-gray-700 hover:text-indigo-600 text-left"
+                                                            >
+                                                                {user.regions.length > 0 ? user.regions.join(', ') : <span className="text-gray-400">None</span>}
+                                                            </button>
+                                                            {openRegionPicker === user.id && (
+                                                                <div className="absolute left-0 top-full mt-1 z-10 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-32">
+                                                                    {regionTypes.map((r) => (
+                                                                        <label key={r} className="flex items-center gap-2 py-1 text-sm text-gray-700 cursor-pointer hover:text-indigo-600">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={user.regions.includes(r)}
+                                                                                onChange={() => {
+                                                                                    const next = user.regions.includes(r)
+                                                                                        ? user.regions.filter(x => x !== r)
+                                                                                        : [...user.regions, r]
+                                                                                    handleRegionChange(user.id, next)
+                                                                                }}
+                                                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                                            />
+                                                                            {r}
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                )}
                                                 <td className="px-6 py-4 text-sm">
                                                     {(() => {
                                                         const isLinked = viberLinkedOverrides[user.id] ?? user.viberLinked

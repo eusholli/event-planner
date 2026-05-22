@@ -155,7 +155,7 @@ export async function exportEventData(eventId: string) {
 
     // Companies: strip id
     const companiesOut = Array.from(companyMap.values()).map(c => ({
-        name: c.name, description: c.description, pipelineValue: c.pipelineValue,
+        name: c.name, description: c.description, pipelineValue: c.pipelineValue, region: c.region,
     }))
 
     // Event: strip id, authorizedUserIds → authorizedEmails
@@ -297,8 +297,8 @@ export async function importEventData(eventId: string, data: any) {
             try {
                 const upserted = await prisma.company.upsert({
                     where: { name: comp.name },
-                    create: { name: comp.name, description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null },
-                    update: { description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null },
+                    create: { name: comp.name, description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null, region: comp.region ?? null },
+                    update: { description: comp.description ?? null, pipelineValue: comp.pipelineValue ?? null, region: comp.region ?? null },
                 })
                 companyNameToId.set(comp.name, upserted.id)
             } catch (e) {

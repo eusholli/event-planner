@@ -8,6 +8,7 @@ interface Company {
     name: string
     description?: string | null
     pipelineValue?: number | null
+    region?: string | null
 }
 
 interface Attendee {
@@ -60,6 +61,8 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
     const [newCompanyName, setNewCompanyName] = useState('')
     const [newCompanyDescription, setNewCompanyDescription] = useState('')
     const [newCompanyPipeline, setNewCompanyPipeline] = useState('')
+    const [newCompanyRegion, setNewCompanyRegion] = useState('')
+    const [regionTypes, setRegionTypes] = useState<string[]>([])
     const [creatingCompany, setCreatingCompany] = useState(false)
     const companyDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -168,6 +171,11 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
             }
 
             setAttendeeTypes(types)
+
+            fetch('/api/admin/system')
+                .then(res => res.ok ? res.json() : {})
+                .then(data => setRegionTypes(data.defaultRegionTypes || []))
+                .catch(() => {})
         } catch (error) {
             console.error('Error checking settings:', error)
         }
@@ -286,6 +294,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                     name: newCompanyName.trim(),
                     description: newCompanyDescription.trim() || null,
                     pipelineValue: newCompanyPipeline || null,
+                    region: newCompanyRegion || null,
                 }),
             })
             if (res.ok) {
@@ -296,6 +305,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                 setNewCompanyName('')
                 setNewCompanyDescription('')
                 setNewCompanyPipeline('')
+                setNewCompanyRegion('')
             } else {
                 const data = await res.json()
                 alert(data.error || 'Failed to create company')
@@ -793,10 +803,23 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
                                     min="0"
                                 />
                             </div>
+                            {regionTypes.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Region</label>
+                                    <select
+                                        className="input-field"
+                                        value={newCompanyRegion}
+                                        onChange={e => setNewCompanyRegion(e.target.value)}
+                                    >
+                                        <option value="">Select region...</option>
+                                        {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => { setShowNewCompanyForm(false); setNewCompanyName(''); setNewCompanyDescription(''); setNewCompanyPipeline('') }}
+                                onClick={() => { setShowNewCompanyForm(false); setNewCompanyName(''); setNewCompanyDescription(''); setNewCompanyPipeline(''); setNewCompanyRegion('') }}
                                 className="flex-1 btn-secondary"
                             >
                                 Cancel

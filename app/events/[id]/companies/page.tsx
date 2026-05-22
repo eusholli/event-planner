@@ -8,12 +8,13 @@ interface Company {
     name: string
     description?: string | null
     pipelineValue?: number | null
+    region?: string | null
     _count?: {
         attendees: number
     }
 }
 
-const COMPANIES_FILTER_DEFAULTS = { search: '' }
+const COMPANIES_FILTER_DEFAULTS = { search: '', region: '' }
 
 export default function CompaniesPage() {
     const params = require('next/navigation').useParams()
@@ -27,10 +28,12 @@ export default function CompaniesPage() {
 
 function CompaniesContent({ eventId }: { eventId: string }) {
     const [companies, setCompanies] = useState<Company[]>([])
+    const [regionTypes, setRegionTypes] = useState<string[]>([])
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        pipelineValue: ''
+        pipelineValue: '',
+        region: ''
     })
     const [loading, setLoading] = useState(false)
     const { filters: companyFilters, setFilter: setCompanyFilter, isFiltered: companyIsFiltered, resetFilters: resetCompanyFilters } = useFilterParams('companies', COMPANIES_FILTER_DEFAULTS)
@@ -40,12 +43,17 @@ function CompaniesContent({ eventId }: { eventId: string }) {
     const [editFormData, setEditFormData] = useState({
         name: '',
         description: '',
-        pipelineValue: ''
+        pipelineValue: '',
+        region: ''
     })
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
     useEffect(() => {
         if (eventId) fetchCompanies()
+        fetch('/api/admin/system')
+            .then(res => res.ok ? res.json() : {})
+            .then(data => setRegionTypes(data.defaultRegionTypes || []))
+            .catch(() => {})
     }, [eventId])
 
     const fetchCompanies = async () => {
@@ -64,11 +72,12 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                 body: JSON.stringify({
                     name: formData.name,
                     description: formData.description || null,
-                    pipelineValue: formData.pipelineValue ? parseFloat(formData.pipelineValue) : null
+                    pipelineValue: formData.pipelineValue ? parseFloat(formData.pipelineValue) : null,
+                    region: formData.region || null
                 }),
             })
             if (res.ok) {
-                setFormData({ name: '', description: '', pipelineValue: '' })
+                setFormData({ name: '', description: '', pipelineValue: '', region: '' })
                 fetchCompanies()
             } else {
                 const data = await res.json()
@@ -86,7 +95,8 @@ function CompaniesContent({ eventId }: { eventId: string }) {
         setEditFormData({
             name: company.name,
             description: company.description || '',
-            pipelineValue: company.pipelineValue ? company.pipelineValue.toString() : ''
+            pipelineValue: company.pipelineValue ? company.pipelineValue.toString() : '',
+            region: company.region || ''
         })
         setIsEditModalOpen(true)
     }
@@ -102,7 +112,8 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                 body: JSON.stringify({
                     name: editFormData.name,
                     description: editFormData.description || null,
-                    pipelineValue: editFormData.pipelineValue ? parseFloat(editFormData.pipelineValue) : null
+                    pipelineValue: editFormData.pipelineValue ? parseFloat(editFormData.pipelineValue) : null,
+                    region: editFormData.region || null
                 }),
             })
             if (res.ok) {
@@ -126,25 +137,37 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                         <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Companies</h1>
                         <p className="mt-2 text-neutral-500">Companies represented by attendees at this event.</p>
                     </div>
-                    <div className="relative w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-56">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                className="input-field pl-10"
+                                placeholder="Search companies..."
+                                value={companyFilters.search as string}
+                                onChange={(e) => setCompanyFilter('search', e.target.value)}
+                            />
                         </div>
-                        <input
-                            type="text"
-                            className="input-field pl-10"
-                            placeholder="Search companies..."
-                            value={companyFilters.search as string}
-                            onChange={(e) => setCompanyFilter('search', e.target.value)}
-                        />
+                        {regionTypes.length > 0 && (
+                            <select
+                                className="input-field w-36"
+                                value={companyFilters.region as string}
+                                onChange={(e) => setCompanyFilter('region', e.target.value)}
+                            >
+                                <option value="">All Regions</option>
+                                {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        )}
                         {companyIsFiltered && (
                             <button
                                 onClick={resetCompanyFilters}
-                                className="text-sm text-gray-500 hover:text-gray-700 underline"
+                                className="text-sm text-gray-500 hover:text-gray-700 underline whitespace-nowrap"
                             >
-                                Clear Search
+                                Clear
                             </button>
                         )}
                     </div>
@@ -191,6 +214,21 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                                         onChange={(e) => setFormData({ ...formData, pipelineValue: e.target.value })}
                                     />
                                 </div>
+                                {regionTypes.length > 0 && (
+                                    <div>
+                                        <label htmlFor="region" className="block text-sm font-medium text-neutral-700 mb-1.5">Region</label>
+                                        <select
+                                            id="region"
+                                            name="region"
+                                            className="input-field"
+                                            value={formData.region}
+                                            onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                                        >
+                                            <option value="">Select region...</option>
+                                            {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <button
                                     type="submit"
                                     disabled={loading}
@@ -209,7 +247,13 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                     <div className="lg:col-span-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {companies
-                                .filter(company => company.name.toLowerCase().includes((companyFilters.search as string).toLowerCase()) || (company.description && company.description.toLowerCase().includes((companyFilters.search as string).toLowerCase())))
+                                .filter(company => {
+                                    const search = (companyFilters.search as string).toLowerCase()
+                                    const region = companyFilters.region as string
+                                    const matchesSearch = !search || company.name.toLowerCase().includes(search) || (company.description && company.description.toLowerCase().includes(search)) || (company.region && company.region.toLowerCase().includes(search))
+                                    const matchesRegion = !region || company.region === region
+                                    return matchesSearch && matchesRegion
+                                })
                                 .map((company) => (
                                     <div key={company.id} className="bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between">
                                         <div>
@@ -242,6 +286,11 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                                                     <span className="text-xs font-medium">${company.pipelineValue.toLocaleString()}</span>
                                                 </div>
                                             )}
+                                            {company.region && (
+                                                <div className="flex items-center text-violet-700 bg-violet-50 px-2.5 py-1.5 rounded-lg inline-flex">
+                                                    <span className="text-xs font-medium">{company.region}</span>
+                                                </div>
+                                            )}
                                             {company._count !== undefined && (
                                                 <div className="flex items-center text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg inline-flex">
                                                     <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,7 +302,13 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                                         </div>
                                     </div>
                                 ))}
-                            {companies.filter(c => c.name.toLowerCase().includes((companyFilters.search as string).toLowerCase()) || (c.description && c.description.toLowerCase().includes((companyFilters.search as string).toLowerCase()))).length === 0 && (
+                            {companies.filter(c => {
+                                const search = (companyFilters.search as string).toLowerCase()
+                                const region = companyFilters.region as string
+                                const matchesSearch = !search || c.name.toLowerCase().includes(search) || (c.description && c.description.toLowerCase().includes(search)) || (c.region && c.region.toLowerCase().includes(search))
+                                const matchesRegion = !region || c.region === region
+                                return matchesSearch && matchesRegion
+                            }).length === 0 && (
                                 <div className="col-span-full py-20 text-center border-2 border-dashed border-neutral-200 rounded-xl bg-white/50">
                                     <div className="mx-auto w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
                                         <svg className="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +317,7 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                                     </div>
                                     <h3 className="text-lg font-medium text-neutral-900">No companies found</h3>
                                     <p className="text-neutral-500 mt-1">
-                                        {companyFilters.search ? 'Try adjusting your search.' : 'Add attendees from a company to see it here.'}
+                                        {(companyFilters.search || companyFilters.region) ? 'Try adjusting your search or filters.' : 'Add attendees from a company to see it here.'}
                                     </p>
                                 </div>
                             )}
@@ -313,6 +368,21 @@ function CompaniesContent({ eventId }: { eventId: string }) {
                                         onChange={(e) => setEditFormData({ ...editFormData, pipelineValue: e.target.value })}
                                     />
                                 </div>
+                                {regionTypes.length > 0 && (
+                                    <div>
+                                        <label htmlFor="edit-region" className="block text-sm font-medium text-neutral-700 mb-1.5">Region</label>
+                                        <select
+                                            id="edit-region"
+                                            name="region"
+                                            className="input-field"
+                                            value={editFormData.region}
+                                            onChange={(e) => setEditFormData({ ...editFormData, region: e.target.value })}
+                                        >
+                                            <option value="">Select region...</option>
+                                            {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <div className="flex justify-end space-x-3 pt-4 border-t border-neutral-100">
                                     <button
                                         type="button"

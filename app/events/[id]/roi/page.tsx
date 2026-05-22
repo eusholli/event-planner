@@ -17,6 +17,7 @@ interface Company {
     name: string
     description?: string | null
     pipelineValue?: number | null
+    region?: string | null
 }
 
 // Types
@@ -351,8 +352,16 @@ function ROIPage() {
 
     // Company edit modal
     const [editingCompany, setEditingCompany] = useState<Company | null>(null)
-    const [editCompanyForm, setEditCompanyForm] = useState({ name: '', description: '', pipelineValue: '' })
+    const [editCompanyForm, setEditCompanyForm] = useState({ name: '', description: '', pipelineValue: '', region: '' })
     const [isCompanyEditModalOpen, setIsCompanyEditModalOpen] = useState(false)
+    const [regionTypes, setRegionTypes] = useState<string[]>([])
+
+    useEffect(() => {
+        fetch('/api/admin/system')
+            .then(res => res.ok ? res.json() : {})
+            .then(data => setRegionTypes(data.defaultRegionTypes || []))
+            .catch(() => {})
+    }, [])
 
     const openCompanyEditModal = (company: Company) => {
         const full = availableCompanies.find(c => c.id === company.id) ?? company
@@ -361,6 +370,7 @@ function ROIPage() {
             name: full.name,
             description: full.description ?? '',
             pipelineValue: full.pipelineValue != null ? full.pipelineValue.toString() : '',
+            region: full.region ?? '',
         })
         setIsCompanyEditModalOpen(true)
     }
@@ -375,6 +385,7 @@ function ROIPage() {
                 name: editCompanyForm.name,
                 description: editCompanyForm.description || null,
                 pipelineValue: editCompanyForm.pipelineValue ? parseFloat(editCompanyForm.pipelineValue) : null,
+                region: editCompanyForm.region || null,
             }),
         })
         if (!res.ok) {
@@ -2073,6 +2084,19 @@ function ROIPage() {
                                     onChange={e => setEditCompanyForm(f => ({ ...f, pipelineValue: e.target.value }))}
                                 />
                             </div>
+                            {regionTypes.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1.5">Region</label>
+                                    <select
+                                        className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                        value={editCompanyForm.region}
+                                        onChange={e => setEditCompanyForm(f => ({ ...f, region: e.target.value }))}
+                                    >
+                                        <option value="">Select region...</option>
+                                        {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                                    </select>
+                                </div>
+                            )}
                             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
                                 <button
                                     type="button"

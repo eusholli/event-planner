@@ -51,6 +51,7 @@ interface Company {
     id: string
     name: string
     pipelineValue?: number | null
+    region?: string | null
 }
 
 const METRIC_FIELDS: Array<{ key: keyof LinkedInDraft; label: string; hint: string; isFloat?: boolean; isDate?: boolean; isUrl?: boolean; isTextarea?: boolean }> = [

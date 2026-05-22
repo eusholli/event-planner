@@ -105,10 +105,18 @@ export default function DataIngestionPage() {
     const [companies, setCompanies] = useState<any[]>([]);
     const [people, setPeople] = useState<any[]>([]);
     const [meetings, setMeetings] = useState<any[]>([]);
+    const [regionTypes, setRegionTypes] = useState<string[]>([]);
 
     const [activeTab, setActiveTab] = useState<'companies' | 'people' | 'meetings'>('companies');
 
     const fileInput = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        fetch('/api/admin/system')
+            .then(res => res.ok ? res.json() : {})
+            .then(data => setRegionTypes(data.defaultRegionTypes || []))
+            .catch(() => {})
+    }, [])
 
     // Pre-populate companies from ROI page when pendingCompanies param is present
     useEffect(() => {
@@ -380,6 +388,19 @@ export default function DataIngestionPage() {
                                             <FieldEditor obj={co} idx={idx} field="pipelineValue" type="number" label="Pipeline Value" setFn={setCompanies} list={companies} />
                                         </div>
                                         <FieldEditor obj={co} idx={idx} field="description" label="Description" setFn={setCompanies} list={companies} />
+                                        {regionTypes.length > 0 && (
+                                            <div className="flex flex-col space-y-1 my-2 border-l-2 pl-3 pb-2 border-zinc-100">
+                                                <span className="text-xs text-zinc-500 font-medium">Region</span>
+                                                <select
+                                                    value={co.region || ''}
+                                                    onChange={e => updateEntity(co, idx, 'region', e.target.value || null, setCompanies, companies)}
+                                                    className="text-sm py-1 border-b bg-transparent outline-none transition-colors border-zinc-200 focus:border-zinc-800"
+                                                >
+                                                    <option value="">Select region...</option>
+                                                    {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+                                                </select>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                                 {companies.length === 0 && <p className="text-zinc-400 text-center py-10">No companies extracted</p>}
