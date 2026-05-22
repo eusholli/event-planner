@@ -193,3 +193,97 @@ Write a concise, professional HTML email. Rules:
   )
   return parseGeminiResponse(result.response.text())
 }
+
+export async function composeRegionalEmail(
+  recipientName: string,
+  region: string,
+  regionalTargets: TargetUpdate[],
+  upcomingEvents: UpcomingEvent[],
+  runDate: string,
+  appUrl?: string,
+  reportToken?: string
+): Promise<{ subject: string; html: string }> {
+
+  const baseUrl = appUrl ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+
+  const byType = {
+    company: regionalTargets.filter(t => t.type === 'company'),
+    attendee: regionalTargets.filter(t => t.type === 'attendee'),
+    event: regionalTargets.filter(t => t.type === 'event'),
+  }
+
+  const formatTarget = (t: TargetUpdate) => {
+    const reportUrl = reportToken
+      ? `${baseUrl}/intelligence/report/${encodeURIComponent(t.name)}?token=${reportToken}`
+      : null
+    const actionBlock = t.recommendedAction
+      ? `Recommended Action: ${t.recommendedAction}`
+      : ''
+    const askMoreQuery =
+      t.type === 'event'
+        ? `Show me the latest market intelligence for event ${t.name}`
+        : `Show me the latest market intelligence for ${t.name}`
+    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}`
+    const askMoreLink = `<a href="${askMoreUrl}" style="font-size:12px;color:#4a9eff;display:block;margin:4px 0;">Ask more questions... →</a>`
+    const reportLinkHtml = reportUrl
+      ? `<a href="${reportUrl}" style="font-size:12px;color:#666;display:block;margin:4px 0;">Read full brief →</a>`
+      : ''
+    const linksHtml = [askMoreLink, reportLinkHtml].filter(Boolean).join('\n')
+    return `### ${t.name}\nSummary: ${t.summary}\nSales Angle: ${t.salesAngle}\n${actionBlock}\nLINKS_HTML_VERBATIM:\n${linksHtml}\nEND_LINKS_HTML\n\nFull Report:\n${t.fullReport}`
+  }
+
+  const targetsText = [
+    byType.company.length ? `## Companies in ${region}\n${byType.company.map(formatTarget).join('\n\n---\n\n')}` : '',
+    byType.attendee.length ? `## People at ${region} companies\n${byType.attendee.map(formatTarget).join('\n\n---\n\n')}` : '',
+    byType.event.length ? `## Events\n${byType.event.map(formatTarget).join('\n\n---\n\n')}` : '',
+  ].filter(Boolean).join('\n\n')
+
+  const eventsText = upcomingEvents
+    .map(e => `- ${e.name}: ${e.startDate ?? 'TBD'} to ${e.endDate ?? 'TBD'} (${e.status})`)
+    .join('\n')
+
+  const isUnassigned = region === 'No Region'
+  const subjectLine = isUnassigned
+    ? `Intelligence Briefing – No Region – ${runDate}`
+    : `Intelligence Briefing – ${region} – ${runDate}`
+  const openingLine = isUnassigned
+    ? `Regional intelligence run for ${runDate} — companies with no region assigned (${regionalTargets.length} targets).`
+    : `Regional intelligence run for ${region} on ${runDate}. ${regionalTargets.length} targets.`
+
+  const prompt = `You are composing a regional market intelligence briefing for ${recipientName}, a Rakuten Symphony team member who covers the ${region} region.
+
+Run date: ${runDate}
+Region: ${region}
+Total targets in this region: ${regionalTargets.length}
+
+Intelligence updates for this region:
+
+${targetsText || '(No company or attendee updates this run for this region.)'}
+
+Upcoming PIPELINE or COMMITTED events in the next 3 months (region-agnostic — every regional briefing includes these so the team has full pipeline visibility):
+${eventsText || 'No upcoming events.'}
+
+Write a concise, professional HTML email. Rules:
+1. First line: "Subject: ${subjectLine}" (exactly as written)
+2. Then a blank line
+3. Then the full HTML body starting with <html>
+4. Structure:
+   - Opening: "${openingLine}"
+   - Companies section (if any): <h2> heading "Companies in ${region}", then per-company <h3> with 2-3 bullets + Sales Angle <blockquote>
+   - People section (if any): <h2> heading "People at ${region} companies", then per-attendee <h3> with 2-3 bullets + Sales Angle <blockquote>
+   - Events section (if any updated events): same pattern
+   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
+     <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
+   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Sales Angle blockquote if no action). Do NOT modify the href values or any attributes.
+   - Upcoming events <table> (columns: Event, Dates, Status) — title it "Upcoming events (next 3 months)"
+   - No unsubscribe link (this is a system report)
+5. Tone: sharp, B2B, executive summary. Max 1200 words.
+6. Do NOT wrap the HTML in markdown code fences.`
+
+  const result = await generateContentWithLog(
+    'gemini-3.1-flash-lite-preview',
+    prompt,
+    { functionName: 'IntelligenceEmail-ComposeRegional' }
+  )
+  return parseGeminiResponse(result.response.text())
+}

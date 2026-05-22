@@ -21,9 +21,9 @@ export async function GET(req: Request) {
     const now = new Date()
 
     const companies = await prisma.company.findMany({
-      where: { subscriptionCount: { gt: 0 } },
+      where: { OR: [{ subscriptionCount: { gt: 0 } }, { subscribed: true }] },
       orderBy: { subscriptionCount: 'desc' },
-      select: { name: true, pipelineValue: true, subscriptionCount: true },
+      select: { name: true, pipelineValue: true, subscriptionCount: true, subscribed: true, region: true },
     })
 
     const attendees = await prisma.attendee.findMany({
@@ -64,6 +64,8 @@ export async function GET(req: Request) {
         name: c.name,
         pipelineValue: c.pipelineValue ?? 0,
         subscriptionCount: c.subscriptionCount,
+        subscribed: c.subscribed,
+        region: c.region,
       })),
       attendees: attendees.map(a => ({
         name: a.name,

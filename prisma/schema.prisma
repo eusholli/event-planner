@@ -212,7 +212,9 @@ model IntelligenceEmailLog {
   sentAt      DateTime @default(now())
   targetCount Int
   status      String
+  region      String?
 
+  @@unique([runId, userId, status, region])
   @@index([runId, userId])
 }
 

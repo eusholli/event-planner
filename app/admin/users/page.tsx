@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Roles } from '@/lib/constants'
 import Pagination from '@/components/Pagination'
 
@@ -37,6 +38,7 @@ export default function UserAdminPage() {
     const [limit] = useState(10)
     const [regionTypes, setRegionTypes] = useState<string[]>([])
     const [openRegionPicker, setOpenRegionPicker] = useState<string | null>(null)
+    const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
     const pickerRef = useRef<HTMLDivElement | null>(null)
 
     useEffect(() => {
@@ -377,36 +379,21 @@ export default function UserAdminPage() {
                                                 </td>
                                                 {regionTypes.length > 0 && (
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div
-                                                            className="relative"
-                                                            ref={openRegionPicker === user.id ? pickerRef : null}
-                                                        >
+                                                        <div className="relative">
                                                             <button
-                                                                onClick={() => setOpenRegionPicker(openRegionPicker === user.id ? null : user.id)}
+                                                                onClick={(e) => {
+                                                                    if (openRegionPicker === user.id) {
+                                                                        setOpenRegionPicker(null)
+                                                                        return
+                                                                    }
+                                                                    const rect = e.currentTarget.getBoundingClientRect()
+                                                                    setPickerPos({ top: rect.bottom + 4, left: rect.left })
+                                                                    setOpenRegionPicker(user.id)
+                                                                }}
                                                                 className="text-sm text-gray-700 hover:text-indigo-600 text-left"
                                                             >
                                                                 {user.regions.length > 0 ? user.regions.join(', ') : <span className="text-gray-400">None</span>}
                                                             </button>
-                                                            {openRegionPicker === user.id && (
-                                                                <div className="absolute left-0 top-full mt-1 z-10 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-32">
-                                                                    {regionTypes.map((r) => (
-                                                                        <label key={r} className="flex items-center gap-2 py-1 text-sm text-gray-700 cursor-pointer hover:text-indigo-600">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={user.regions.includes(r)}
-                                                                                onChange={() => {
-                                                                                    const next = user.regions.includes(r)
-                                                                                        ? user.regions.filter(x => x !== r)
-                                                                                        : [...user.regions, r]
-                                                                                    handleRegionChange(user.id, next)
-                                                                                }}
-                                                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                                            />
-                                                                            {r}
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     </td>
                                                 )}
@@ -514,6 +501,36 @@ export default function UserAdminPage() {
             </div>
 
             <Pagination page={page} limit={limit} totalCount={totalCount} onPageChange={setPage} />
+
+            {openRegionPicker && createPortal(
+                <div
+                    ref={pickerRef}
+                    style={{ position: 'fixed', top: pickerPos.top, left: pickerPos.left }}
+                    className="z-50 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-32"
+                >
+                    {regionTypes.map((r) => {
+                        const pickerUser = users.find(u => u.id === openRegionPicker)
+                        if (!pickerUser) return null
+                        return (
+                            <label key={r} className="flex items-center gap-2 py-1 text-sm text-gray-700 cursor-pointer hover:text-indigo-600">
+                                <input
+                                    type="checkbox"
+                                    checked={pickerUser.regions.includes(r)}
+                                    onChange={() => {
+                                        const next = pickerUser.regions.includes(r)
+                                            ? pickerUser.regions.filter(x => x !== r)
+                                            : [...pickerUser.regions, r]
+                                        handleRegionChange(pickerUser.id, next)
+                                    }}
+                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                {r}
+                            </label>
+                        )
+                    })}
+                </div>,
+                document.body
+            )}
         </div>
     )
 }

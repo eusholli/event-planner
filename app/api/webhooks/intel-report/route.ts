@@ -4,7 +4,7 @@ import { clerkClient } from '@clerk/nextjs/server'
 import prisma from '@/lib/prisma'
 import {
   composeIntelligenceEmail,
-  composeAggregateEmail,
+  composeRegionalEmail,
   type TargetUpdate,
   type UpcomingEvent,
 } from '@/lib/intelligence-email'
@@ -343,42 +343,176 @@ export async function POST(req: Request) {
     }
   }
 
-  // 5. Aggregate report for root/marketing users (only when there is genuinely new intelligence).
-  // Run on the FIRST slice only (or when the caller did not slice at all) so
-  // chunked dispatcher loops do not duplicate the aggregate email.
+  // 5. Regional reports (replaces the old aggregate-to-root/marketing email).
+  // Runs on the FIRST slice only (or when the caller did not slice at all) so
+  // chunked dispatcher loops do not duplicate emails.
   const isFirstOrUnsliced = !sliceRequested || subscriberOffset === 0
-  let aggregateSent = 0
-  if (isFirstOrUnsliced && updatedTargets.length > 0 && process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+  let regionalSent = 0
+  let unassignedSent = 0
+  if (isFirstOrUnsliced && updatedTargets.length > 0) {
     try {
-      const client = await clerkClient()
-      const allUsers = await client.users.getUserList({ limit: 500 })
-      const privilegedUsers = allUsers.data.filter(u =>
-        u.publicMetadata.role === Roles.Root || u.publicMetadata.role === Roles.Marketing
-      )
+      const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
-      for (const u of privilegedUsers) {
-        const email = u.emailAddresses[0]?.emailAddress
-        if (!email) continue
-        try {
-          const firstName = u.firstName ?? u.emailAddresses[0]?.emailAddress ?? 'Team'
-          const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
-          const aggregateReportToken = signReportToken(u.id, email)
-          const { subject, html } = await composeAggregateEmail(firstName, updatedTargets, upcomingEvents, runDate, appUrl, aggregateReportToken)
-          await sendPlainEmail(email, subject, html)
-          await prisma.intelligenceEmailLog.create({
-            data: { runId, userId: u.id, email, targetCount: updatedTargets.length, status: 'aggregate' },
-          })
-          aggregateSent++
-        } catch (err) {
-          console.error(`Failed to send aggregate report to ${email}:`, err)
-          await prisma.intelligenceEmailLog.create({
-            data: { runId, userId: u.id, email, targetCount: 0, status: 'failed' },
-          })
+      // 5a. Load in-scope companies (subscribed OR user-subscribed) with their region.
+      const scopedCompanies = await prisma.company.findMany({
+        where: { OR: [{ subscriptionCount: { gt: 0 } }, { subscribed: true }] },
+        select: { name: true, region: true },
+      })
+      const companyRegion = new Map<string, string | null>()
+      for (const c of scopedCompanies) {
+        companyRegion.set(c.name.toLowerCase(), c.region)
+      }
+
+      // 5b. For attendee targets, resolve their company → region in one query.
+      const attendeeNames = updatedTargets
+        .filter(t => t.type === 'attendee')
+        .map(t => t.name)
+      const attendeeCompanyRegion = new Map<string, string | null>()
+      if (attendeeNames.length > 0) {
+        const attendees = await prisma.attendee.findMany({
+          where: { name: { in: attendeeNames } },
+          select: { name: true, company: { select: { region: true } } },
+        })
+        for (const a of attendees) {
+          attendeeCompanyRegion.set(a.name.toLowerCase(), a.company.region)
+        }
+      }
+
+      // 5c. Bucket targets by region (null/unknown → __UNASSIGNED__).
+      const UNASSIGNED = '__UNASSIGNED__'
+      const regionBuckets = new Map<string, TargetUpdate[]>()
+      const pushBucket = (key: string, t: TargetUpdate) => {
+        const arr = regionBuckets.get(key) ?? []
+        arr.push(t)
+        regionBuckets.set(key, arr)
+      }
+      for (const t of updatedTargets) {
+        const key = t.name.toLowerCase()
+        if (t.type === 'company') {
+          if (!companyRegion.has(key)) continue // not in scope (shouldn't happen)
+          const region = companyRegion.get(key)
+          pushBucket(region ?? UNASSIGNED, t)
+        } else if (t.type === 'attendee') {
+          const region = attendeeCompanyRegion.get(key)
+          if (region === undefined) continue // attendee company not resolved
+          pushBucket(region ?? UNASSIGNED, t)
+        }
+        // events: handled below — included in every regional briefing.
+      }
+
+      // 5d. Fetch PIPELINE/COMMITTED events in the next 3 months (shared).
+      const threeMonthsOut = new Date()
+      threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
+      const pipelineEventRecords = await prisma.event.findMany({
+        where: {
+          status: { in: ['PIPELINE', 'COMMITTED'] },
+          startDate: { gte: new Date(), lte: threeMonthsOut },
+        },
+        orderBy: { startDate: 'asc' },
+        select: { name: true, startDate: true, endDate: true, status: true },
+      })
+      const pipelineEvents: UpcomingEvent[] = pipelineEventRecords.map(e => ({
+        name: e.name,
+        startDate: e.startDate?.toISOString().split('T')[0] ?? null,
+        endDate: e.endDate?.toISOString().split('T')[0] ?? null,
+        status: e.status,
+      }))
+
+      const clerkEnabled = process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true'
+
+      // 5e. Per-region dispatch.
+      const regionalRegions = [...regionBuckets.keys()].filter(r => r !== UNASSIGNED)
+      for (const region of regionalRegions) {
+        const targetsForRegion = regionBuckets.get(region) ?? []
+        if (targetsForRegion.length === 0) continue
+
+        const profiles = await prisma.userProfile.findMany({
+          where: { regions: { has: region } },
+          select: { clerkUserId: true },
+        })
+        if (profiles.length === 0) continue
+
+        const alreadyLogged = await prisma.intelligenceEmailLog.findMany({
+          where: { runId, status: 'regional', region },
+          select: { userId: true },
+        })
+        const skipUserIds = new Set(alreadyLogged.map(l => l.userId))
+
+        if (!clerkEnabled) continue
+
+        const client = await clerkClient()
+        for (const profile of profiles) {
+          if (skipUserIds.has(profile.clerkUserId)) continue
+          let u
+          try {
+            u = await client.users.getUser(profile.clerkUserId)
+          } catch (err) {
+            console.error(`[intel-report] Failed to fetch Clerk user ${profile.clerkUserId}:`, err)
+            continue
+          }
+          const email = u.emailAddresses[0]?.emailAddress
+          if (!email) continue
+          try {
+            const firstName = u.firstName ?? email ?? 'Team'
+            const reportToken = signReportToken(u.id, email)
+            const { subject, html } = await composeRegionalEmail(
+              firstName, region, targetsForRegion, pipelineEvents, runDate, appUrl, reportToken,
+            )
+            await sendPlainEmail(email, subject, html)
+            await prisma.intelligenceEmailLog.create({
+              data: { runId, userId: u.id, email, targetCount: targetsForRegion.length, status: 'regional', region },
+            })
+            regionalSent++
+          } catch (err) {
+            console.error(`Failed to send regional report (${region}) to ${email}:`, err)
+            await prisma.intelligenceEmailLog.create({
+              data: { runId, userId: u.id, email, targetCount: 0, status: 'failed', region },
+            })
+          }
+        }
+      }
+
+      // 5f. Unassigned bucket → root/marketing users only.
+      const unassignedTargets = regionBuckets.get(UNASSIGNED) ?? []
+      if (unassignedTargets.length > 0 && clerkEnabled) {
+        const client = await clerkClient()
+        const allUsers = await client.users.getUserList({ limit: 500 })
+        const privilegedUsers = allUsers.data.filter(u =>
+          u.publicMetadata.role === Roles.Root || u.publicMetadata.role === Roles.Marketing,
+        )
+
+        const alreadyLoggedUnassigned = await prisma.intelligenceEmailLog.findMany({
+          where: { runId, status: 'unassigned' },
+          select: { userId: true },
+        })
+        const skipUserIds = new Set(alreadyLoggedUnassigned.map(l => l.userId))
+
+        for (const u of privilegedUsers) {
+          if (skipUserIds.has(u.id)) continue
+          const email = u.emailAddresses[0]?.emailAddress
+          if (!email) continue
+          try {
+            const firstName = u.firstName ?? email ?? 'Team'
+            const reportToken = signReportToken(u.id, email)
+            const { subject, html } = await composeRegionalEmail(
+              firstName, 'No Region', unassignedTargets, pipelineEvents, runDate, appUrl, reportToken,
+            )
+            await sendPlainEmail(email, subject, html)
+            await prisma.intelligenceEmailLog.create({
+              data: { runId, userId: u.id, email, targetCount: unassignedTargets.length, status: 'unassigned' },
+            })
+            unassignedSent++
+          } catch (err) {
+            console.error(`Failed to send unassigned regional report to ${email}:`, err)
+            await prisma.intelligenceEmailLog.create({
+              data: { runId, userId: u.id, email, targetCount: 0, status: 'failed' },
+            })
+          }
         }
       }
     } catch (err) {
-      console.error('[intel-report] Failed to fetch Clerk users for aggregate report:', err)
-      // Non-fatal: continue
+      console.error('[intel-report] Regional dispatch failed:', err)
+      // Non-fatal: per-subscriber digests have already been sent.
     }
   }
 
@@ -387,7 +521,8 @@ export async function POST(req: Request) {
   return NextResponse.json({
     status: 'ok',
     emailsSent,
-    aggregateSent,
+    regionalSent,
+    unassignedSent,
     emailsSkippedAlreadySent,
     subscriberOffset,
     subscribersInSlice: subscribers.length,
