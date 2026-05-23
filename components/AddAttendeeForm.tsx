@@ -174,7 +174,7 @@ export default function AddAttendeeForm({ onSuccess, eventId }: AddAttendeeFormP
 
             fetch('/api/admin/system')
                 .then(res => res.ok ? res.json() : {})
-                .then(data => setRegionTypes(data.defaultRegionTypes || []))
+                .then((data: { defaultRegionTypes?: string[] }) => setRegionTypes(data.defaultRegionTypes || []))
                 .catch(() => {})
         } catch (error) {
             console.error('Error checking settings:', error)

@@ -44,7 +44,7 @@ export default function UserAdminPage() {
     useEffect(() => {
         fetch('/api/admin/system')
             .then(res => res.ok ? res.json() : {})
-            .then(data => setRegionTypes(data.defaultRegionTypes || []))
+            .then((data: { defaultRegionTypes?: string[] }) => setRegionTypes(data.defaultRegionTypes || []))
             .catch(() => {})
     }, [])
 
