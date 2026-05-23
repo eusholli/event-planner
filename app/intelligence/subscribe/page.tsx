@@ -305,7 +305,7 @@ function SubscribePage() {
           <div className="border border-zinc-200 rounded-xl p-5 bg-white shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-zinc-900">Send briefings to</p>
+                <p className="text-sm font-medium text-zinc-900">Email briefings</p>
                 <p className="text-sm text-zinc-500 font-mono mt-0.5">{userEmail ?? '—'}</p>
                 {!canSubscribe && (
                   <p className="text-xs text-zinc-400 mt-1">Select at least one item below to subscribe</p>
@@ -354,11 +354,16 @@ function SubscribePage() {
           {hasSubscribedItems && (
             <div className="border border-indigo-100 rounded-xl p-5 bg-indigo-50/30 shadow-sm">
               <h2 className="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
-                Currently Subscribed
+                Tracked Items
                 <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2 rounded-full text-xs font-medium">
                   {totalSelected}
                 </span>
               </h2>
+              {!sub?.subscribed && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-3">
+                  Briefings paused — toggle &ldquo;Email briefings&rdquo; above to resume.
+                </p>
+              )}
 
               <div className="space-y-3">
                 {subscribedEvents.length > 0 && (
