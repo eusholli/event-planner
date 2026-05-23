@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense, useMemo } from 'react'
+import { useEffect, useState, Suspense, useMemo, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -615,6 +615,14 @@ function SubscribePage() {
   )
 }
 
+function getLineAt(text: string, cursorPos: number) {
+  const before = text.substring(0, cursorPos)
+  const lineStart = before.lastIndexOf('\n') + 1
+  const rest = text.indexOf('\n', cursorPos)
+  const lineEnd = rest === -1 ? text.length : rest
+  return { line: text.substring(lineStart, lineEnd).trim(), lineStart, lineEnd }
+}
+
 function BulkAddCompanies({
   regionTypes,
   existingCompanies,
@@ -629,10 +637,44 @@ function BulkAddCompanies({
   const [region, setRegion] = useState('')
   const [applying, setApplying] = useState(false)
   const [result, setResult] = useState<string | null>(null)
+  const [currentLineSuggestions, setCurrentLineSuggestions] = useState<CompanyItem[]>([])
+  const [currentLineQuery, setCurrentLineQuery] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (regionTypes.length > 0 && !region) setRegion(regionTypes[0])
   }, [regionTypes, region])
+
+  function updateSuggestions() {
+    if (applying) return
+    const ta = textareaRef.current
+    if (!ta) return
+    const { line } = getLineAt(ta.value, ta.selectionStart)
+    if (line.length === 0) {
+      setCurrentLineSuggestions([])
+      setCurrentLineQuery('')
+      return
+    }
+    const q = line.toLowerCase()
+    const matches = existingCompanies
+      .filter(c => c.name.toLowerCase().includes(q))
+      .slice(0, 8)
+    setCurrentLineSuggestions(matches)
+    setCurrentLineQuery(line)
+  }
+
+  function applySuggestion(company: CompanyItem) {
+    const ta = textareaRef.current
+    if (!ta) return
+    const { lineStart, lineEnd } = getLineAt(ta.value, ta.selectionStart)
+    const newText = ta.value.substring(0, lineStart) + company.name + ta.value.substring(lineEnd)
+    setText(newText)
+    setCurrentLineSuggestions([])
+    setCurrentLineQuery('')
+    ta.focus()
+    const newCursor = lineStart + company.name.length
+    requestAnimationFrame(() => ta.setSelectionRange(newCursor, newCursor))
+  }
 
   async function handleApply() {
     const names = Array.from(new Set(
@@ -741,14 +783,45 @@ function BulkAddCompanies({
       <p className="text-xs text-zinc-500 mb-2">
         Paste company names, one per line. Existing companies are updated; new ones are created. All are set to subscribed.
       </p>
-      <textarea
-        value={text}
-        onChange={e => setText(e.target.value)}
-        disabled={applying}
-        rows={6}
-        placeholder={'Telenor Finland\nVEON\nOrange\nTelefonica'}
-        className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-md font-mono bg-white focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
-      />
+      <div className="flex gap-3 items-start">
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={e => { setText(e.target.value); updateSuggestions() }}
+          onKeyUp={updateSuggestions}
+          onClick={updateSuggestions}
+          onSelect={updateSuggestions}
+          disabled={applying}
+          rows={6}
+          placeholder={'Telenor Finland\nVEON\nOrange\nTelefonica'}
+          className="flex-1 min-w-0 px-3 py-2 text-sm border border-zinc-200 rounded-md font-mono bg-white focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
+        />
+        {currentLineSuggestions.length > 0 && (
+          <div className="w-52 shrink-0 border border-zinc-200 rounded-md bg-white shadow-sm overflow-hidden">
+            <p className="px-2 py-1.5 text-[10px] font-medium text-zinc-400 uppercase tracking-wide border-b border-zinc-100 truncate">
+              Matching &ldquo;{currentLineQuery}&rdquo;
+            </p>
+            <ul>
+              {currentLineSuggestions.map(c => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onMouseDown={e => { e.preventDefault(); applySuggestion(c) }}
+                    className="w-full text-left px-2 py-1.5 hover:bg-indigo-50 transition-colors group"
+                  >
+                    <span className="block text-xs font-medium text-zinc-900 truncate group-hover:text-indigo-700">{c.name}</span>
+                    {(c.region || c.pipelineValue) && (
+                      <span className="block text-[10px] text-zinc-400 truncate">
+                        {c.region}{c.region && c.pipelineValue ? ' · ' : ''}{c.pipelineValue ? formatCurrency(c.pipelineValue).replace(' · ', '') : ''}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
       <div className="flex items-center gap-3 mt-3">
         <label className="text-xs text-zinc-600">Region:</label>
         <select
