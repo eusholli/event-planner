@@ -18,7 +18,7 @@ export async function sendPlainEmail(to: string, subject: string, html: string) 
         html,
         text: html.replace(/<[^>]+>/g, ''), // naive HTML-to-text strip
     })
-    console.log('Intelligence email sent: %s', info.messageId)
+    console.log('Intelligence email sent to: %s (messageId: %s)', to, info.messageId)
     return info
 }
 

@@ -93,10 +93,10 @@ Write a concise, professional HTML email. Rules:
    - Personalised opening sentence referencing their specific tracked items
    - If there are ⭐ DIRECTLY TRACKED TARGETS: render them first with a bold "⭐ You're tracking this" callout per item
    - If there are FROM YOUR TRACKED EVENTS targets: group them by event name with an <h3> event header
-   - Per target: <h3> heading, 2-3 bullet points of key updates, a "Sales Angle:" callout in a <blockquote>
-   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
+   - Per target: render the Full Report field as a formatted intelligence briefing section. The Full Report already contains structured content with a 🦾 header line, 🚀 Key Developments bullets, ⚠️ [FRICTION] Points bullets, and 💡 Sales Angle. Convert this markdown to clean HTML, preserving the section structure and emoji headers exactly — do NOT re-summarize, collapse, or reformat the content. Use <h3> for the 🦾 header line, <strong> for bold bullet labels, and wrap each emoji section title (🚀 Key Developments, ⚠️ [FRICTION] Points, 💡 Sales Angle) in an <h4>.
+   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Full Report section:
      <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
-   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Sales Angle blockquote if no action). Do NOT modify the href values or any attributes.
+   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Full Report section if no action). Do NOT modify the href values or any attributes.
    - Upcoming events as a <table> (columns: Event, Dates, Status)
    - Unsubscribe footer with link: ${baseUrl}/api/intelligence/unsubscribe?token=${unsubscribeToken}
 5. Tone: sharp, B2B sales, no fluff. Max 800 words.
@@ -269,12 +269,14 @@ Write a concise, professional HTML email. Rules:
 3. Then the full HTML body starting with <html>
 4. Structure:
    - Opening: "${openingLine}"
-   - Companies section (if any): <h2> heading "Companies in ${region}", then per-company <h3> with 2-3 bullets + Sales Angle <blockquote>
-   - People section (if any): <h2> heading "People at ${region} companies", then per-attendee <h3> with 2-3 bullets + Sales Angle <blockquote>
+   - **Regional Intelligence Overview** (<h2>): A 3–5 sentence executive synthesis across ALL targets in this region. Identify cross-cutting themes (shared risks, common competitive pressures, regional market dynamics), highlight the single most time-sensitive opportunity or threat, and give one concrete strategic recommendation for Rakuten Symphony's approach to this region. This section appears BEFORE any per-target sections.
+   - Companies section (if any): <h2> heading "Companies in ${region}", then per-company sections
+   - People section (if any): <h2> heading "People at ${region} companies", then per-attendee sections
    - Events section (if any updated events): same pattern
-   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Sales Angle blockquote:
+   - Per target: render the Full Report field as a formatted intelligence briefing section. The Full Report already contains structured content with a 🦾 header line, 🚀 Key Developments bullets, ⚠️ [FRICTION] Points bullets, and 💡 Sales Angle. Convert this markdown to clean HTML, preserving the section structure and emoji headers exactly — do NOT re-summarize, collapse, or reformat the content. Use <h3> for the 🦾 header line, <strong> for bold bullet labels, and wrap each emoji section title (🚀 Key Developments, ⚠️ [FRICTION] Points, 💡 Sales Angle) in an <h4>.
+   - If a target has a "Recommended Action": render it as a styled callout div immediately after the Full Report section:
      <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin:8px 0;font-size:13px;"><strong>Recommended Action:</strong> [action text here]</div>
-   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Sales Angle blockquote if no action). Do NOT modify the href values or any attributes.
+   - If a target has a LINKS_HTML_VERBATIM block: copy the exact HTML between LINKS_HTML_VERBATIM: and END_LINKS_HTML verbatim into the email immediately after the Recommended Action div (or after the Full Report section if no action). Do NOT modify the href values or any attributes.
    - Upcoming events <table> (columns: Event, Dates, Status) — title it "Upcoming events (next 3 months)"
    - No unsubscribe link (this is a system report)
 5. Tone: sharp, B2B, executive summary. Max 1200 words.

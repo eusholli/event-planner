@@ -263,7 +263,7 @@ export default function UserAdminPage() {
                         User Administration
                     </h2>
                 </div>
-                <div className="mt-4 flex md:mt-0 md:ml-4">
+                <div className="mt-4 flex md:mt-0 md:ml-4 items-center gap-2">
                     <div className="relative rounded-md shadow-sm">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

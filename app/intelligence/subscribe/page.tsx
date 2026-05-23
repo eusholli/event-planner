@@ -469,6 +469,13 @@ function SubscribePage() {
                   <span className="font-normal text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{sub.selectedCompanyIds.length} selected</span>
                 )}
               </h2>
+              {isRoot && (
+                <BulkAddCompanies
+                  regionTypes={regionTypes}
+                  existingCompanies={companies}
+                  onApplied={(updated) => setCompanies(updated)}
+                />
+              )}
               <div className="flex items-center gap-3 px-2 py-1 mb-1 border-b border-zinc-100">
                 <div className="w-4 shrink-0" />
                 <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide flex-1">Company</span>
@@ -599,6 +606,166 @@ function SubscribePage() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function BulkAddCompanies({
+  regionTypes,
+  existingCompanies,
+  onApplied,
+}: {
+  regionTypes: string[]
+  existingCompanies: CompanyItem[]
+  onApplied: (next: CompanyItem[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [region, setRegion] = useState('')
+  const [applying, setApplying] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (regionTypes.length > 0 && !region) setRegion(regionTypes[0])
+  }, [regionTypes, region])
+
+  async function handleApply() {
+    const names = Array.from(new Set(
+      text.split('\n').map(s => s.trim()).filter(Boolean).map(s => s)
+    ))
+    // Dedupe case-insensitively while preserving the user's casing.
+    const seen = new Set<string>()
+    const unique = names.filter(n => {
+      const k = n.toLowerCase()
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    })
+    if (unique.length === 0) return
+
+    setApplying(true)
+    setResult(null)
+    const byName = new Map(existingCompanies.map(c => [c.name.toLowerCase(), c]))
+    let created = 0, updated = 0, skipped = 0
+
+    for (const name of unique) {
+      try {
+        let companyId = byName.get(name.toLowerCase())?.id ?? null
+        const wasExisting = !!companyId
+
+        if (!companyId) {
+          const postRes = await fetch('/api/companies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, region: region || null }),
+          })
+          if (postRes.ok) {
+            const c = await postRes.json()
+            companyId = c.id
+            created++
+          } else if (postRes.status === 409) {
+            const listRes = await fetch(`/api/companies?query=${encodeURIComponent(name)}`)
+            if (listRes.ok) {
+              const list = await listRes.json()
+              const m = (Array.isArray(list) ? list : []).find((c: any) => c.name.toLowerCase() === name.toLowerCase())
+              companyId = m?.id ?? null
+            }
+          }
+        }
+
+        if (!companyId) { skipped++; continue }
+
+        const putRes = await fetch(`/api/companies/${companyId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ region: region || null, subscribed: true }),
+        })
+        if (!putRes.ok) { skipped++; continue }
+        if (wasExisting) updated++
+      } catch {
+        skipped++
+      }
+    }
+
+    // Refresh the companies list so the UI reflects new/updated entries.
+    try {
+      const r = await fetch('/api/companies')
+      if (r.ok) {
+        const data = await r.json()
+        const raw = Array.isArray(data) ? data : (data.companies ?? [])
+        onApplied(raw.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          description: c.description ?? null,
+          pipelineValue: c.pipelineValue ?? null,
+          region: c.region ?? null,
+          subscribed: c.subscribed ?? false,
+        })))
+      }
+    } catch { /* non-fatal */ }
+
+    setResult(`${created} created, ${updated} updated${skipped > 0 ? `, ${skipped} skipped` : ''}.`)
+    setText('')
+    setApplying(false)
+  }
+
+  if (!open) {
+    return (
+      <div className="mb-3">
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs px-3 py-1 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100 transition-colors shadow-sm"
+        >
+          + Bulk add companies
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-4 p-4 border border-zinc-200 rounded-lg bg-zinc-50/50">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-zinc-700">Bulk add companies from sales report</p>
+        <button
+          onClick={() => { setOpen(false); setResult(null); setText('') }}
+          className="text-xs text-zinc-500 hover:text-zinc-700"
+        >
+          Cancel
+        </button>
+      </div>
+      <p className="text-xs text-zinc-500 mb-2">
+        Paste company names, one per line. Existing companies are updated; new ones are created. All are set to subscribed.
+      </p>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        disabled={applying}
+        rows={6}
+        placeholder={'Telenor Finland\nVEON\nOrange\nTelefonica'}
+        className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-md font-mono bg-white focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
+      />
+      <div className="flex items-center gap-3 mt-3">
+        <label className="text-xs text-zinc-600">Region:</label>
+        <select
+          value={region}
+          onChange={e => setRegion(e.target.value)}
+          disabled={applying}
+          className="text-xs border border-zinc-200 rounded-md px-2 py-1 text-zinc-700 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-400"
+        >
+          <option value="">No region</option>
+          {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <button
+          onClick={handleApply}
+          disabled={applying || text.trim() === ''}
+          className="ml-auto text-xs px-3 py-1.5 rounded-md bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40"
+        >
+          {applying ? 'Applying…' : 'Apply'}
+        </button>
+      </div>
+      {result && (
+        <p className="mt-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5">{result}</p>
+      )}
     </div>
   )
 }
