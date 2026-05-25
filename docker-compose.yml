@@ -34,6 +34,15 @@ services:
       - event-planner-net
     restart: "no"
 
+  event-planner-redis:
+    image: redis:alpine
+    container_name: event-planner-redis
+    restart: unless-stopped
+    networks:
+      - event-planner-net
+    volumes:
+      - event-planner-redis-data:/data
+
   event-planner-app:
     container_name: event-planner-app
     build:
@@ -47,6 +56,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      REDIS_URL: redis://event-planner-redis:6379
       POSTGRES_PRISMA_URL: postgresql://postgres:${POSTGRES_PASSWORD}@event-planner-db:5432/eventplanner
       POSTGRES_URL_NON_POOLING: postgresql://postgres:${POSTGRES_PASSWORD}@event-planner-db:5432/eventplanner
       DATABASE_SSL: "false"
@@ -78,6 +88,8 @@ services:
         condition: service_completed_successfully
       event-planner-db:
         condition: service_healthy
+      event-planner-redis:
+        condition: service_started
     networks:
       - event-planner-net
       - webproxy
@@ -90,3 +102,4 @@ networks:
 
 volumes:
   event-planner-postgres-data:
+  event-planner-redis-data:

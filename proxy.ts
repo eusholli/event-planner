@@ -25,22 +25,24 @@ const isReportRoute = createRouteMatcher([
     '/reports(.*)'
 ]);
 
-const isIntelligenceApiRoute = createRouteMatcher([
+// Routes that use their own Bearer token auth — bypass Clerk session check
+const isBearerTokenRoute = createRouteMatcher([
     '/api/intelligence/targets(.*)',
     '/api/intelligence/session(.*)',
     '/api/intelligence/actions(.*)',
     '/api/webhooks/intel-report(.*)',
     '/api/viber/lookup(.*)',
-    '/api/viber/link/redeem(.*)'
+    '/api/viber/link/redeem(.*)',
+    '/api/mcp(.*)',
 ]);
 
-export const proxy = clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
     if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === 'true') {
         return;
     }
     if (isProtectedRoute(req)) {
-        // Allow intelligence API routes to bypass Clerk (they use Bearer token auth)
-        if (isIntelligenceApiRoute(req)) {
+        // Allow Bearer-token-authenticated routes to bypass Clerk session check
+        if (isBearerTokenRoute(req)) {
             return NextResponse.next();
         }
 

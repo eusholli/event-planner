@@ -225,13 +225,13 @@ export default function Navigation() {
                             </SignUpButton>
                         </SignedOut>
                         <SignedIn>
-                            <UserButton afterSignOutUrl="/" />
+                            <UserButton />
                         </SignedIn>
                     </div>
 
                     <div className="-mr-2 flex items-center sm:hidden">
                         <SignedIn>
-                            <UserButton afterSignOutUrl="/" />
+                            <UserButton />
                         </SignedIn>
                         <div className="ml-4">
                             <button
@@ -256,7 +256,6 @@ export default function Navigation() {
                     </div>
                 </div>
             </div>
-
             {/* Mobile menu */}
             <SignedIn>
                 <div className={`${isOpen ? 'block' : 'hidden'} sm:hidden glass border-t border-zinc-100 max-h-[calc(100vh-4rem)] overflow-y-auto`} id="mobile-menu">
@@ -390,7 +389,6 @@ export default function Navigation() {
                     </div>
                 </div>
             </SignedIn>
-
             <SignedOut>
                 <div className={`${isOpen ? 'block' : 'hidden'} sm:hidden glass border-t border-zinc-100 p-4 space-y-4`}>
                     <SignInButton mode="modal">
@@ -406,5 +404,5 @@ export default function Navigation() {
                 </div>
             </SignedOut>
         </nav>
-    )
+    );
 }

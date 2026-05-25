@@ -199,14 +199,27 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             const report = data.report as TargetUpdate | undefined;
                             setMessages((prev) => {
                                 const lastIdx = prev.length - 1;
-                                if (lastIdx < 0) return prev;
-                                const last = prev[lastIdx];
-                                if (last.role !== "assistant") return prev;
-                                const cleaned = stripStructuredBlock(last.content);
-                                return [
-                                    ...prev.slice(0, lastIdx),
-                                    { ...last, content: cleaned, report: report ?? last.report },
-                                ];
+                                const last = lastIdx >= 0 ? prev[lastIdx] : null;
+
+                                if (last && last.role === "assistant") {
+                                    // Normal path: attach/clean report on existing assistant message
+                                    const cleaned = stripStructuredBlock(last.content);
+                                    return [
+                                        ...prev.slice(0, lastIdx),
+                                        { ...last, content: cleaned, report: report ?? last.report },
+                                    ];
+                                }
+
+                                // No assistant message to attach to — create one if we have a report
+                                if (report) {
+                                    return [
+                                        ...prev,
+                                        { role: "assistant" as const, content: "", id: Date.now().toString(), report },
+                                    ];
+                                }
+
+                                // No report, no assistant message — nothing to display
+                                return prev;
                             });
                         } else if (data.type === "session-cleared") {
                             setMessages([{ role: "user", content: "/new", id: Date.now().toString() }]);
@@ -368,136 +381,136 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
 
                     {messages.map((msg) => {
                         return (
-                        <div
-                            key={msg.id}
-                            className={clsx(
-                                "flex flex-col max-w-[85%]",
-                                msg.role === "user" ? "self-end items-end" : "self-start items-start"
-                            )}
-                        >
-                            <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 px-1">
-                                {msg.role === "user" ? "You" : msg.role === "system" ? "Thinking" : "Kenji"}
-                            </div>
                             <div
+                                key={msg.id}
                                 className={clsx(
-                                    "rounded-2xl px-5 py-3 shadow-sm text-sm leading-relaxed",
-                                    msg.role === "user"
-                                        ? "bg-zinc-900 text-white rounded-br-none"
-                                        : msg.role === "system"
-                                            ? "bg-zinc-100/50 text-zinc-400 rounded-bl-none border border-zinc-200 italic text-xs"
-                                            : "bg-zinc-50 text-zinc-800 rounded-bl-none border border-zinc-100"
+                                    "flex flex-col max-w-[85%]",
+                                    msg.role === "user" ? "self-end items-end" : "self-start items-start"
                                 )}
                             >
-                                {msg.role === "assistant" && msg.report && (
-                                    <div className="mb-3 p-3 rounded-xl bg-white border border-zinc-200 shadow-sm space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                                                {msg.report.type}
-                                            </span>
-                                            <span className="text-sm font-semibold text-zinc-900">{msg.report.name}</span>
-                                        </div>
-                                        <div>
-                                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Summary</div>
-                                            <div className="text-sm text-zinc-800">{msg.report.summary}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Sales Angle</div>
-                                            <div className="text-sm text-zinc-800">{msg.report.salesAngle}</div>
-                                        </div>
-                                        {msg.report.recommendedAction && (
-                                            <div>
-                                                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Recommended Action</div>
-                                                <div className="text-sm text-zinc-800">{msg.report.recommendedAction}</div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="prose prose-sm max-w-none break-words
-                                    prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1
-                                    prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5
-                                    prose-blockquote:border-zinc-300 prose-blockquote:text-zinc-600
-                                    prose-a:text-blue-600 prose-a:underline prose-a:underline-offset-2
-                                    prose-strong:text-zinc-900 prose-em:text-zinc-700
-                                    prose-table:border-collapse prose-th:border prose-th:border-zinc-200 prose-th:px-3 prose-th:py-1 prose-th:bg-zinc-50
-                                    prose-td:border prose-td:border-zinc-200 prose-td:px-3 prose-td:py-1
-                                    prose-hr:border-zinc-200"
-                                >
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            pre: ({ node, ...props }) => (
-                                                <div className="bg-zinc-900 rounded-lg p-3 my-2 overflow-x-auto border border-zinc-200 text-[13px]" {...props as React.HTMLAttributes<HTMLDivElement>} />
-                                            ),
-                                            code: ({ node, className, children, ...props }) => {
-                                                const isBlock = className?.startsWith("language-");
-                                                if (isBlock) {
-                                                    return <code className={`${className ?? ""} font-mono text-[13px] text-zinc-100`} {...props}>{children}</code>;
-                                                }
-                                                return <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono border border-zinc-200" {...props}>{children}</code>;
-                                            },
-                                            a: ({ node, href, children, ...props }) => {
-                                              // Internal app links → styled navigation card
-                                              if (href && href.startsWith('/')) {
-                                                const label = typeof children === 'string' ? children :
-                                                  Array.isArray(children) ? children.join('') : String(children ?? href)
-                                                return (
-                                                  <Link href={href} className="inline-flex group my-2 w-full no-underline">
-                                                    <span className="bg-white border border-zinc-200 rounded-xl p-3 hover:border-blue-500 hover:shadow-md transition-all inline-flex items-center gap-3 w-full">
-                                                      <span className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0 inline-flex">
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                        </svg>
-                                                      </span>
-                                                      <span className="inline-flex flex-col">
-                                                        <span className="text-sm font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors">{label}</span>
-                                                        <span className="text-xs text-zinc-400 mt-0.5">{href}</span>
-                                                      </span>
-                                                    </span>
-                                                  </Link>
-                                                )
-                                              }
-                                              // External links → open in new tab
-                                              return <a href={href} className="text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors font-medium" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-                                            },
-                                        }}
-                                    >
-                                        {msg.content}
-                                    </ReactMarkdown>
+                                <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5 text-zinc-400 px-1">
+                                    {msg.role === "user" ? "You" : msg.role === "system" ? "Thinking" : "Kenji"}
                                 </div>
-                            </div>
-                            {msg.role === "assistant" && (
-                                <button
-                                    onClick={() => {
-                                        const match = msg.content.match(/^#{1,3}\s+(.*)/m);
-                                        let subject = "Insights";
-                                        if (match) {
-                                            subject = match[1].trim();
-                                        } else {
-                                            const idx = messages.findIndex(m => m.id === msg.id);
-                                            for (let i = idx - 1; i >= 0; i--) {
-                                                const candidate = messages[i];
-                                                if (candidate.role === "user") {
-                                                    subject = candidate.content.trim();
-                                                    break;
+                                <div
+                                    className={clsx(
+                                        "rounded-2xl px-5 py-3 shadow-sm text-sm leading-relaxed",
+                                        msg.role === "user"
+                                            ? "bg-zinc-900 text-white rounded-br-none"
+                                            : msg.role === "system"
+                                                ? "bg-zinc-100/50 text-zinc-400 rounded-bl-none border border-zinc-200 italic text-xs"
+                                                : "bg-zinc-50 text-zinc-800 rounded-bl-none border border-zinc-100"
+                                    )}
+                                >
+                                    {msg.role === "assistant" && msg.report && (
+                                        <div className="mb-3 p-3 rounded-xl bg-white border border-zinc-200 shadow-sm space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                                                    {msg.report.type}
+                                                </span>
+                                                <span className="text-sm font-semibold text-zinc-900">{msg.report.name}</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Summary</div>
+                                                <div className="text-sm text-zinc-800">{msg.report.summary}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Sales Angle</div>
+                                                <div className="text-sm text-zinc-800">{msg.report.salesAngle}</div>
+                                            </div>
+                                            {msg.report.recommendedAction && (
+                                                <div>
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Recommended Action</div>
+                                                    <div className="text-sm text-zinc-800">{msg.report.recommendedAction}</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="prose prose-sm max-w-none break-words
+                                        prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1
+                                        prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5
+                                        prose-blockquote:border-zinc-300 prose-blockquote:text-zinc-600
+                                        prose-a:text-blue-600 prose-a:underline prose-a:underline-offset-2
+                                        prose-strong:text-zinc-900 prose-em:text-zinc-700
+                                        prose-table:border-collapse prose-th:border prose-th:border-zinc-200 prose-th:px-3 prose-th:py-1 prose-th:bg-zinc-50
+                                        prose-td:border prose-td:border-zinc-200 prose-td:px-3 prose-td:py-1
+                                        prose-hr:border-zinc-200"
+                                    >
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                pre: ({ node, ...props }) => (
+                                                    <div className="bg-zinc-900 rounded-lg p-3 my-2 overflow-x-auto border border-zinc-200 text-[13px]" {...props as React.HTMLAttributes<HTMLDivElement>} />
+                                                ),
+                                                code: ({ node, className, children, ...props }) => {
+                                                    const isBlock = className?.startsWith("language-");
+                                                    if (isBlock) {
+                                                        return <code className={`${className ?? ""} font-mono text-[13px] text-zinc-100`} {...props}>{children}</code>;
+                                                    }
+                                                    return <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono border border-zinc-200" {...props}>{children}</code>;
+                                                },
+                                                a: ({ node, href, children, ...props }) => {
+                                                  // Internal app links → styled navigation card
+                                                  if (href && href.startsWith('/')) {
+                                                    const label = typeof children === 'string' ? children :
+                                                      Array.isArray(children) ? children.join('') : String(children ?? href)
+                                                    return (
+                                                      <Link href={href} className="inline-flex group my-2 w-full no-underline">
+                                                        <span className="bg-white border border-zinc-200 rounded-xl p-3 hover:border-blue-500 hover:shadow-md transition-all inline-flex items-center gap-3 w-full">
+                                                          <span className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0 inline-flex">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                            </svg>
+                                                          </span>
+                                                          <span className="inline-flex flex-col">
+                                                            <span className="text-sm font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors">{label}</span>
+                                                            <span className="text-xs text-zinc-400 mt-0.5">{href}</span>
+                                                          </span>
+                                                        </span>
+                                                      </Link>
+                                                    )
+                                                  }
+                                                  // External links → open in new tab
+                                                  return <a href={href} className="text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors font-medium" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+                                                },
+                                            }}
+                                        >
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </div>
+                                </div>
+                                {msg.role === "assistant" && (
+                                    <button
+                                        onClick={() => {
+                                            const match = msg.content.match(/^#{1,3}\s+(.*)/m);
+                                            let subject = "Insights";
+                                            if (match) {
+                                                subject = match[1].trim();
+                                            } else {
+                                                const idx = messages.findIndex(m => m.id === msg.id);
+                                                for (let i = idx - 1; i >= 0; i--) {
+                                                    const candidate = messages[i];
+                                                    if (candidate.role === "user") {
+                                                        subject = candidate.content.trim();
+                                                        break;
+                                                    }
                                                 }
                                             }
-                                        }
-                                        subject = subject.substring(0, 40).replace(/[^a-zA-Z0-9_ -]/g, "").trim().replace(/\s+/g, "_");
-                                        if (!subject) subject = "Insights";
+                                            subject = subject.substring(0, 40).replace(/[^a-zA-Z0-9_ -]/g, "").trim().replace(/\s+/g, "_");
+                                            if (!subject) subject = "Insights";
 
-                                        const now = new Date();
-                                        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+                                            const now = new Date();
+                                            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
 
-                                        downloadMarkdownAsPdf(msg.content, `${subject}_${dateStr}.pdf`);
-                                    }}
-                                    title="Download as PDF"
-                                    className="mt-1 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
-                                >
-                                    <Download size={12} />
-                                    Download as PDF
-                                </button>
-                            )}
-                        </div>
+                                            downloadMarkdownAsPdf(msg.content, `${subject}_${dateStr}.pdf`);
+                                        }}
+                                        title="Download as PDF"
+                                        className="mt-1 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
+                                    >
+                                        <Download size={12} />
+                                        Download as PDF
+                                    </button>
+                                )}
+                            </div>
                         );
                     })}
 

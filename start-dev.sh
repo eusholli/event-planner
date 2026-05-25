@@ -1,40 +1,52 @@
 #!/usr/bin/env bash
 # start-dev.sh — Start a local dev environment for event-planner.
-# Spins up an isolated PostgreSQL container on port 5433, runs migrations,
-# then starts 'npm run dev' with hot reload on port 3000.
+# Ensures event-planner-db (PostgreSQL) and redis-dev are running,
+# applies pending migrations, then starts 'npm run dev'. Uses .env as-is.
 #
-# Remote access: SSH tunnel from your local machine:
-#   ssh -N -L 3000:localhost:3000 eusholli@<server-ip>
-# Then open http://localhost:3000 in your browser.
+# event-planner-db is the local dev database, managed via docker-compose.yml.
+# redis-dev is a standalone container managed by this script.
+# Production runs a separate database on Hetzner — no shared state.
 
 set -e
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
-# Activate dev environment file
-echo "Switching to dev environment..."
-cp .env.dev .env
+# ── Ensure event-planner-db (PostgreSQL) ─────────────────────────────────────
+# Managed by docker-compose.yml — use docker compose to create if missing
+# so it gets the correct volume, network, and healthcheck config.
+if docker ps -q -f "name=^event-planner-db$" | grep -q .; then
+    echo "event-planner-db: already running"
+elif docker ps -aq -f "name=^event-planner-db$" | grep -q .; then
+    echo "event-planner-db: starting existing container"
+    docker start event-planner-db
+else
+    echo "event-planner-db: not found — starting via docker compose"
+    docker compose -f docker-compose.yml up -d event-planner-db
+fi
 
-# Start dev database (idempotent — safe to call when already running)
-echo "Starting dev database (port 5433)..."
-docker compose -f docker-compose.dev.yml up -d
+# ── Ensure redis-dev ──────────────────────────────────────────────────────────
+# Standalone container; required for mcp-handler SSE transport.
+if docker ps -q -f "name=^redis-dev$" | grep -q .; then
+    echo "redis-dev: already running"
+elif docker ps -aq -f "name=^redis-dev$" | grep -q .; then
+    echo "redis-dev: starting existing container"
+    docker start redis-dev
+else
+    echo "redis-dev: creating container"
+    docker run -d \
+        --name redis-dev \
+        -p "127.0.0.1:6379:6379" \
+        --restart unless-stopped \
+        redis:alpine
+fi
 
-# Wait for Postgres to accept connections
-echo "Waiting for dev DB to be ready..."
-until docker compose -f docker-compose.dev.yml exec -T event-planner-dev-db \
-      pg_isready -U postgres -q 2>/dev/null; do
-  sleep 1
-done
-echo "Dev DB ready."
+# ── Apply pending migrations ──────────────────────────────────────────────────
+# Applies any pending migration files; creates schema on first run.
+# Prompts for a name if schema.prisma has changed without a migration file.
+echo "Applying pending migrations..."
+npx prisma migrate dev
 
-# Apply any pending migrations (creates schema on first run)
-echo "Running migrations..."
-npx prisma migrate dev --skip-seed
-
-# Start Next.js dev server with hot reload
-echo ""
+# ── Start Next.js dev server ──────────────────────────────────────────────────
 echo "Starting dev server on http://localhost:3000"
-echo "Remote access: ssh -N -L 3000:localhost:3000 eusholli@<server-ip>"
-echo ""
 npm run dev

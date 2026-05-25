@@ -53,14 +53,14 @@ export const SignedIn = ({ children }: { children: React.ReactNode }) => {
     if (isAuthDisabled) {
         return <>{children}</>;
     }
-    return <ClerkNextjs.SignedIn>{children}</ClerkNextjs.SignedIn>;
+    return <ClerkNextjs.Show when="signed-in">{children}</ClerkNextjs.Show>;
 };
 
 export const SignedOut = ({ children }: { children: React.ReactNode }) => {
     if (isAuthDisabled) {
         return null;
     }
-    return <ClerkNextjs.SignedOut>{children}</ClerkNextjs.SignedOut>;
+    return <ClerkNextjs.Show when="signed-out">{children}</ClerkNextjs.Show>;
 };
 
 export const SignInButton = ({ children, ...props }: any) => {
