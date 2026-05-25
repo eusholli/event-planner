@@ -459,14 +459,18 @@ export async function POST(req: Request) {
               firstName, region, targetsForRegion, pipelineEvents, runDate, appUrl, reportToken,
             )
             await sendPlainEmail(email, subject, html)
-            await prisma.intelligenceEmailLog.create({
-              data: { runId, userId: u.id, email, targetCount: targetsForRegion.length, status: 'regional', region },
+            await prisma.intelligenceEmailLog.upsert({
+              where: { runId_userId_status_region: { runId, userId: u.id, status: 'regional', region } },
+              update: {},
+              create: { runId, userId: u.id, email, targetCount: targetsForRegion.length, status: 'regional', region },
             })
             regionalSent++
           } catch (err) {
             console.error(`Failed to send regional report (${region}) to ${email}:`, err)
-            await prisma.intelligenceEmailLog.create({
-              data: { runId, userId: u.id, email, targetCount: 0, status: 'failed', region },
+            await prisma.intelligenceEmailLog.upsert({
+              where: { runId_userId_status_region: { runId, userId: u.id, status: 'failed', region } },
+              update: {},
+              create: { runId, userId: u.id, email, targetCount: 0, status: 'failed', region },
             })
           }
         }
