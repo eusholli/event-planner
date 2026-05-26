@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      REDIS_URL: redis://event-planner-redis:6379
+      REDIS_URL: ${REDIS_URL:-redis://event-planner-redis:6379}
       POSTGRES_PRISMA_URL: postgresql://postgres:${POSTGRES_PASSWORD}@event-planner-db:5432/eventplanner
       POSTGRES_URL_NON_POOLING: postgresql://postgres:${POSTGRES_PASSWORD}@event-planner-db:5432/eventplanner
       READ_ONLY_DATABASE_URL: postgresql://read_only_agent:${READ_ONLY_AGENT_PASSWORD}@event-planner-db:5432/eventplanner
