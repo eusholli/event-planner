@@ -451,6 +451,8 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                                             e.stopPropagation()
                                             const query = `Give me the latest market intelligence on company ${attendee.company.name}.`
                                             sessionStorage.setItem('intelligenceAutoQuery', query)
+                                            sessionStorage.setItem('intelligenceEntityType', 'company')
+                                            sessionStorage.setItem('intelligenceEntityName', attendee.company.name)
                                             router.push(`/intelligence?eventId=${eventId}`)
                                         }}
                                         className="inline-flex items-center p-0.5 text-zinc-300 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
@@ -502,6 +504,8 @@ function AttendeesContent({ eventId }: { eventId: string }) {
                             if (attendee.company?.name) parts.push(attendee.company.name)
                             const query = `Give me the latest market intelligence on person ${parts.join(', ')}.`
                             sessionStorage.setItem('intelligenceAutoQuery', query)
+                            sessionStorage.setItem('intelligenceEntityType', 'attendee')
+                            sessionStorage.setItem('intelligenceEntityName', attendee.name)
                             router.push(`/intelligence?eventId=${eventId}`)
                         }}
                         className="p-1.5 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"

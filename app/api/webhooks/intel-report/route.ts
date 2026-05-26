@@ -46,6 +46,8 @@ export async function POST(req: Request) {
   const payload = parsed.data
   const { runId, updatedTargets } = payload
 
+  console.log(`[intel-report] incoming runId=${runId} silent=${payload.silent} targets=${updatedTargets.length}`)
+
   // Subscriber slicing for chunked digest delivery. The dispatcher loops
   // over slices to stay under the 300s function timeout when the subscriber
   // list is large. Without these params behavior is unchanged: process all
@@ -89,6 +91,7 @@ export async function POST(req: Request) {
   }
 
   if (payload.silent) {
+    console.log(`[intel-report] upserted ${updatedTargets.length} reports for runId=${runId} (silent, skipping emails)`)
     return NextResponse.json({ status: 'ok', note: 'Silent run, skipped emails' })
   }
 
@@ -163,10 +166,15 @@ export async function POST(req: Request) {
 
   let emailsSent = 0
   let emailsSkippedAlreadySent = 0
+  let emailsSkippedNoTargets = 0
+  let emailsFailed = 0
   const runDate = runId.replace('-cron', '')
+
+  console.log(`[intel-report] processing subscribers runId=${runId} total=${totalSubscribers} slice=${subscriberOffset}..${subscriberOffset + subscribers.length} alreadyHandled=${alreadyHandled.size}`)
 
   for (const subscriber of subscribers) {
     if (alreadyHandled.has(subscriber.userId)) {
+      console.log(`[intel-report] skip userId=${subscriber.userId} email=${subscriber.email} reason=already_handled runId=${runId}`)
       emailsSkippedAlreadySent++
       continue
     }
@@ -305,6 +313,8 @@ export async function POST(req: Request) {
       }
 
       if (matched.length === 0) {
+        console.log(`[intel-report] skip userId=${subscriber.userId} email=${subscriber.email} reason=no_matched_targets directSubs=${subscriber.selectedAttendees.length + subscriber.selectedCompanies.length} eventSubs=${subscriber.selectedEvents.length} runId=${runId}`)
+        emailsSkippedNoTargets++
         await prisma.intelligenceEmailLog.create({
           data: { runId, userId: subscriber.userId, email: subscriber.email, targetCount: 0, status: 'skipped' },
         })
@@ -335,13 +345,17 @@ export async function POST(req: Request) {
         data: { runId, userId: subscriber.userId, email: subscriber.email, targetCount: matched.length, status: 'sent' },
       })
       emailsSent++
+      console.log(`[intel-report] email sent userId=${subscriber.userId} email=${subscriber.email} matchedTargets=${matched.length} highlighted=${matched.filter(t => t.highlighted).length} eventLinked=${matched.filter(t => t.linkedEventName && !t.highlighted).length} fallback=${matched.filter(t => !t.highlighted && !t.linkedEventName).length} runId=${runId}`)
     } catch (err) {
       console.error(`Failed to process subscriber ${subscriber.email}:`, err)
+      emailsFailed++
       await prisma.intelligenceEmailLog.create({
         data: { runId, userId: subscriber.userId, email: subscriber.email, targetCount: 0, status: 'failed' },
       })
     }
   }
+
+  console.log(`[intel-report] subscriber loop done runId=${runId} sent=${emailsSent} skippedAlreadyHandled=${emailsSkippedAlreadySent} skippedNoTargets=${emailsSkippedNoTargets} failed=${emailsFailed}`)
 
   // 5. Regional reports (replaces the old aggregate-to-root/marketing email).
   // Runs on the FIRST slice only (or when the caller did not slice at all) so
@@ -349,6 +363,9 @@ export async function POST(req: Request) {
   const isFirstOrUnsliced = !sliceRequested || subscriberOffset === 0
   let regionalSent = 0
   let unassignedSent = 0
+  if (!isFirstOrUnsliced) {
+    console.log(`[intel-report] regional dispatch skipped runId=${runId} reason=not_first_slice offset=${subscriberOffset}`)
+  }
   if (isFirstOrUnsliced && updatedTargets.length > 0) {
     try {
       const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
@@ -400,6 +417,10 @@ export async function POST(req: Request) {
         // events: handled below — included in every regional briefing.
       }
 
+      const namedRegions = [...regionBuckets.keys()].filter(r => r !== UNASSIGNED)
+      const unassignedCount = regionBuckets.get(UNASSIGNED)?.length ?? 0
+      console.log(`[intel-report] regional dispatch start runId=${runId} regions=[${namedRegions.join(',')}] unassignedTargets=${unassignedCount}`)
+
       // 5d. Fetch PIPELINE/COMMITTED events in the next 3 months (shared).
       const threeMonthsOut = new Date()
       threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
@@ -430,19 +451,23 @@ export async function POST(req: Request) {
           where: { regions: { has: region } },
           select: { clerkUserId: true },
         })
-        if (profiles.length === 0) continue
-
         const alreadyLogged = await prisma.intelligenceEmailLog.findMany({
           where: { runId, status: 'regional', region },
           select: { userId: true },
         })
         const skipUserIds = new Set(alreadyLogged.map(l => l.userId))
 
+        console.log(`[intel-report] region=${region} targets=${targetsForRegion.length} profiles=${profiles.length} alreadyLogged=${alreadyLogged.length} runId=${runId}`)
+
+        if (profiles.length === 0) continue
         if (!clerkEnabled) continue
 
         const client = await clerkClient()
         for (const profile of profiles) {
-          if (skipUserIds.has(profile.clerkUserId)) continue
+          if (skipUserIds.has(profile.clerkUserId)) {
+            console.log(`[intel-report] regional email skipped region=${region} userId=${profile.clerkUserId} reason=already_logged runId=${runId}`)
+            continue
+          }
           let u
           try {
             u = await client.users.getUser(profile.clerkUserId)
@@ -465,6 +490,7 @@ export async function POST(req: Request) {
               create: { runId, userId: u.id, email, targetCount: targetsForRegion.length, status: 'regional', region },
             })
             regionalSent++
+            console.log(`[intel-report] regional email sent region=${region} userId=${u.id} email=${email} runId=${runId}`)
           } catch (err) {
             console.error(`Failed to send regional report (${region}) to ${email}:`, err)
             await prisma.intelligenceEmailLog.upsert({
@@ -481,6 +507,7 @@ export async function POST(req: Request) {
       if (unassignedTargets.length > 0 && clerkEnabled) {
         const client = await clerkClient()
         const allUsers = await client.users.getUserList({ limit: 500 })
+        console.log(`[intel-report] unassigned targets=${unassignedTargets.length} privilegedUsers=${allUsers.data.filter(u => u.publicMetadata.role === Roles.Root || u.publicMetadata.role === Roles.Marketing).length} runId=${runId}`)
         const privilegedUsers = allUsers.data.filter(u =>
           u.publicMetadata.role === Roles.Root || u.publicMetadata.role === Roles.Marketing,
         )

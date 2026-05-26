@@ -183,6 +183,11 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
                             ]
                             const prompt = `Return the latest market intelligence relevant to the following meeting purpose, the companies involved, the meeting itself, and the latest intelligence on the external attendees. Also recommend what the most impactful speaking points and conversation should be, based on the market research and analysis. Here are the meeting details:\n\n${queryParts.join('\n')}`
                             sessionStorage.setItem('intelligenceAutoQuery', prompt)
+                            const firstAttendee = meeting.attendees?.[0];
+                            if (firstAttendee) {
+                                sessionStorage.setItem('intelligenceEntityType', 'attendee')
+                                sessionStorage.setItem('intelligenceEntityName', firstAttendee.name)
+                            }
                             router.push(`/intelligence?eventId=${eventId}`)
                         }}
                         className="p-2 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"

@@ -58,7 +58,7 @@ function EntityActionButton({
     type === 'event'
       ? `Show me the latest market intelligence for event ${name}`
       : `Show me the latest market intelligence for ${name}`
-  const url = `/intelligence?autoQuery=${encodeURIComponent(query)}`
+  const url = `/intelligence?autoQuery=${encodeURIComponent(query)}&entityType=${type}&entityName=${encodeURIComponent(name)}`
   return (
     <Link
       href={url}

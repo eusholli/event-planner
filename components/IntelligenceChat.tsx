@@ -121,23 +121,31 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                     setError(null);
 
                     // Auto-send query from sessionStorage (preferred) or URL param fallback
+                    const urlParams = new URLSearchParams(window.location.search);
                     const autoQuery = sessionStorage.getItem('intelligenceAutoQuery')
-                        || new URLSearchParams(window.location.search).get("autoQuery");
+                        || urlParams.get("autoQuery");
                     if (autoQuery && !autoQuerySentRef.current) {
                         autoQuerySentRef.current = true;
-                        // Clear immediately to prevent re-send on reconnect
+                        // Read entity context from sessionStorage or URL params
+                        const entityType = sessionStorage.getItem('intelligenceEntityType') || urlParams.get('entityType') || undefined;
+                        const entityName  = sessionStorage.getItem('intelligenceEntityName') || urlParams.get('entityName')  || undefined;
+                        // Clear sessionStorage immediately to prevent re-send on reconnect
                         sessionStorage.removeItem('intelligenceAutoQuery');
+                        sessionStorage.removeItem('intelligenceEntityType');
+                        sessionStorage.removeItem('intelligenceEntityName');
                         // Small delay to let history load first
                         setTimeout(() => {
                             if (cancelled || !ws || ws.readyState !== WebSocket.OPEN) return;
                             const userMsg: Message = { role: "user", content: autoQuery, id: Date.now().toString() };
                             setMessages((prev) => [...prev, userMsg]);
                             setIsWaitingForResponse(true);
-                            ws.send(JSON.stringify({ type: "message", content: autoQuery }));
-                            // Clear URL param if present (backward compat)
+                            ws.send(JSON.stringify({ type: "message", content: autoQuery, entityType, entityName }));
+                            // Clear URL params if present
                             const params = new URLSearchParams(window.location.search);
-                            if (params.has("autoQuery")) {
+                            if (params.has("autoQuery") || params.has("entityType") || params.has("entityName")) {
                                 params.delete("autoQuery");
+                                params.delete("entityType");
+                                params.delete("entityName");
                                 const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
                                 router.replace(newUrl, { scroll: false });
                             }
@@ -478,7 +486,7 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                                         </ReactMarkdown>
                                     </div>
                                 </div>
-                                {msg.role === "assistant" && (
+                                {msg.role === "assistant" && msg.report && (
                                     <button
                                         onClick={() => {
                                             const match = msg.content.match(/^#{1,3}\s+(.*)/m);

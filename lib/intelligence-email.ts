@@ -47,7 +47,7 @@ export async function composeIntelligenceEmail(
       t.type === 'event'
         ? `Show me the latest market intelligence for event ${t.name}`
         : `Show me the latest market intelligence for ${t.name}`
-    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}`
+    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}&entityType=${t.type}&entityName=${encodeURIComponent(t.name)}`
     const askMoreLink = `<a href="${askMoreUrl}" style="font-size:12px;color:#4a9eff;display:block;margin:4px 0;">Ask more questions... →</a>`
     const reportLinkHtml = reportUrl
       ? `<a href="${reportUrl}" style="font-size:12px;color:#666;display:block;margin:4px 0;">Read full brief →</a>`
@@ -138,7 +138,7 @@ export async function composeAggregateEmail(
       t.type === 'event'
         ? `Show me the latest market intelligence for event ${t.name}`
         : `Show me the latest market intelligence for ${t.name}`
-    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}`
+    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}&entityType=${t.type}&entityName=${encodeURIComponent(t.name)}`
     const askMoreLink = `<a href="${askMoreUrl}" style="font-size:12px;color:#4a9eff;display:block;margin:4px 0;">Ask more questions... →</a>`
     const reportLinkHtml = reportUrl
       ? `<a href="${reportUrl}" style="font-size:12px;color:#666;display:block;margin:4px 0;">Read full brief →</a>`
@@ -223,7 +223,7 @@ export async function composeRegionalEmail(
       t.type === 'event'
         ? `Show me the latest market intelligence for event ${t.name}`
         : `Show me the latest market intelligence for ${t.name}`
-    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}`
+    const askMoreUrl = `${baseUrl}/intelligence?autoQuery=${encodeURIComponent(askMoreQuery)}&entityType=${t.type}&entityName=${encodeURIComponent(t.name)}`
     const askMoreLink = `<a href="${askMoreUrl}" style="font-size:12px;color:#4a9eff;display:block;margin:4px 0;">Ask more questions... →</a>`
     const reportLinkHtml = reportUrl
       ? `<a href="${reportUrl}" style="font-size:12px;color:#666;display:block;margin:4px 0;">Read full brief →</a>`

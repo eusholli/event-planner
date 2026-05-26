@@ -3,7 +3,6 @@ import { verifyClerkToken } from '@clerk/mcp-tools/next'
 import { auth } from '@clerk/nextjs/server'
 import { getRoleForUser } from '@/lib/mcp/auth'
 import { registerReadTools } from '@/lib/mcp/tools/read'
-import { registerWriteTools } from '@/lib/mcp/tools/write'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -11,7 +10,7 @@ export const maxDuration = 60
 const handler = createMcpHandler(
     (server) => {
         registerReadTools(server)
-        registerWriteTools(server)
+        // write tools removed — all MCP access is read-only
     },
     {
         serverInfo: { name: 'event-planner-mcp', version: '1.0.0' },

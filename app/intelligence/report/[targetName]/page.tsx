@@ -99,7 +99,7 @@ export default function IntelligenceReportPage() {
                   report.targetType.toLowerCase() === 'event'
                     ? `Show me the latest market intelligence for event ${report.targetName}`
                     : `Show me the latest market intelligence for ${report.targetName}`
-                )}`}
+                )}&entityType=${report.targetType.toLowerCase()}&entityName=${encodeURIComponent(report.targetName)}`}
                 className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border border-zinc-300 text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 transition-colors shrink-0 sm:mt-1"
               >
                 Ask more questions →
