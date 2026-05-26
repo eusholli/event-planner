@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { getStatusColor } from '@/lib/status-colors'
+import { useRouter } from 'next/navigation'
+import { useUser } from '@/components/auth'
+import { canManageEvents } from '@/lib/role-utils'
+import { EventStatusSelect } from '@/components/events/EventStatusSelect'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,13 +62,19 @@ function countChecklist(checklist: ChecklistData): number {
     return CHECKLIST_FIELDS.filter(f => checklist[f] === true).length
 }
 
-function CheckIcon({ complete }: { complete: boolean }) {
-    return complete
-        ? <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-50 text-green-700 font-bold text-sm">✓</span>
-        : <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-50 text-red-600 font-bold text-sm">✗</span>
+function CheckIcon({ complete, onClick }: { complete: boolean; onClick?: () => void }) {
+    const base = 'inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm transition-all'
+    const cls = complete
+        ? `${base} bg-green-50 text-green-700 ${onClick ? 'hover:ring-1 hover:ring-green-300 cursor-pointer' : ''}`
+        : `${base} bg-red-50 text-red-600 ${onClick ? 'hover:ring-1 hover:ring-red-300 cursor-pointer' : ''}`
+    return (
+        <span className={cls} onClick={onClick} role={onClick ? 'button' : undefined}>
+            {complete ? '✓' : '✗'}
+        </span>
+    )
 }
 
-function ChecklistBadge({ done, total }: { done: number; total: number }) {
+function ChecklistBadge({ done, total, onClick }: { done: number; total: number; onClick?: () => void }) {
     const all = done === total
     const none = done === 0
     const cls = all
@@ -75,15 +83,39 @@ function ChecklistBadge({ done, total }: { done: number; total: number }) {
         ? 'bg-red-50 text-red-600 ring-red-200'
         : 'bg-amber-50 text-amber-700 ring-amber-200'
     return (
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset ${cls}`}>
+        <span
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset cursor-pointer hover:opacity-80 transition-opacity ${cls}`}
+            onClick={onClick}
+            role="button"
+        >
             {done}/{total}
         </span>
     )
 }
 
+// Clickable wrapper for cells that navigate somewhere
+function CellBtn({ onClick, children, className = '' }: { onClick: () => void; children: React.ReactNode; className?: string }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`hover:ring-1 hover:ring-blue-300 rounded transition-colors w-full ${className}`}
+        >
+            {children}
+        </button>
+    )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function EventDashboardTableView({ events }: { events: EventRow[] }) {
+export function EventDashboardTableView({ events, statusOverrides, onStatusChange }: {
+    events: EventRow[]
+    statusOverrides: Map<string, string>
+    onStatusChange: (id: string, status: string) => void
+}) {
+    const router = useRouter()
+    const { user } = useUser()
+    const canManage = canManageEvents(user?.publicMetadata?.role as string)
+
     const [data, setData] = useState<Map<string, EventDashboardData | null>>(new Map())
     const [loading, setLoading] = useState(true)
 
@@ -138,6 +170,22 @@ export function EventDashboardTableView({ events }: { events: EventRow[] }) {
         fetchAll()
     }, [eventIds])  // eslint-disable-line react-hooks/exhaustive-deps
 
+    // ── Navigation helpers ────────────────────────────────────────────────────
+
+    const goChecklist = (event: EventRow) =>
+        router.push(`/events/${event.slug || event.id}/checklist`)
+
+    const goLinkedIn = (event: EventRow) =>
+        router.push(`/events/${event.slug || event.id}/linkedin-campaigns`)
+
+    const goComms = (event: EventRow) =>
+        router.push(`/events/${event.slug || event.id}/comms`)
+
+    const goRoiPerformance = (event: EventRow) => {
+        try { localStorage.setItem(`roi-tab-${event.id}`, 'performance') } catch { }
+        router.push(`/events/${event.slug || event.id}/roi`)
+    }
+
     // ── CSV Export ────────────────────────────────────────────────────────────
 
     const handleExportCsv = () => {
@@ -169,7 +217,7 @@ export function EventDashboardTableView({ events }: { events: EventRow[] }) {
             const companies = (d?.actuals?.targetCompaniesHit ?? []).map(c => c.name).join('; ')
 
             return [
-                event.name, event.status,
+                event.name, statusOverrides.get(event.id) ?? event.status,
                 `${checkDone}/17`, finalReport, nextYear,
                 linkedin, mediaPR, spendStr, pipelineStr, ratio, companies,
             ].map(escape).join(',')
@@ -205,7 +253,7 @@ export function EventDashboardTableView({ events }: { events: EventRow[] }) {
             <div className="p-5 border-b border-neutral-100 flex items-center justify-between gap-4">
                 <div>
                     <h2 className="text-lg font-semibold text-neutral-900">Event Health Dashboard</h2>
-                    <p className="text-sm text-neutral-500 mt-0.5">At-a-glance readiness for all filtered events.</p>
+                    <p className="text-sm text-neutral-500 mt-0.5">At-a-glance readiness for all filtered events. Click any value to edit it.</p>
                 </div>
                 <button
                     onClick={handleExportCsv}
@@ -250,7 +298,7 @@ export function EventDashboardTableView({ events }: { events: EventRow[] }) {
                         const roiRatio = investment > 0 ? revenue / investment : null
 
                         const companiesHit = d?.actuals?.targetCompaniesHit ?? []
-                        const statusColors = getStatusColor(event.status)
+                        const currentStatus = statusOverrides.get(event.id) ?? event.status
 
                         const rowBg = i % 2 === 0 ? '' : 'bg-neutral-50/50'
 
@@ -258,24 +306,30 @@ export function EventDashboardTableView({ events }: { events: EventRow[] }) {
                             <tr key={event.id} className={`border-b border-neutral-100 ${rowBg} hover:bg-blue-50/20 transition-colors`}>
                                 {/* Event name */}
                                 <td className="px-5 py-3">
-                                    <Link
-                                        href={`/events/${event.slug || event.id}/roi`}
-                                        className="font-medium text-neutral-900 hover:text-blue-600 hover:underline transition-colors line-clamp-1"
+                                    <button
+                                        onClick={() => {
+                                            try { localStorage.setItem(`roi-tab-${event.id}`, 'performance') } catch { }
+                                            router.push(`/events/${event.slug || event.id}/roi`)
+                                        }}
+                                        className="font-medium text-neutral-900 hover:text-blue-600 hover:underline transition-colors line-clamp-1 text-left"
                                     >
                                         {event.name}
-                                    </Link>
+                                    </button>
                                 </td>
 
-                                {/* Status */}
+                                {/* Status — inline select or badge */}
                                 <td className="px-3 py-3 text-center">
-                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold tracking-wider uppercase ${statusColors.className}`}>
-                                        {event.status}
-                                    </span>
+                                    <EventStatusSelect
+                                        eventId={event.id}
+                                        status={currentStatus}
+                                        canManage={canManage}
+                                        onSuccess={s => onStatusChange(event.id, s)}
+                                    />
                                 </td>
 
                                 {isLoading ? (
                                     // Loading skeleton for data columns
-                                    <td colSpan={8} className="px-3 py-3 text-center">
+                                    <td colSpan={9} className="px-3 py-3 text-center">
                                         <span className="inline-block w-40 h-4 bg-neutral-100 rounded animate-pulse" />
                                     </td>
                                 ) : (
@@ -283,81 +337,89 @@ export function EventDashboardTableView({ events }: { events: EventRow[] }) {
                                         {/* Checklist */}
                                         <td className="px-3 py-3 text-center">
                                             {checklist
-                                                ? <ChecklistBadge done={checkDone} total={17} />
+                                                ? <ChecklistBadge done={checkDone} total={17} onClick={() => goChecklist(event)} />
                                                 : <span className="text-neutral-300 text-xs">—</span>
                                             }
                                         </td>
 
                                         {/* Final Report */}
                                         <td className="px-3 py-3 text-center">
-                                            <CheckIcon complete={hasFinalReport} />
+                                            <CheckIcon complete={hasFinalReport} onClick={() => goChecklist(event)} />
                                         </td>
 
                                         {/* Next Year Decision */}
                                         <td className="px-3 py-3 text-center">
-                                            <CheckIcon complete={hasNextYear} />
+                                            <CheckIcon complete={hasNextYear} onClick={() => goChecklist(event)} />
                                         </td>
 
                                         {/* LinkedIn */}
                                         <td className="px-3 py-3 text-center">
-                                            <CheckIcon complete={d?.hasLinkedIn ?? false} />
+                                            <CheckIcon complete={d?.hasLinkedIn ?? false} onClick={() => goLinkedIn(event)} />
                                         </td>
 
                                         {/* Media / PR */}
                                         <td className="px-3 py-3 text-center">
-                                            <CheckIcon complete={d?.hasMediaPR ?? false} />
+                                            <CheckIcon complete={d?.hasMediaPR ?? false} onClick={() => goComms(event)} />
                                         </td>
 
                                         {/* Spend */}
                                         <td className="px-3 py-3 text-right tabular-nums text-neutral-700">
-                                            {spend > 0 ? (
-                                                <span>
-                                                    {fmtCurrency(spend)}
-                                                    {actualCost > 0 && (
-                                                        <span className="ml-1 text-[10px] font-semibold text-neutral-400 uppercase">actual</span>
-                                                    )}
-                                                </span>
-                                            ) : (
-                                                <span className="text-neutral-300">—</span>
-                                            )}
+                                            <CellBtn onClick={() => goRoiPerformance(event)} className="text-right">
+                                                {spend > 0 ? (
+                                                    <span>
+                                                        {fmtCurrency(spend)}
+                                                        {actualCost > 0 && (
+                                                            <span className="ml-1 text-[10px] font-semibold text-neutral-400 uppercase">actual</span>
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-neutral-300">—</span>
+                                                )}
+                                            </CellBtn>
                                         </td>
 
                                         {/* Pipeline */}
                                         <td className="px-3 py-3 text-right tabular-nums text-neutral-700">
-                                            {(d?.actuals?.actualPipeline ?? 0) > 0
-                                                ? fmtCurrency(d!.actuals!.actualPipeline)
-                                                : <span className="text-neutral-300">—</span>
-                                            }
+                                            <CellBtn onClick={() => goRoiPerformance(event)} className="text-right">
+                                                {(d?.actuals?.actualPipeline ?? 0) > 0
+                                                    ? fmtCurrency(d!.actuals!.actualPipeline)
+                                                    : <span className="text-neutral-300">—</span>
+                                                }
+                                            </CellBtn>
                                         </td>
 
                                         {/* ROI Ratio */}
                                         <td className="px-3 py-3 text-center tabular-nums">
-                                            {roiRatio != null && investment > 0 && revenue > 0 ? (
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ring-1 ring-inset ${
-                                                    roiRatio >= 1
-                                                        ? 'bg-green-50 text-green-700 ring-green-200'
-                                                        : 'bg-red-50 text-red-600 ring-red-200'
-                                                }`}>
-                                                    x{roiRatio.toFixed(1)}
-                                                </span>
-                                            ) : (
-                                                <span className="text-neutral-300">—</span>
-                                            )}
+                                            <CellBtn onClick={() => goRoiPerformance(event)}>
+                                                {roiRatio != null && investment > 0 && revenue > 0 ? (
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ring-1 ring-inset ${
+                                                        roiRatio >= 1
+                                                            ? 'bg-green-50 text-green-700 ring-green-200'
+                                                            : 'bg-red-50 text-red-600 ring-red-200'
+                                                    }`}>
+                                                        x{roiRatio.toFixed(1)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-neutral-300">—</span>
+                                                )}
+                                            </CellBtn>
                                         </td>
 
                                         {/* Target Companies Met */}
                                         <td className="px-5 py-3">
-                                            {companiesHit.length > 0 ? (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {companiesHit.map(c => (
-                                                        <span key={c.id} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200 text-xs font-medium whitespace-nowrap">
-                                                            {c.name}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <span className="text-red-400 text-xs font-medium">None</span>
-                                            )}
+                                            <CellBtn onClick={() => goRoiPerformance(event)} className="text-left">
+                                                {companiesHit.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {companiesHit.map(c => (
+                                                            <span key={c.id} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200 text-xs font-medium whitespace-nowrap">
+                                                                {c.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-red-400 text-xs font-medium">None</span>
+                                                )}
+                                            </CellBtn>
                                         </td>
                                     </>
                                 )}

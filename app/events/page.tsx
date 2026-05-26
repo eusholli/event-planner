@@ -15,6 +15,7 @@ import useFilterParams from '@/hooks/useFilterParams'
 import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
 import { RoiDashboardView } from '@/components/events/RoiDashboardView'
 import { EventDashboardTableView } from '@/components/events/EventDashboardTableView'
+import { EventStatusSelect } from '@/components/events/EventStatusSelect'
 interface Event {
     id: string
     name: string
@@ -376,11 +377,17 @@ export default function EventsPage() {
     const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams('events', EVENTS_FILTER_DEFAULTS)
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+    const [statusOverrides, setStatusOverrides] = useState<Map<string, string>>(new Map())
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [newEventName, setNewEventName] = useState('')
     const [creating, setCreating] = useState(false)
     const [createError, setCreateError] = useState('')
+
+    const handleStatusChange = (id: string, status: string) => {
+        setStatusOverrides(m => new Map(m).set(id, status))
+        setSelectedEvent(e => e?.id === id ? { ...e, status } : e)
+    }
 
     const fetchEvents = () => {
         setLoading(true)
@@ -712,7 +719,7 @@ export default function EventsPage() {
                                         onClick={() => router.push(`/events/${event.slug || event.id}/roi`)}
                                         className={`group block bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-xl hover:border-blue-500/30 transition-all duration-300 relative overflow-hidden cursor-pointer`}
                                     >
-                                        <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: getStatusColor(event.status).bg }} />
+                                        <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: getStatusColor(statusOverrides.get(event.id) ?? event.status).bg }} />
 
                                         <div className="flex justify-between items-start mb-4 pl-3">
                                             <div className="space-y-1">
@@ -721,11 +728,14 @@ export default function EventsPage() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span
-                                                    className={`px-2 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase ${getStatusColor(event.status).className}`}
-                                                >
-                                                    {event.status}
-                                                </span>
+                                                <div onClick={e => e.stopPropagation()}>
+                                                    <EventStatusSelect
+                                                        eventId={event.id}
+                                                        status={statusOverrides.get(event.id) ?? event.status}
+                                                        canManage={canManage}
+                                                        onSuccess={s => handleStatusChange(event.id, s)}
+                                                    />
+                                                </div>
                                                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={(e) => {
@@ -836,11 +846,11 @@ export default function EventsPage() {
                         )}
 
                         {eventFilters.view === 'roi' && (
-                            <RoiDashboardView events={displayEvents} />
+                            <RoiDashboardView events={displayEvents} canManage={canManage} statusOverrides={statusOverrides} onStatusChange={handleStatusChange} />
                         )}
 
                         {eventFilters.view === 'dashboard' && (
-                            <EventDashboardTableView events={displayEvents} />
+                            <EventDashboardTableView events={displayEvents} statusOverrides={statusOverrides} onStatusChange={handleStatusChange} />
                         )}
                     </div>
                 </div>
@@ -907,9 +917,12 @@ export default function EventsPage() {
                             </button>
                             <h3 className="text-2xl font-bold text-neutral-900 pr-10">{selectedEvent.name}</h3>
                             <div className="mt-2 flex items-center gap-2">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold tracking-wider uppercase border ${getStatusColor(selectedEvent.status).className}`}>
-                                    {selectedEvent.status}
-                                </span>
+                                <EventStatusSelect
+                                    eventId={selectedEvent.id}
+                                    status={statusOverrides.get(selectedEvent.id) ?? selectedEvent.status}
+                                    canManage={canManage}
+                                    onSuccess={s => handleStatusChange(selectedEvent.id, s)}
+                                />
                                 {selectedEvent.region && (
                                     <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest border border-neutral-200 px-2 py-1 rounded-full">
                                         {selectedEvent.region}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas-pro'
-import { getStatusColor } from '@/lib/status-colors'
+import { EventStatusSelect } from '@/components/events/EventStatusSelect'
 
 interface Event {
     id: string
@@ -334,10 +334,17 @@ function deriveSlide(data: EventRoiData | undefined) {
 }
 
 // ── Individual Event Slide ───────────────────────────────────────────────────
-function EventSlide({ event, data, slideRef }: { event: Event; data: EventRoiData | undefined; slideRef?: React.Ref<HTMLDivElement> }) {
+function EventSlide({ event, data, slideRef, canManage, statusOverride, onStatusChange }: {
+    event: Event
+    data: EventRoiData | undefined
+    slideRef?: React.Ref<HTMLDivElement>
+    canManage?: boolean
+    statusOverride?: string
+    onStatusChange?: (newStatus: string) => void
+}) {
     const eventPath = event.slug || event.id
     const { targets, actuals, companies, leads, media, calculatedPipeline, calculatedRevenue } = deriveSlide(data)
-    const statusCfg = getStatusColor(event.status)
+    const currentStatus = statusOverride ?? event.status
 
     const dateRange = event.startDate
         ? (event.endDate ? `${fmtDate(event.startDate)} – ${fmtDate(event.endDate)}` : fmtDate(event.startDate))
@@ -370,9 +377,12 @@ function EventSlide({ event, data, slideRef }: { event: Event; data: EventRoiDat
                                 {event.region}
                             </span>
                         )}
-                        <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${statusCfg.className}`}>
-                            {event.status}
-                        </span>
+                        <EventStatusSelect
+                            eventId={event.id}
+                            status={currentStatus}
+                            canManage={canManage ?? false}
+                            onSuccess={onStatusChange}
+                        />
                     </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
@@ -568,7 +578,12 @@ async function exportSlidesPdf(slideEls: HTMLElement[]) {
 }
 
 // ── Main Export ──────────────────────────────────────────────────────────────
-export function RoiDashboardView({ events }: { events: Event[] }) {
+export function RoiDashboardView({ events, canManage, statusOverrides, onStatusChange }: {
+    events: Event[]
+    canManage?: boolean
+    statusOverrides: Map<string, string>
+    onStatusChange: (id: string, status: string) => void
+}) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const [roiDataMap, setRoiDataMap] = useState<Record<string, EventRoiData>>({})
     const [loading, setLoading] = useState(false)
@@ -713,7 +728,13 @@ export function RoiDashboardView({ events }: { events: Event[] }) {
                 {loading ? <SlideSkeleton /> : (
                     currentEvent && (
                         <ScaledSlide>
-                            <EventSlide event={currentEvent} data={currentData} />
+                            <EventSlide
+                                event={currentEvent}
+                                data={currentData}
+                                canManage={canManage}
+                                statusOverride={statusOverrides.get(currentEvent.id)}
+                                onStatusChange={s => onStatusChange(currentEvent.id, s)}
+                            />
                         </ScaledSlide>
                     )
                 )}
