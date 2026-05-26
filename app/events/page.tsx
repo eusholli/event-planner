@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign, Info, TrendingUp } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Map as MapIcon, ChevronDown, DollarSign, Info, TrendingUp, LayoutList } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import Link from 'next/link'
@@ -14,6 +14,7 @@ import { getStatusColor, STATUS_DISPLAY_ORDER } from '@/lib/status-colors'
 import useFilterParams from '@/hooks/useFilterParams'
 import SparkleMarketingPlanButton from '@/components/roi/SparkleMarketingPlanButton'
 import { RoiDashboardView } from '@/components/events/RoiDashboardView'
+import { EventDashboardTableView } from '@/components/events/EventDashboardTableView'
 interface Event {
     id: string
     name: string
@@ -360,7 +361,7 @@ const EVENTS_FILTER_DEFAULTS = {
     regions: [] as string[],
     dateFrom: '',
     dateTo: '',
-    view: 'list' as 'list' | 'calendar' | 'map' | 'budget' | 'roi',
+    view: 'list' as 'list' | 'calendar' | 'map' | 'budget' | 'roi' | 'dashboard',
 }
 
 export default function EventsPage() {
@@ -576,6 +577,13 @@ export default function EventsPage() {
                                 title="ROI Performance View"
                             >
                                 <TrendingUp className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setFilter('view', 'dashboard')}
+                                className={`p-2 rounded-md transition-all ${eventFilters.view === 'dashboard' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                title="Health Dashboard View"
+                            >
+                                <LayoutList className="w-5 h-5" />
                             </button>
                         </div>
                         {canManage && (
@@ -829,6 +837,10 @@ export default function EventsPage() {
 
                         {eventFilters.view === 'roi' && (
                             <RoiDashboardView events={displayEvents} />
+                        )}
+
+                        {eventFilters.view === 'dashboard' && (
+                            <EventDashboardTableView events={displayEvents} />
                         )}
                     </div>
                 </div>
