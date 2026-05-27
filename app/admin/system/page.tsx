@@ -11,6 +11,8 @@ export default function SystemAdminPage() {
         defaultMeetingTypes: string[]
         defaultAttendeeTypes: string[]
         defaultRegionTypes: string[]
+        defaultContentTypes: string[]
+        contentTypeColors: Record<string, string>
     } | null>(null)
 
     // Local state for list inputs
@@ -18,6 +20,7 @@ export default function SystemAdminPage() {
     const [defaultMeetingTypesInput, setDefaultMeetingTypesInput] = useState('')
     const [defaultAttendeeTypesInput, setDefaultAttendeeTypesInput] = useState('')
     const [defaultRegionTypesInput, setDefaultRegionTypesInput] = useState('')
+    const [contentTypeRows, setContentTypeRows] = useState<{ name: string; color: string }[]>([])
 
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -40,7 +43,9 @@ export default function SystemAdminPage() {
                     defaultTags: data.defaultTags || [],
                     defaultMeetingTypes: data.defaultMeetingTypes || [],
                     defaultAttendeeTypes: data.defaultAttendeeTypes || [],
-                    defaultRegionTypes: data.defaultRegionTypes || []
+                    defaultRegionTypes: data.defaultRegionTypes || [],
+                    defaultContentTypes: data.defaultContentTypes || [],
+                    contentTypeColors: data.contentTypeColors || {}
                 }
                 setSettings(loadedSettings)
 
@@ -49,6 +54,10 @@ export default function SystemAdminPage() {
                 setDefaultMeetingTypesInput(loadedSettings.defaultMeetingTypes.join(', '))
                 setDefaultAttendeeTypesInput(loadedSettings.defaultAttendeeTypes.join(', '))
                 setDefaultRegionTypesInput(loadedSettings.defaultRegionTypes.join(', '))
+                setContentTypeRows(loadedSettings.defaultContentTypes.map((name: string) => ({
+                    name,
+                    color: loadedSettings.contentTypeColors[name] || '#6366f1'
+                })))
 
                 setLoading(false)
             })
@@ -71,7 +80,13 @@ export default function SystemAdminPage() {
                 defaultTags: defaultTagsInput.split(',').map(s => s.trim()).filter(Boolean),
                 defaultMeetingTypes: defaultMeetingTypesInput.split(',').map(s => s.trim()).filter(Boolean),
                 defaultAttendeeTypes: defaultAttendeeTypesInput.split(',').map(s => s.trim()).filter(Boolean),
-                defaultRegionTypes: defaultRegionTypesInput.split(',').map(s => s.trim()).filter(Boolean)
+                defaultRegionTypes: defaultRegionTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                defaultContentTypes: contentTypeRows.map(r => r.name.trim()).filter(Boolean),
+                contentTypeColors: contentTypeRows.reduce<Record<string, string>>((acc, r) => {
+                    const n = r.name.trim()
+                    if (n) acc[n] = r.color
+                    return acc
+                }, {})
             }
 
             const res = await fetch('/api/admin/system', {
@@ -293,6 +308,44 @@ export default function SystemAdminPage() {
                                     className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                                 />
                                 <p className="text-xs text-neutral-500 mt-1">Comma-separated list of region types used to tag companies and users.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700">Default Content Types</label>
+                                <p className="text-xs text-neutral-500 mt-1 mb-2">Used by the editorial content calendar. Each type has a color that drives its calendar event fill.</p>
+                                <div className="space-y-2">
+                                    {contentTypeRows.map((row, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            <input
+                                                type="color"
+                                                value={row.color}
+                                                onChange={e => setContentTypeRows(rows => rows.map((r, j) => j === i ? { ...r, color: e.target.value } : r))}
+                                                className="h-9 w-12 rounded border border-neutral-300 cursor-pointer"
+                                                aria-label="Color"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={row.name}
+                                                onChange={e => setContentTypeRows(rows => rows.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
+                                                placeholder="e.g. Newsletter"
+                                                className="flex-1 rounded-md border border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setContentTypeRows(rows => rows.filter((_, j) => j !== i))}
+                                                className="px-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                                                aria-label="Remove"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => setContentTypeRows(rows => [...rows, { name: '', color: '#6366f1' }])}
+                                        className="text-sm text-blue-600 hover:text-blue-800"
+                                    >+ Add content type</button>
+                                </div>
                             </div>
                         </div>
                         <div className="flex justify-end">

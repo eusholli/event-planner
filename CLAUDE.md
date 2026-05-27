@@ -140,6 +140,20 @@ const { filters, setFilter, setFilters, isFiltered, resetFilters } = useFilterPa
 - `isFiltered` is `true` when any filter differs from its default — use it to conditionally render a "Clear Filters" button.
 - SSR-safe: gracefully handles `localStorage` being unavailable.
 
+### Editorial Content Tasks
+
+System-level `ContentTask` model for managing editorial deliverables (newsletters, podcasts, articles, social posts, event recaps, awards, web updates) — replaces Asana for the marketing team.
+
+- **Scope**: System-level (not event-scoped). `eventId` is optional — tasks linked to an event also surface in that event's dashboard via `<LinkedContentPanel>`.
+- **Status workflow**: `TODO` → `IN_PROGRESS` → `DONE` / `CANCELED` (simple, no approval step).
+- **Assignee**: Single Clerk user (`assigneeId` stores Clerk userId).
+- **Categorization**: `contentType` (drives calendar color, populated from `SystemSettings.defaultContentTypes`) + free-form `tags[]`.
+- **Pages**: `/content` (list with filters) and `/content/calendar` (react-big-calendar month view, drag to reschedule).
+- **Components**: `ContentTaskModal`, `UserCombobox`, `EventCombobox`, `LinkedContentPanel`.
+- **API**: `/api/content-tasks` (GET/POST), `/api/content-tasks/[id]` (GET/PUT/DELETE), `/api/content-tasks/options` (returns content types + tags for any authenticated user).
+- **AI**: event chat exposes `getContentTasks` tool to query upcoming content (set `onlyLinked=true` to scope to the current event).
+- **RBAC**: list/read is open to any authenticated user; create requires `create` role; edit/delete via `isOwnerOrCanWrite` (owner by `createdBy` email, or `write` role).
+
 ### External Integrations
 
 **Cloudflare R2** (`lib/storage.ts`): Image storage using AWS S3-compatible API. Used for attendee/company photos.
@@ -230,6 +244,8 @@ Event pages are logically grouped into sub-menus: **Performance**, **Audience**,
 /admin/system               - System administration
 /intelligence               - OpenClaw Insights AI (standalone)
 /intelligence/subscribe     - Manage intelligence subscriptions
+/content                    - Editorial content tasks (list)
+/content/calendar           - Editorial calendar view
 /manual                     - User manual
 /settings                   - System settings (root only)
 ```

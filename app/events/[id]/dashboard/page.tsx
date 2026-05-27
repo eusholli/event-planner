@@ -13,6 +13,7 @@ import MeetingDetailsModal from '@/components/MeetingDetailsModal'
 import { useUser } from '@/components/auth'
 import { hasWriteAccess, hasCreateAccess } from '@/lib/role-utils'
 import useFilterParams from '@/hooks/useFilterParams'
+import LinkedContentPanel from '@/components/LinkedContentPanel'
 
 const DASHBOARD_FILTER_DEFAULTS = {
     search: '',
@@ -691,6 +692,8 @@ function DashboardContent({ eventId }: { eventId: string }) {
                     <div className="mt-2 text-3xl font-bold text-gray-700">{stats.CANCELED}</div>
                 </div>
             </div>
+
+            <LinkedContentPanel eventId={eventId} canWrite={canCreate} />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Filters Sidebar */}

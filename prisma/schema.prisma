@@ -13,6 +13,8 @@ model SystemSettings {
   defaultMeetingTypes  String[] @default([])
   defaultTags          String[] @default([])
   defaultRegionTypes   String[] @default([])
+  defaultContentTypes  String[] @default([])
+  contentTypeColors    Json?
 }
 
 model Event {
@@ -48,6 +50,7 @@ model Event {
   linkedInDrafts    LinkedInDraft[]
   attendeeReports   AttendeeEventReport[]
   pitches           Pitch[]
+  contentTasks      ContentTask[]
 }
 
 model Company {
@@ -128,6 +131,34 @@ enum MeetingStatus {
   PIPELINE
   CONFIRMED
   OCCURRED
+  CANCELED
+}
+
+model ContentTask {
+  id          String            @id @default(cuid())
+  title       String
+  description String?           @db.Text
+  contentType String?
+  status      ContentTaskStatus @default(TODO)
+  dueDate     DateTime?
+  tags        String[]          @default([])
+  assigneeId  String?
+  eventId     String?
+  createdBy   String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  event       Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+enum ContentTaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
   CANCELED
 }
 

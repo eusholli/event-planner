@@ -15,6 +15,7 @@ const getHandler = withAuth(async () => {
                     defaultAttendeeTypes: ['VIP', 'Speaker', 'Guest', 'Staff'],
                     defaultMeetingTypes: ['Sync', 'Review', 'Planning'],
                     defaultTags: ['Urgent', 'Follow-up'],
+                    defaultContentTypes: ['Newsletter', 'Podcast', 'Article', 'Social', 'Event Recap', 'Award', 'Web Update'],
                 }
             })
         }
@@ -25,6 +26,7 @@ const getHandler = withAuth(async () => {
             attendeeTypes: settings.defaultAttendeeTypes,
             meetingTypes: settings.defaultMeetingTypes,
             tags: settings.defaultTags,
+            contentTypes: settings.defaultContentTypes,
             // Provide defaults for legacy fields to avoid client errors if it expects them
             name: '',
             startDate: '',
@@ -50,7 +52,8 @@ const postHandler = withAuth(async (request) => {
             geminiApiKey: json.geminiApiKey,
             defaultAttendeeTypes: json.attendeeTypes,
             defaultMeetingTypes: json.meetingTypes,
-            defaultTags: json.tags
+            defaultTags: json.tags,
+            defaultContentTypes: json.contentTypes,
         }
 
         if (settings) {
@@ -69,6 +72,7 @@ const postHandler = withAuth(async (request) => {
             attendeeTypes: settings.defaultAttendeeTypes,
             meetingTypes: settings.defaultMeetingTypes,
             tags: settings.defaultTags,
+            contentTypes: settings.defaultContentTypes,
             name: '',
             startDate: '',
             endDate: '',

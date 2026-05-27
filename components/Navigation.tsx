@@ -94,6 +94,12 @@ export default function Navigation() {
         { href: '/intelligence/subscribe', label: 'Manage Subscriptions' },
     ]
 
+    // Content Links (Global)
+    const contentLinks = [
+        { href: '/content', label: 'List' },
+        { href: '/content/calendar', label: 'Calendar' },
+    ]
+
     // Event Groups (Scoped)
     const eventGroups = eventId ? [
         {
@@ -198,6 +204,12 @@ export default function Navigation() {
                                     label="Intelligence"
                                     items={intelligenceLinks}
                                     isActive={isGroupActive(intelligenceLinks)}
+                                />
+
+                                <NavDropdown
+                                    label="Content"
+                                    items={contentLinks}
+                                    isActive={isGroupActive(contentLinks)}
                                 />
 
                                 {!eventId && adminLinks.filter(filterItem).length > 0 && (
@@ -315,6 +327,41 @@ export default function Navigation() {
                                 </div>
                             )
                         })}
+
+                        {(() => {
+                            const contentGroupExpanded = openGroup === 'Content'
+                            return (
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => setOpenGroup(contentGroupExpanded ? null : 'Content')}
+                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${contentLinks.some(l => isActive(l.href))
+                                            ? 'text-zinc-900'
+                                            : 'text-zinc-500'
+                                            }`}
+                                    >
+                                        Content
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${contentGroupExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {contentGroupExpanded && (
+                                        <div className="pl-6 space-y-1">
+                                            {contentLinks.map(link => (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    onClick={() => { setIsOpen(false); setOpenGroup(null) }}
+                                                    className={`block pl-3 pr-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
+                                                        ? 'bg-zinc-50 text-zinc-900'
+                                                        : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                                        }`}
+                                                >
+                                                    {link.label}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })()}
 
                         {(() => {
                             const intelligenceGroupExpanded = openGroup === 'Intelligence'
