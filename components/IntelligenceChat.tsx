@@ -7,7 +7,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Image from "next/image";
-import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell, History } from "lucide-react";
+import { Send, Terminal, Loader2, AlertCircle, RotateCcw, Download, Bell, History, Square, WifiOff } from "lucide-react";
 import clsx from "clsx";
 import { downloadMarkdownAsPdf } from "@/lib/markdown-to-pdf";
 import type { TargetUpdate } from "@/lib/intelligence-schema";
@@ -61,6 +61,7 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isConnected, setIsConnected] = useState(false);
+    const [isGatewayOffline, setIsGatewayOffline] = useState(false);
     const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -241,6 +242,12 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             ]);
                             setIsWaitingForResponse(true);
                             setStatusMessage("Thinking…");
+                        } else if (data.type === "gateway-offline") {
+                            setIsGatewayOffline(true);
+                            setIsWaitingForResponse(false);
+                            setStatusMessage(null);
+                        } else if (data.type === "gateway-online") {
+                            setIsGatewayOffline(false);
                         } else if (data.type === "error") {
                             setError(data.message);
                             setIsWaitingForResponse(false);
@@ -313,6 +320,11 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
         wsRef.current.send(JSON.stringify({ type: "message", content: "/history" }));
     };
 
+    const handleAbort = () => {
+        if (!wsRef.current || !isConnected || !isWaitingForResponse) return;
+        wsRef.current.send(JSON.stringify({ type: "abort" }));
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -372,11 +384,35 @@ export default function IntelligenceChat({ eventId }: IntelligenceChatProps) {
                             <History size={13} />
                             Get History
                         </button>
+                        {isWaitingForResponse && (
+                            <button
+                                onClick={handleAbort}
+                                disabled={!isConnected}
+                                title="Stop"
+                                className={clsx(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                                    !isConnected
+                                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                                        : "bg-red-600 text-white hover:bg-red-700 active:scale-95 shadow-sm"
+                                )}
+                            >
+                                <Square size={13} />
+                                Stop
+                            </button>
+                        )}
                         <span className="text-sm text-zinc-400">
                             {user?.primaryEmailAddress?.emailAddress}
                         </span>
                     </div>
                 </div>
+
+                {/* Gateway offline banner */}
+                {isGatewayOffline && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-medium">
+                        <WifiOff size={13} className="flex-shrink-0" />
+                        Reconnecting to agent — chat is read-only until connection is restored…
+                    </div>
+                )}
 
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-white">
