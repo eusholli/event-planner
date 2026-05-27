@@ -4,7 +4,7 @@ import { Meeting } from '@/components/MeetingModal'
 import { generateBriefingBook } from '@/lib/briefing-book'
 import moment from 'moment'
 import { useRouter, useParams } from 'next/navigation'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Info } from 'lucide-react'
 import { useState } from 'react'
 
 interface Room {
@@ -25,6 +25,8 @@ interface MeetingCardProps {
     rooms: Room[]
     onClick?: (e: React.MouseEvent) => void
     onDoubleClick?: (e: React.MouseEvent) => void
+    onInfoClick?: () => void
+    onInlineEdit?: (meetingId: string, field: 'purpose' | 'otherDetails', value: string) => Promise<void> | void
     className?: string
     hasConflict?: boolean
     onStatusChange?: (meetingId: string, newStatus: MeetingStatus) => void | Promise<void>
@@ -44,11 +46,42 @@ const STATUS_COLORS: Record<MeetingStatus, string> = {
     CANCELED: 'bg-gray-50 text-gray-700 border-gray-200',
 }
 
-export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, className = '', hasConflict = false, onStatusChange }: MeetingCardProps) {
+const FIELD_LABELS: Record<'purpose' | 'otherDetails', string> = {
+    purpose: 'Purpose',
+    otherDetails: 'Results',
+}
+
+export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, onInfoClick, onInlineEdit, className = '', hasConflict = false, onStatusChange }: MeetingCardProps) {
     const router = useRouter()
     const params = useParams()
     const eventId = params?.id as string
     const [savingStatus, setSavingStatus] = useState(false)
+
+    const [inlineEditField, setInlineEditField] = useState<'purpose' | 'otherDetails' | null>(null)
+    const [inlineEditValue, setInlineEditValue] = useState('')
+    const [inlineSaving, setInlineSaving] = useState(false)
+
+    const openInlineEdit = (field: 'purpose' | 'otherDetails', e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!onInlineEdit) {
+            // Fall back to opening the full edit modal
+            onClick?.(e)
+            return
+        }
+        setInlineEditValue(field === 'purpose' ? (meeting.purpose ?? '') : (meeting.otherDetails ?? ''))
+        setInlineEditField(field)
+    }
+
+    const handleInlineSave = async () => {
+        if (!inlineEditField || !meeting.id) return
+        setInlineSaving(true)
+        try {
+            await onInlineEdit?.(meeting.id, inlineEditField, inlineEditValue)
+        } finally {
+            setInlineSaving(false)
+            setInlineEditField(null)
+        }
+    }
 
     const renderStatus = (status: string) => {
         const key = (STATUS_COLORS[status as MeetingStatus] ? status : 'PIPELINE') as MeetingStatus
@@ -89,127 +122,199 @@ export default function MeetingCard({ meeting, rooms, onClick, onDoubleClick, cl
     }
 
     return (
-        <div
-            className={`bg-white p-5 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md hover:border-zinc-200 transition-all cursor-pointer group ${className}`}
-            onClick={onClick}
-            onDoubleClick={onDoubleClick}
-        >
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center flex-wrap gap-2 text-xs text-zinc-500 mb-2">
-                        <span className="font-medium text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-md">
-                            {meeting.date ? moment(meeting.date).format('ddd, MMM D') : (meeting.start ? moment(meeting.start).format('ddd, MMM D') : 'No Date')}
-                        </span>
-                        <span className="text-zinc-300">•</span>
-                        <span>
-                            {meeting.startTime && meeting.endTime
-                                ? `${moment(meeting.startTime, 'HH:mm').format('h:mm A')} - ${moment(meeting.endTime, 'HH:mm').format('h:mm A')}`
-                                : (meeting.start && meeting.end ? `${moment(meeting.start).format('h:mm A')} - ${moment(meeting.end).format('h:mm A')}` : 'No Time')}
-                        </span>
-                        <span className="text-zinc-300">•</span>
-                        <span className="flex items-center text-zinc-600">
-                            <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            {meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'No Room')}
-                        </span>
-                        {meeting.meetingType && (
-                            <>
-                                <span className="text-zinc-300">•</span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                    {meeting.meetingType}
-                                </span>
-                            </>
-                        )}
-                        {meeting.isApproved && (
-                            <>
-                                <span className="text-zinc-300">•</span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                                    Approved
-                                </span>
-                            </>
-                        )}
-                        {meeting.calendarInviteSent && (
-                            <>
-                                <span className="text-zinc-300">•</span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
-                                    Invite Sent
-                                </span>
-                            </>
-                        )}
-                        <span className="text-zinc-300">•</span>
-                        {renderStatus(meeting.status)}
-                    </div>
-
-                    <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors truncate flex items-center gap-2">
-                        {hasConflict && (
-                            <span title="Attendee Conflict" className="text-amber-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+        <>
+            <div
+                className={`bg-white p-5 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md hover:border-zinc-200 transition-all cursor-pointer group ${className}`}
+                onClick={onClick}
+                onDoubleClick={onDoubleClick}
+            >
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-2 text-xs text-zinc-500 mb-2">
+                            <span className="font-medium text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-md">
+                                {meeting.date ? moment(meeting.date).format('ddd, MMM D') : (meeting.start ? moment(meeting.start).format('ddd, MMM D') : 'No Date')}
+                            </span>
+                            <span className="text-zinc-300">•</span>
+                            <span>
+                                {meeting.startTime && meeting.endTime
+                                    ? `${moment(meeting.startTime, 'HH:mm').format('h:mm A')} - ${moment(meeting.endTime, 'HH:mm').format('h:mm A')}`
+                                    : (meeting.start && meeting.end ? `${moment(meeting.start).format('h:mm A')} - ${moment(meeting.end).format('h:mm A')}` : 'No Time')}
+                            </span>
+                            <span className="text-zinc-300">•</span>
+                            <span className="flex items-center text-zinc-600">
+                                <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                 </svg>
+                                {meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'No Room')}
                             </span>
-                        )}
-                        {meeting.title}
-                    </h3>
+                            {meeting.meetingType && (
+                                <>
+                                    <span className="text-zinc-300">•</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                        {meeting.meetingType}
+                                    </span>
+                                </>
+                            )}
+                            {meeting.isApproved && (
+                                <>
+                                    <span className="text-zinc-300">•</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                                        Approved
+                                    </span>
+                                </>
+                            )}
+                            {meeting.calendarInviteSent && (
+                                <>
+                                    <span className="text-zinc-300">•</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                                        Invite Sent
+                                    </span>
+                                </>
+                            )}
+                            <span className="text-zinc-300">•</span>
+                            {renderStatus(meeting.status)}
+                        </div>
 
-                    {meeting.purpose && (
-                        <p className="mt-1 text-sm text-zinc-500 line-clamp-1">{meeting.purpose}</p>
-                    )}
+                        <h3 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-indigo-600 transition-colors truncate flex items-center gap-2">
+                            {hasConflict && (
+                                <span title="Attendee Conflict" className="text-amber-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                    </svg>
+                                </span>
+                            )}
+                            {meeting.title}
+                        </h3>
 
-                    <div className="mt-3 flex flex-wrap gap-2 items-center">
-                        {meeting.attendees && meeting.attendees.length > 0 && (
-                            <div className="text-sm text-zinc-600 mr-2">
-                                {meeting.attendees.slice(0, 3).map(a => a.name).join(', ')}
-                                {meeting.attendees.length > 3 && <span className="text-zinc-400 ml-1">+{meeting.attendees.length - 3} more</span>}
-                            </div>
-                        )}
-                        {meeting.tags && meeting.tags.map(tag => (
-                            <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-50 text-zinc-600 border border-zinc-100">
-                                {tag}
-                            </span>
-                        ))}
+                        <div
+                            className="mt-1 cursor-text"
+                            title="Click to edit Purpose"
+                            onClick={(e) => openInlineEdit('purpose', e)}
+                        >
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Purpose</span>
+                            <p className="text-sm text-zinc-500 line-clamp-1 hover:text-zinc-700">
+                                {meeting.purpose || <span className="italic text-zinc-300">—</span>}
+                            </p>
+                        </div>
+
+                        <div
+                            className="mt-1 cursor-text"
+                            title="Click to edit Results"
+                            onClick={(e) => openInlineEdit('otherDetails', e)}
+                        >
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Results</span>
+                            <p className="text-sm text-zinc-400 line-clamp-1 hover:text-zinc-600 italic">
+                                {meeting.otherDetails || <span className="text-zinc-300">—</span>}
+                            </p>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2 items-center">
+                            {meeting.attendees && meeting.attendees.length > 0 && (
+                                <div className="text-sm text-zinc-600 mr-2">
+                                    {meeting.attendees.slice(0, 3).map(a => a.name).join(', ')}
+                                    {meeting.attendees.length > 3 && <span className="text-zinc-400 ml-1">+{meeting.attendees.length - 3} more</span>}
+                                </div>
+                            )}
+                            {meeting.tags && meeting.tags.map(tag => (
+                                <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-50 text-zinc-600 border border-zinc-100">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
                     </div>
-                </div>
-                <div className="flex flex-col justify-center gap-2 pl-4 border-l border-zinc-100">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            const queryParts = [
-                                `Meeting Title: ${meeting.title}`,
-                                `Date: ${meeting.date ? moment(meeting.date).format('YYYY-MM-DD') : (meeting.start ? moment(meeting.start).format('YYYY-MM-DD') : 'Unknown')}`,
-                                `Purpose: ${meeting.purpose || 'None provided'}`,
-                                `Other Details: ${meeting.otherDetails || 'None'}`,
-                                `Attendees: ${meeting.attendees?.map(a => `${a.name} (${a.company || 'Unknown Company'})`).join(', ') || 'None'}`
-                            ]
-                            const prompt = `Return the latest market intelligence relevant to the following meeting purpose, the companies involved, the meeting itself, and the latest intelligence on the external attendees. Also recommend what the most impactful speaking points and conversation should be, based on the market research and analysis. Here are the meeting details:\n\n${queryParts.join('\n')}`
-                            sessionStorage.setItem('intelligenceAutoQuery', prompt)
-                            const firstAttendee = meeting.attendees?.[0];
-                            if (firstAttendee) {
-                                sessionStorage.setItem('intelligenceEntityType', 'attendee')
-                                sessionStorage.setItem('intelligenceEntityName', firstAttendee.name)
-                            }
-                            router.push(`/intelligence?eventId=${eventId}`)
-                        }}
-                        className="p-2 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        title="Get latest meeting recommendations"
-                    >
-                        <Sparkles className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={async (e) => {
-                            e.stopPropagation()
-                            const roomName = meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'Unknown Room')
-                            await generateBriefingBook(meeting, roomName)
-                        }}
-                        className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Export Briefing"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </button>
+                    <div className="flex flex-col justify-center gap-2 pl-4 border-l border-zinc-100">
+                        {onInfoClick && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onInfoClick()
+                                }}
+                                className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="View details"
+                            >
+                                <Info className="w-5 h-5" />
+                            </button>
+                        )}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                const queryParts = [
+                                    `Meeting Title: ${meeting.title}`,
+                                    `Date: ${meeting.date ? moment(meeting.date).format('YYYY-MM-DD') : (meeting.start ? moment(meeting.start).format('YYYY-MM-DD') : 'Unknown')}`,
+                                    `Purpose: ${meeting.purpose || 'None provided'}`,
+                                    `Other Details: ${meeting.otherDetails || 'None'}`,
+                                    `Attendees: ${meeting.attendees?.map(a => `${a.name} (${a.company || 'Unknown Company'})`).join(', ') || 'None'}`
+                                ]
+                                const prompt = `Return the latest market intelligence relevant to the following meeting purpose, the companies involved, the meeting itself, and the latest intelligence on the external attendees. Also recommend what the most impactful speaking points and conversation should be, based on the market research and analysis. Here are the meeting details:\n\n${queryParts.join('\n')}`
+                                sessionStorage.setItem('intelligenceAutoQuery', prompt)
+                                const firstAttendee = meeting.attendees?.[0];
+                                if (firstAttendee) {
+                                    sessionStorage.setItem('intelligenceEntityType', 'attendee')
+                                    sessionStorage.setItem('intelligenceEntityName', firstAttendee.name)
+                                }
+                                router.push(`/intelligence?eventId=${eventId}`)
+                            }}
+                            className="p-2 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            title="Get latest meeting recommendations"
+                        >
+                            <Sparkles className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={async (e) => {
+                                e.stopPropagation()
+                                const roomName = meeting.location ? meeting.location : (rooms.find(r => r.id === meeting.resourceId)?.name || 'Unknown Room')
+                                await generateBriefingBook(meeting, roomName)
+                            }}
+                            className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Export Briefing"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* Inline Edit Popup */}
+            {inlineEditField && (
+                <div
+                    className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+                    onClick={() => setInlineEditField(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-base font-semibold text-zinc-900 mb-3">
+                            Edit {FIELD_LABELS[inlineEditField]}
+                        </h3>
+                        <textarea
+                            autoFocus
+                            className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-800 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-32"
+                            value={inlineEditValue}
+                            onChange={(e) => setInlineEditValue(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button
+                                type="button"
+                                onClick={() => setInlineEditField(null)}
+                                className="px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={inlineSaving}
+                                onClick={handleInlineSave}
+                                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                            >
+                                {inlineSaving ? 'Saving…' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     )
 }

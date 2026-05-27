@@ -672,6 +672,26 @@ export default function MeetingModal({
                                 </div>
                             </div>
                         )}
+
+                        <div>
+                            <div className="mb-2 mt-4">
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        className="input-field pl-10 py-1.5 text-sm"
+                                        placeholder="Search attendees..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
                                 External Attendees
@@ -709,22 +729,6 @@ export default function MeetingModal({
                         </div>
 
                         <div>
-                            <div className="mb-2 mt-4">
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg className="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                    <input
-                                        type="text"
-                                        className="input-field pl-10 py-1.5 text-sm"
-                                        placeholder="Search attendees..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
-                            </div>
                             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
                                 Internal Attendees
                             </label>
@@ -771,7 +775,7 @@ export default function MeetingModal({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Other Details</label>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Results</label>
                             <textarea
                                 className={`input-field h-24 resize-none ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                 disabled={readOnly}

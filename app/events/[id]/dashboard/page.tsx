@@ -885,9 +885,36 @@ function DashboardContent({ eventId }: { eventId: string }) {
                                     key={meeting.id}
                                     meeting={meeting}
                                     rooms={rooms}
-                                    onClick={() => handleViewEventClick(meeting)}
-                                    onDoubleClick={() => handleEventClick(meeting)}
+                                    onClick={() => handleEventClick(meeting)}
+                                    onInfoClick={() => handleViewEventClick(meeting)}
                                     hasConflict={conflictedEventIds.has(meeting.id)}
+                                    onInlineEdit={async (id, field, value) => {
+                                        const target = meetings.find(m => m.id === id)
+                                        if (!target) return
+                                        await fetch(`/api/meetings/${id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                title: target.title,
+                                                status: target.status,
+                                                purpose: target.purpose,
+                                                otherDetails: target.otherDetails,
+                                                tags: target.tags,
+                                                requesterEmail: target.requesterEmail,
+                                                meetingType: target.meetingType,
+                                                isApproved: target.isApproved,
+                                                calendarInviteSent: target.calendarInviteSent,
+                                                date: target.date,
+                                                startTime: target.startTime,
+                                                endTime: target.endTime,
+                                                roomId: target.resourceId !== 'external' ? (target.resourceId || null) : null,
+                                                location: target.resourceId === 'external' ? target.location : null,
+                                                attendeeIds: target.attendees?.map(a => a.id) ?? [],
+                                                [field]: value,
+                                            })
+                                        })
+                                        await fetchMeetings()
+                                    }}
                                 />
                             ))}
                         </div>

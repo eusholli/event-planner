@@ -316,7 +316,7 @@ export default function PitchDetailPage() {
             startTime: '09:00',
             endTime: '09:30',
             resourceId: rooms[0]?.id ?? '',
-            attendees: targetAttendees,
+            attendees: [],
             status: 'PIPELINE',
             tags: pitch.tags,
             meetingType: '',
@@ -609,9 +609,36 @@ export default function PitchDetailPage() {
                                         key={(m as Meeting & { roomId?: string }).id}
                                         meeting={m as unknown as Meeting & { resourceId?: string }}
                                         rooms={rooms}
-                                        onClick={dirty ? undefined : () => openViewBriefing(m as unknown as Meeting)}
-                                        onDoubleClick={dirty ? undefined : () => openEditBriefing(m as unknown as Meeting)}
+                                        onClick={dirty ? undefined : () => openEditBriefing(m as unknown as Meeting)}
+                                        onInfoClick={dirty ? undefined : () => openViewBriefing(m as unknown as Meeting)}
                                         onStatusChange={dirty ? undefined : handleQuickStatusChange}
+                                        onInlineEdit={dirty ? undefined : async (id, field, value) => {
+                                            const target = pitch?.meetings.find(x => x.id === id)
+                                            if (!target) return
+                                            await fetch(`/api/meetings/${id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    title: target.title,
+                                                    status: target.status,
+                                                    purpose: target.purpose,
+                                                    otherDetails: target.otherDetails,
+                                                    tags: target.tags,
+                                                    requesterEmail: target.requesterEmail,
+                                                    meetingType: target.meetingType,
+                                                    isApproved: target.isApproved,
+                                                    calendarInviteSent: target.calendarInviteSent,
+                                                    date: target.date,
+                                                    startTime: target.startTime,
+                                                    endTime: target.endTime,
+                                                    roomId: (target as Meeting & { roomId?: string }).roomId ?? null,
+                                                    attendeeIds: target.attendees?.map(a => a.id) ?? [],
+                                                    pitchId,
+                                                    [field]: value,
+                                                })
+                                            })
+                                            await loadPitch()
+                                        }}
                                     />
                                 ))}
                             </div>
