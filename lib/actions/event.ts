@@ -12,6 +12,7 @@ export async function generateEventDetails(url: string, currentData?: any) {
         // 3. Call Gemini
         const settings = await prisma.systemSettings.findFirst()
         const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY
+        const regionList = settings?.defaultRegionTypes?.join(', ') || 'AMER, EMEA, APAC'
 
         if (!apiKey) {
             return { debug: 'Gemini API Key not configured in System Settings.' }
@@ -52,7 +53,7 @@ export async function generateEventDetails(url: string, currentData?: any) {
         - endDate (YYYY-MM-DD)
         - location (string: City, Country)
         - address (string: Full venue address if known)
-        - region (string: One of NA, SA, EU/UK, MEA, APAC, Japan. Infer from location.)
+        - region (string: One of ${regionList}. Infer from location.)
         - description (string: Brief summary of the event)
         - budget (number: Estimated typical budget for attending/sponsoring if inferable, else 0)
         - targetCustomers (string: Summary of who attends/targets)

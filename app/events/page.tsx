@@ -376,6 +376,7 @@ export default function EventsPage() {
     // Filter + View State — persisted in URL
     const { filters: eventFilters, setFilter, isFiltered, resetFilters } = useFilterParams('events', EVENTS_FILTER_DEFAULTS)
 
+    const [regionTypes, setRegionTypes] = useState<string[]>([])
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
     const [statusOverrides, setStatusOverrides] = useState<Map<string, string>>(new Map())
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
@@ -405,6 +406,10 @@ export default function EventsPage() {
 
     useEffect(() => {
         fetchEvents()
+        fetch('/api/admin/system')
+            .then(res => res.ok ? res.json() : {})
+            .then((data: { defaultRegionTypes?: string[] }) => setRegionTypes(data.defaultRegionTypes || []))
+            .catch(() => {})
     }, [])
 
     const handleDelete = async (id: string, slug?: string) => {
@@ -484,7 +489,7 @@ export default function EventsPage() {
     }
 
     // Derived Filter Data
-    const availableRegions = Array.from(new Set(events.map(e => e.region ?? 'Global')))
+    const availableRegions = regionTypes
 
     const filteredEvents = events.filter(event => {
         // Search Filter

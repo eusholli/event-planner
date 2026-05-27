@@ -64,6 +64,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     const [tagsInput, setTagsInput] = useState('')
     const [meetingTypesInput, setMeetingTypesInput] = useState('')
     const [attendeeTypesInput, setAttendeeTypesInput] = useState('')
+    const [regionTypes, setRegionTypes] = useState<string[]>([])
 
     const router = useRouter()
 
@@ -73,6 +74,13 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
     useEffect(() => {
         params.then(p => setId(p.id))
     }, [params])
+
+    useEffect(() => {
+        fetch('/api/admin/system')
+            .then(res => res.ok ? res.json() : {})
+            .then((data: { defaultRegionTypes?: string[] }) => setRegionTypes(data.defaultRegionTypes || []))
+            .catch(() => {})
+    }, [])
 
     useEffect(() => {
         if (!id) return
@@ -432,13 +440,7 @@ export default function EventSettingsPage({ params }: { params: Promise<{ id: st
                                 className="mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border disabled:bg-neutral-100 disabled:text-neutral-500"
                             >
                                 <option value="">Select Region...</option>
-                                <option value="NA">North America (NA)</option>
-                                <option value="SA">South America (SA)</option>
-                                <option value="EU/UK">Europe / UK</option>
-                                <option value="MEA">Middle East & Africa</option>
-                                <option value="APAC">Asia Pacific</option>
-                                <option value="Japan">Japan</option>
-                                <option value="Global">Global</option>
+                                {regionTypes.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         </div>
 
