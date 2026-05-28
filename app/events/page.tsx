@@ -36,6 +36,11 @@ interface Event {
 const effectiveBudget = (e: Event) =>
     (e.actualCost != null && e.actualCost > 0) ? e.actualCost : e.budget
 
+const parseLocalDate = (s: string): Date => {
+    const [y, m, d] = s.split('-').map(Number)
+    return new Date(y, m - 1, d)
+}
+
 function BudgetPivotTable({ events }: { events: Event[] }) {
     const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set())
     const toggleRegion = (region: string) =>
@@ -800,7 +805,7 @@ export default function EventsPage() {
                                                     <CalendarIcon className="w-3.5 h-3.5" />
                                                     <span>
                                                         {event.startDate && event.endDate
-                                                            ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
+                                                            ? `${parseLocalDate(event.startDate).toLocaleDateString()} - ${parseLocalDate(event.endDate).toLocaleDateString()}`
                                                             : 'Dates TBD'}
                                                     </span>
                                                 </div>
@@ -945,7 +950,7 @@ export default function EventsPage() {
                                     <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">Date</label>
                                     <p className="text-neutral-900 font-medium">
                                         {selectedEvent.startDate && selectedEvent.endDate
-                                            ? `${new Date(selectedEvent.startDate).toLocaleDateString()} - ${new Date(selectedEvent.endDate).toLocaleDateString()}`
+                                            ? `${parseLocalDate(selectedEvent.startDate).toLocaleDateString()} - ${parseLocalDate(selectedEvent.endDate).toLocaleDateString()}`
                                             : 'Dates To Be Determined'}
                                     </p>
                                 </div>

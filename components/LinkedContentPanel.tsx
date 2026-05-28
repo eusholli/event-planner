@@ -25,8 +25,9 @@ const STATUS_COLORS: Record<string, string> = {
 
 function formatDate(v?: string | null): string {
     if (!v) return '—'
-    const d = new Date(v)
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const parts = v.split('-').map(Number)
+    if (parts.length !== 3 || parts.some(isNaN)) return '—'
+    return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 interface Props {

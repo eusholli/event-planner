@@ -122,7 +122,8 @@ const fmtCurrency = (v: number | null | undefined, compact = false) => {
 
 const fmtDate = (d: string | null) => {
     if (!d) return ''
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const [y, m, day] = d.split('-').map(Number)
+    return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 const pctOf = (actual: number, target: number | null | undefined) => {
