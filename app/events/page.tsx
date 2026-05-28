@@ -37,7 +37,7 @@ const effectiveBudget = (e: Event) =>
     (e.actualCost != null && e.actualCost > 0) ? e.actualCost : e.budget
 
 const parseLocalDate = (s: string): Date => {
-    const [y, m, d] = s.split('-').map(Number)
+    const [y, m, d] = s.slice(0, 10).split('-').map(Number)
     return new Date(y, m - 1, d)
 }
 
