@@ -8,9 +8,14 @@ const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+const R2_CONTENT_BUCKET_NAME = process.env.R2_CONTENT_BUCKET_NAME;
+const R2_CONTENT_PUBLIC_URL = process.env.R2_CONTENT_PUBLIC_URL;
 
 if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME || !R2_PUBLIC_URL) {
     console.warn("Missing R2 environment variables. Photo storage will fail.");
+}
+if (!R2_CONTENT_BUCKET_NAME || !R2_CONTENT_PUBLIC_URL) {
+    console.warn("Missing R2_CONTENT_BUCKET_NAME or R2_CONTENT_PUBLIC_URL. Attachment storage will fail.");
 }
 
 const r2Client = new S3Client({
@@ -90,6 +95,70 @@ export async function deleteImageFromR2(fileUrl: string): Promise<void> {
         console.error("Error deleting from R2:", error);
         // We generally don't want to throw here, just log it, 
         // as this is usually a cleanup step.
+    }
+}
+
+/**
+ * Uploads any file buffer to the content attachments bucket, preserving the original file extension.
+ */
+export async function uploadFileToR2(fileBuffer: Buffer, contentType: string, originalFilename: string): Promise<string> {
+    const ext = originalFilename.includes('.') ? originalFilename.split('.').pop() : 'bin';
+    const filename = `${uuidv4()}.${ext}`;
+
+    const command = new PutObjectCommand({
+        Bucket: R2_CONTENT_BUCKET_NAME,
+        Key: filename,
+        Body: fileBuffer,
+        ContentType: contentType,
+    });
+
+    try {
+        await r2Client.send(command);
+        const baseUrl = R2_CONTENT_PUBLIC_URL?.replace(/\/$/, '');
+        return `${baseUrl}/${filename}`;
+    } catch (error) {
+        console.error("Error uploading to R2 content bucket:", error);
+        throw new Error("Failed to upload file to storage");
+    }
+}
+
+/**
+ * Deletes a file from the content attachments bucket given its full public URL.
+ */
+export async function deleteFileFromR2(fileUrl: string): Promise<void> {
+    if (!fileUrl) return;
+
+    try {
+        let urlString = fileUrl;
+        if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
+            urlString = `https://${urlString}`;
+        }
+        const url = new URL(urlString);
+
+        const contentPublicUrlObj = R2_CONTENT_PUBLIC_URL
+            ? new URL(R2_CONTENT_PUBLIC_URL.startsWith('http') ? R2_CONTENT_PUBLIC_URL : `https://${R2_CONTENT_PUBLIC_URL}`)
+            : null;
+
+        if (contentPublicUrlObj && url.host !== contentPublicUrlObj.host) {
+            console.log("Skipping delete for non-content-R2 URL:", fileUrl);
+            return;
+        }
+
+        const key = url.pathname.substring(1);
+        if (!key) {
+            console.warn("Could not extract key from URL:", fileUrl);
+            return;
+        }
+
+        const command = new DeleteObjectCommand({
+            Bucket: R2_CONTENT_BUCKET_NAME,
+            Key: key,
+        });
+
+        await r2Client.send(command);
+        console.log(`Deleted R2 content object: ${key}`);
+    } catch (error) {
+        console.error("Error deleting from R2 content bucket:", error);
     }
 }
 

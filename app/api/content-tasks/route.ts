@@ -114,15 +114,19 @@ export const POST = withAuth(async (request, { authCtx }) => {
         const user = await currentUser()
         const createdBy = user?.emailAddresses[0]?.emailAddress ?? authCtx.userId
 
+        const { notes, collaboratorIds = [] } = body
+
         const task = await prisma.contentTask.create({
             data: {
                 title: title.trim(),
                 description: description ?? null,
+                notes: notes ?? null,
                 contentType: contentType ?? null,
                 status,
                 dueDate: dueDate ? new Date(dueDate) : null,
                 tags,
                 assigneeId: assigneeId ?? null,
+                collaboratorIds,
                 eventId,
                 createdBy,
             },

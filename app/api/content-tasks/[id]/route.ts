@@ -3,6 +3,12 @@ import prisma from '@/lib/prisma'
 import { withAuth, isOwnerOrCanWrite } from '@/lib/with-auth'
 import { hasEventAccess } from '@/lib/access'
 import { resolveEventId } from '@/lib/events'
+import { clerkClient } from '@clerk/nextjs/server'
+
+function clerkUserName(u: { firstName?: string | null; lastName?: string | null; emailAddresses?: { emailAddress: string }[] }): string {
+    const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim()
+    return name || u.emailAddresses?.[0]?.emailAddress || ''
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -10,10 +16,26 @@ export const GET = withAuth(async (_request, { params }) => {
     const id = (await params).id
     const task = await prisma.contentTask.findUnique({
         where: { id },
-        include: { event: { select: { id: true, name: true, slug: true } } },
+        include: {
+            event: { select: { id: true, name: true, slug: true } },
+            attachments: { orderBy: { createdAt: 'asc' } },
+        },
     })
     if (!task) return NextResponse.json({ error: 'Content task not found' }, { status: 404 })
-    return NextResponse.json(task)
+
+    // Resolve collaborator names from Clerk
+    const collaboratorNames: string[] = []
+    if (task.collaboratorIds.length > 0) {
+        try {
+            const client = await clerkClient()
+            const { data: users } = await client.users.getUserList({ userId: task.collaboratorIds, limit: task.collaboratorIds.length })
+            const nameMap: Record<string, string> = {}
+            for (const u of users) nameMap[u.id] = clerkUserName(u)
+            for (const cid of task.collaboratorIds) collaboratorNames.push(nameMap[cid] || cid)
+        } catch { /* non-fatal */ }
+    }
+
+    return NextResponse.json({ ...task, collaboratorNames })
 }) as any
 
 export const PUT = withAuth(async (request, { params, authCtx }) => {
@@ -36,11 +58,13 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
             data.title = body.title.trim()
         }
         if (body.description !== undefined) data.description = body.description
+        if (body.notes !== undefined) data.notes = body.notes
         if (body.contentType !== undefined) data.contentType = body.contentType
         if (body.status !== undefined) data.status = body.status
         if (body.dueDate !== undefined) data.dueDate = body.dueDate ? new Date(body.dueDate) : null
         if (body.tags !== undefined) data.tags = body.tags
         if (body.assigneeId !== undefined) data.assigneeId = body.assigneeId
+        if (body.collaboratorIds !== undefined) data.collaboratorIds = body.collaboratorIds
 
         if (body.eventId !== undefined) {
             if (body.eventId === null || body.eventId === '') {
@@ -62,7 +86,10 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
         const task = await prisma.contentTask.update({
             where: { id },
             data,
-            include: { event: { select: { id: true, name: true, slug: true } } },
+            include: {
+                event: { select: { id: true, name: true, slug: true } },
+                attachments: { orderBy: { createdAt: 'asc' } },
+            },
         })
         return NextResponse.json(task)
     } catch (error) {
@@ -73,11 +100,17 @@ export const PUT = withAuth(async (request, { params, authCtx }) => {
 
 export const DELETE = withAuth(async (_request, { params, authCtx }) => {
     const id = (await params).id
-    const existing = await prisma.contentTask.findUnique({ where: { id } })
+    const existing = await prisma.contentTask.findUnique({
+        where: { id },
+        include: { attachments: true },
+    })
     if (!existing) return NextResponse.json({ error: 'Content task not found' }, { status: 404 })
     if (!(await isOwnerOrCanWrite(authCtx, existing.createdBy))) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     await prisma.contentTask.delete({ where: { id } })
+    // Clean up R2 files after DB delete (cascade removes DB records)
+    const { deleteFileFromR2 } = await import('@/lib/storage')
+    await Promise.all(existing.attachments.map(a => deleteFileFromR2(a.fileUrl)))
     return NextResponse.json({ success: true })
 }) as any

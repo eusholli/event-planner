@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ContentTaskModal from '@/components/ContentTaskModal'
 import useFilterParams from '@/hooks/useFilterParams'
@@ -9,15 +10,19 @@ type ContentTask = {
     id: string
     title: string
     description?: string | null
+    notes?: string | null
     contentType?: string | null
     status: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
     dueDate?: string | null
     tags: string[]
     assigneeId?: string | null
     assigneeName?: string | null
+    collaboratorIds: string[]
+    collaboratorNames?: string[]
     eventId?: string | null
     event?: { id: string; name: string; slug: string } | null
     createdBy?: string | null
+    attachments?: { id: string; title: string; fileUrl: string; originalName: string }[]
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -52,13 +57,15 @@ const COLUMNS: { id: string; label: string; sortable: boolean }[] = [
     { id: 'tags',        label: 'Tags',     sortable: false },
 ]
 
-export default function ContentListPage() {
+function ContentListPage() {
     const [tasks, setTasks] = useState<ContentTask[]>([])
     const [loading, setLoading] = useState(true)
     const [contentTypes, setContentTypes] = useState<{ name: string; color: string | null }[]>([])
     const [availableTags, setAvailableTags] = useState<string[]>([])
     const [modalOpen, setModalOpen] = useState(false)
     const [editing, setEditing] = useState<ContentTask | null>(null)
+    const router = useRouter()
+    const searchParams = useSearchParams()
 
     const { filters, setFilter, isFiltered, resetFilters } = useFilterParams('content', FILTER_DEFAULTS)
 
@@ -81,6 +88,21 @@ export default function ContentListPage() {
     }
 
     useEffect(() => { reload() }, [])
+
+    // Deep-link: ?task=<id> opens the modal for that task
+    useEffect(() => {
+        const taskId = searchParams.get('task')
+        if (!taskId) return
+        fetch(`/api/content-tasks/${taskId}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return
+                setEditing(data)
+                setModalOpen(true)
+                router.replace('/content')
+            })
+            .catch(() => {})
+    }, [searchParams])
 
     const filtered = useMemo(() => {
         const list = tasks.filter(t => {
@@ -243,6 +265,14 @@ export default function ContentListPage() {
                 onDeleted={() => reload()}
             />
         </div>
+    )
+}
+
+export default function ContentListPageWrapper() {
+    return (
+        <Suspense fallback={null}>
+            <ContentListPage />
+        </Suspense>
     )
 }
 

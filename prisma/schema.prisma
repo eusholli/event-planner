@@ -135,24 +135,39 @@ enum MeetingStatus {
 }
 
 model ContentTask {
-  id          String            @id @default(cuid())
-  title       String
-  description String?           @db.Text
-  contentType String?
-  status      ContentTaskStatus @default(TODO)
-  dueDate     DateTime?
-  tags        String[]          @default([])
-  assigneeId  String?
-  eventId     String?
-  createdBy   String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  event       Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  id              String            @id @default(cuid())
+  title           String
+  description     String?           @db.Text
+  notes           String?           @db.Text
+  contentType     String?
+  status          ContentTaskStatus @default(TODO)
+  dueDate         DateTime?
+  tags            String[]          @default([])
+  assigneeId      String?
+  collaboratorIds String[]          @default([])
+  eventId         String?
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  event           Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  attachments     ContentTaskAttachment[]
 
   @@index([eventId])
   @@index([assigneeId])
   @@index([status])
   @@index([dueDate])
+}
+
+model ContentTaskAttachment {
+  id            String      @id @default(cuid())
+  contentTaskId String
+  task          ContentTask @relation(fields: [contentTaskId], references: [id], onDelete: Cascade)
+  title         String
+  fileUrl       String
+  originalName  String
+  createdAt     DateTime    @default(now())
+
+  @@index([contentTaskId])
 }
 
 enum ContentTaskStatus {
