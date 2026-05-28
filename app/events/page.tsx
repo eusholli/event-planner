@@ -731,21 +731,8 @@ export default function EventsPage() {
                                     >
                                         <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: getStatusColor(statusOverrides.get(event.id) ?? event.status).bg }} />
 
-                                        <div className="flex justify-between items-start mb-4 pl-3">
-                                            <div className="space-y-1">
-                                                {event.region && (
-                                                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{event.region}</span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div onClick={e => e.stopPropagation()}>
-                                                    <EventStatusSelect
-                                                        eventId={event.id}
-                                                        status={statusOverrides.get(event.id) ?? event.status}
-                                                        canManage={canManage}
-                                                        onSuccess={s => handleStatusChange(event.id, s)}
-                                                    />
-                                                </div>
+                                        <div className="mb-4 pl-3">
+                                            <div className="flex justify-end items-center mb-1">
                                                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={(e) => {
@@ -792,6 +779,17 @@ export default function EventsPage() {
                                                             </>
                                                         )}
                                                     </div>
+                                            </div>
+                                            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                                <EventStatusSelect
+                                                    eventId={event.id}
+                                                    status={statusOverrides.get(event.id) ?? event.status}
+                                                    canManage={canManage}
+                                                    onSuccess={s => handleStatusChange(event.id, s)}
+                                                />
+                                                {event.region && (
+                                                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{event.region}</span>
+                                                )}
                                             </div>
                                         </div>
 
