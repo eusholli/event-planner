@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Trash2, Download, Upload, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { Save, Trash2, Download, Upload, AlertTriangle, ShieldAlert, Wrench } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function SystemAdminPage() {
@@ -13,6 +13,7 @@ export default function SystemAdminPage() {
         defaultRegionTypes: string[]
         defaultContentTypes: string[]
         contentTypeColors: Record<string, string>
+        maintenanceMode: boolean
     } | null>(null)
 
     // Local state for list inputs
@@ -45,7 +46,8 @@ export default function SystemAdminPage() {
                     defaultAttendeeTypes: data.defaultAttendeeTypes || [],
                     defaultRegionTypes: data.defaultRegionTypes || [],
                     defaultContentTypes: data.defaultContentTypes || [],
-                    contentTypeColors: data.contentTypeColors || {}
+                    contentTypeColors: data.contentTypeColors || {},
+                    maintenanceMode: data.maintenanceMode ?? false
                 }
                 setSettings(loadedSettings)
 
@@ -67,6 +69,32 @@ export default function SystemAdminPage() {
                 setLoading(false)
             })
     }, [])
+
+    const handleMaintenanceToggle = async (enabled: boolean) => {
+        setSettings(prev => ({ ...prev!, maintenanceMode: enabled }))
+        try {
+            await fetch('/api/admin/system', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...settings!,
+                    maintenanceMode: enabled,
+                    defaultTags: defaultTagsInput.split(',').map(s => s.trim()).filter(Boolean),
+                    defaultMeetingTypes: defaultMeetingTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                    defaultAttendeeTypes: defaultAttendeeTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                    defaultRegionTypes: defaultRegionTypesInput.split(',').map(s => s.trim()).filter(Boolean),
+                    defaultContentTypes: contentTypeRows.map(r => r.name.trim()).filter(Boolean),
+                    contentTypeColors: contentTypeRows.reduce<Record<string, string>>((acc, r) => {
+                        const n = r.name.trim()
+                        if (n) acc[n] = r.color
+                        return acc
+                    }, {})
+                })
+            })
+        } catch (err) {
+            console.error('Failed to toggle maintenance mode', err)
+        }
+    }
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -260,6 +288,24 @@ export default function SystemAdminPage() {
                         </div>
 
                         <hr className="border-neutral-200" />
+
+                        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                            <Wrench className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings?.maintenanceMode ?? false}
+                                        onChange={e => handleMaintenanceToggle(e.target.checked)}
+                                        className="w-4 h-4 rounded border-neutral-300 text-amber-600 focus:ring-amber-500"
+                                    />
+                                    <span className="text-sm font-medium text-amber-900">Enable Maintenance Mode</span>
+                                </label>
+                                <p className="text-xs text-amber-700 mt-1 ml-7">
+                                    When enabled, all logged-in non-root users will see a maintenance splash screen instead of the normal UI.
+                                </p>
+                            </div>
+                        </div>
 
                         <div className="grid grid-cols-1 gap-6">
                             <div>

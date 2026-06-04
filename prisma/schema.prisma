@@ -15,6 +15,7 @@ model SystemSettings {
   defaultRegionTypes   String[] @default([])
   defaultContentTypes  String[] @default([])
   contentTypeColors    Json?
+  maintenanceMode      Boolean  @default(false)
 }
 
 model Event {

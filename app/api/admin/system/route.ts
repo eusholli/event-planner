@@ -16,7 +16,7 @@ async function handleGET(req: Request, ctx: { params: Promise<Record<string, str
 async function handlePOST(request: Request, ctx: { params: Promise<Record<string, string>>; authCtx: AuthContext }) {
     try {
         const json = await request.json()
-        const { geminiApiKey, defaultTags, defaultMeetingTypes, defaultAttendeeTypes, defaultRegionTypes, defaultContentTypes, contentTypeColors } = json
+        const { geminiApiKey, defaultTags, defaultMeetingTypes, defaultAttendeeTypes, defaultRegionTypes, defaultContentTypes, contentTypeColors, maintenanceMode } = json
 
         // Upsert logic
         const existing = await prisma.systemSettings.findFirst()
@@ -29,7 +29,8 @@ async function handlePOST(request: Request, ctx: { params: Promise<Record<string
             defaultAttendeeTypes: defaultAttendeeTypes || [],
             defaultRegionTypes: defaultRegionTypes || [],
             defaultContentTypes: defaultContentTypes || [],
-            contentTypeColors: contentTypeColors ?? {}
+            contentTypeColors: contentTypeColors ?? {},
+            maintenanceMode: maintenanceMode ?? false
         }
 
         if (existing) {
