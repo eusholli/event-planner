@@ -256,7 +256,7 @@ export default function PitchDetailPage() {
         setSaveError('')
     }
 
-    const addTarget = async (attendeeId: string) => {
+    const addTarget = async (attendeeId: string, attendee?: AttendeeMini) => {
         if (isDirty()) return
         const res = await fetch(`/api/pitches/${pitchId}/targets`, {
             method: 'POST',
@@ -268,6 +268,67 @@ export default function PitchDetailPage() {
                 const refreshed = await fetch(`/api/attendees?all=true`).then(r => r.json())
                 if (Array.isArray(refreshed)) setAllAttendees(refreshed)
             } catch {}
+            if (attendee?.isExternal) {
+                const pitchTitle = draft?.title || pitch?.title || 'Briefing'
+                const briefingTitle = attendee.company?.name ? `${pitchTitle} - ${attendee.company.name}` : pitchTitle
+
+                const companyId = attendee.company?.id
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const existingBriefing = companyId
+                    ? pitch?.meetings.find(m =>
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        (m.attendees as any[])?.some((a: any) => a.isExternal && a.company?.id === companyId)
+                    )
+                    : undefined
+
+                if (existingBriefing) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const existingIds = (existingBriefing.attendees as any[])?.map((a: any) => a.id) ?? []
+                    const mergedIds = Array.from(new Set([...existingIds, attendeeId]))
+                    await fetch(`/api/meetings/${existingBriefing.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: existingBriefing.title,
+                            status: existingBriefing.status,
+                            tags: existingBriefing.tags,
+                            purpose: existingBriefing.purpose,
+                            meetingType: existingBriefing.meetingType,
+                            otherDetails: existingBriefing.otherDetails,
+                            isApproved: existingBriefing.isApproved,
+                            calendarInviteSent: existingBriefing.calendarInviteSent,
+                            date: existingBriefing.date,
+                            startTime: existingBriefing.startTime,
+                            endTime: existingBriefing.endTime,
+                            roomId: (existingBriefing as Meeting & { roomId?: string }).roomId ?? null,
+                            attendeeIds: mergedIds,
+                            pitchId,
+                        })
+                    }).catch(() => {})
+                } else {
+                    await fetch('/api/meetings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: briefingTitle,
+                            status: 'PIPELINE',
+                            tags: draft?.tags ?? [],
+                            attendeeIds: [attendeeId],
+                            pitchId,
+                            eventId,
+                            date: null,
+                            startTime: null,
+                            endTime: null,
+                            roomId: null,
+                            purpose: '',
+                            meetingType: '',
+                            otherDetails: '',
+                            isApproved: false,
+                            calendarInviteSent: false,
+                        })
+                    }).catch(() => {})
+                }
+            }
             await loadPitch()
             setTargetSearch('')
         } else {
@@ -278,12 +339,46 @@ export default function PitchDetailPage() {
     const removeTarget = async (attendeeId: string) => {
         if (isDirty()) return
         if (!confirm('Remove this target from the pitch?')) return
+
+        const target = pitch?.targets.find(t => t.attendeeId === attendeeId)
+        const isExternal = target?.attendee?.isExternal ?? false
+        const affectedMeetings = isExternal
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? (pitch?.meetings ?? []).filter(m => (m.attendees as any[])?.some((a: any) => a.id === attendeeId))
+            : []
+
         const res = await fetch(`/api/pitches/${pitchId}/targets/${attendeeId}`, { method: 'DELETE' })
-        if (res.ok) {
-            await loadPitch()
-        } else {
-            alert('Failed to remove target')
+        if (!res.ok) { alert('Failed to remove target'); return }
+
+        for (const m of affectedMeetings) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const remaining = (m.attendees as any[])?.filter((a: any) => a.id !== attendeeId) ?? []
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const remainingExternal = remaining.filter((a: any) => a.isExternal)
+            if (remainingExternal.length === 0) {
+                if (confirm(`"${m.title}" has no remaining external attendees. Delete this briefing?`)) {
+                    await fetch(`/api/meetings/${m.id}`, { method: 'DELETE' }).catch(() => {})
+                }
+            } else {
+                await fetch(`/api/meetings/${m.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: m.title, status: m.status, tags: m.tags,
+                        purpose: m.purpose, meetingType: m.meetingType,
+                        otherDetails: m.otherDetails, isApproved: m.isApproved,
+                        calendarInviteSent: m.calendarInviteSent,
+                        date: m.date, startTime: m.startTime, endTime: m.endTime,
+                        roomId: (m as Meeting & { roomId?: string }).roomId ?? null,
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        attendeeIds: remaining.map((a: any) => a.id),
+                        pitchId,
+                    })
+                }).catch(() => {})
+            }
         }
+
+        await loadPitch()
     }
 
     const handleDeletePitch = async () => {
@@ -669,7 +764,7 @@ export default function PitchDetailPage() {
                                 filteredCandidates.map(a => (
                                     <button
                                         key={a.id}
-                                        onClick={() => addTarget(a.id)}
+                                        onClick={() => addTarget(a.id, a)}
                                         disabled={dirty}
                                         title={dirty ? 'Save or cancel your changes first' : ''}
                                         className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
@@ -692,7 +787,7 @@ export default function PitchDetailPage() {
                                 eventId={eventId}
                                 onSuccess={async (attendee) => {
                                     setAllAttendees(prev => [...prev, attendee as unknown as AttendeeMini])
-                                    await addTarget(attendee.id)
+                                    await addTarget(attendee.id, attendee as unknown as AttendeeMini)
                                 }}
                             />
                         </div>
