@@ -14,6 +14,8 @@ Options:
   --exclude-zero      Skip CSV rows where TCO Amount == 0.0.
   --force-match NAMES Comma-separated CSV company names to promote from
                       LOW_CONFIDENCE to FUZZY_MATCH for --apply.
+  --force-new NAMES   Comma-separated CSV company names to treat as NEW_COMPANY
+                      regardless of fuzzy score, for insert with --apply --include-new.
   --output-dir DIR    Directory for preview files (default: current dir).
   --env-file PATH     Path to .env file (default: auto-detected from script dir).
 
@@ -93,6 +95,9 @@ def parse_args():
             "5. Promote specific LOW_CONFIDENCE matches by name:\n"
             "     python scripts/bulk_company_update.py forecast.csv --exclude-zero \\\n"
             "       --apply --force-match \"DISH dba Boost Mobile,Nubicom\"\n\n"
+            "6. Insert LOW_CONFIDENCE entries as new companies (bad DB match, known new):\n"
+            "     python scripts/bulk_company_update.py forecast.csv --exclude-zero \\\n"
+            "       --apply --include-new --force-new \"Bell,Viaero Wireless\"\n\n"
             "NOTES\n"
             "-----\n"
             "- Duplicate CSV rows (same region+name+amount) are deduplicated before summing.\n"
@@ -125,6 +130,10 @@ def parse_args():
                    help="Comma-separated list of CSV company names to promote from "
                         "LOW_CONFIDENCE to FUZZY_MATCH so they are included in --apply. "
                         'Example: --force-match "DISH dba Boost Mobile,Nubicom"')
+    p.add_argument("--force-new", default="", metavar="NAMES",
+                   help="Comma-separated list of CSV company names to treat as NEW_COMPANY "
+                        "regardless of fuzzy match score, so they are inserted with --apply --include-new. "
+                        'Example: --force-new "Bell,Viaero Wireless"')
     p.add_argument("--output-dir", default=".", metavar="DIR",
                    help="Directory where preview .txt and .json files are written "
                         "(default: current directory). Created if it does not exist.")
@@ -240,7 +249,9 @@ def load_csv(csv_path, exclude_zero):
 
 # ── Fuzzy matching ────────────────────────────────────────────────────────────
 
-def classify(score, csv_name, db_name, threshold, force_set):
+def classify(score, csv_name, db_name, threshold, force_set, force_new_set):
+    if csv_name in force_new_set:
+        return MATCH_NEW
     if db_name is None or score < LOW_CONFIDENCE_MIN:
         return MATCH_NEW
     if csv_name.strip().lower() == db_name.strip().lower():
@@ -250,7 +261,7 @@ def classify(score, csv_name, db_name, threshold, force_set):
     return MATCH_LOW
 
 
-def build_report(csv_data, db_companies, threshold, force_set):
+def build_report(csv_data, db_companies, threshold, force_set, force_new_set):
     db_names  = [c["name"] for c in db_companies]
     db_by_name = {c["name"]: c for c in db_companies}
     results = []
@@ -269,7 +280,7 @@ def build_report(csv_data, db_companies, threshold, force_set):
             db_name, score, _ = match
             db_rec = db_by_name[db_name]
 
-        match_type = classify(score, csv_name, db_name, threshold, force_set)
+        match_type = classify(score, csv_name, db_name, threshold, force_set, force_new_set)
 
         results.append({
             "csv_name":         csv_name,
@@ -464,7 +475,8 @@ def main():
         print("ERROR: --threshold must be between 0 and 100")
         sys.exit(1)
 
-    force_set = {n.strip() for n in args.force_match.split(",") if n.strip()}
+    force_set     = {n.strip() for n in args.force_match.split(",") if n.strip()}
+    force_new_set = {n.strip() for n in args.force_new.split(",")   if n.strip()}
 
     print("Connecting to database...")
     db_url = load_db_url(args.env_file)
@@ -478,7 +490,7 @@ def main():
     print(f"  {len(db_companies)} companies in DB")
 
     print(f"Fuzzy matching (threshold={args.threshold}, scorer=token_sort_ratio)...")
-    results = build_report(csv_data, db_companies, args.threshold, force_set)
+    results = build_report(csv_data, db_companies, args.threshold, force_set, force_new_set)
 
     write_reports(results, args.output_dir, args.apply, args.include_new, args.threshold)
 
