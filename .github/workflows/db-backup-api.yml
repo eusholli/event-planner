@@ -10,18 +10,18 @@ jobs:
     steps:
       - name: Create Backup
         env:
-          APP_URL: ${{ secrets.APP_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           BACKUP_SECRET_KEY: ${{ secrets.BACKUP_SECRET_KEY }}
         run: |
           TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
           # Use event-config- prefix to match the API's filename format roughly, or just use backup-
           FILENAME="backup-${TIMESTAMP}.json"
           echo "FILENAME=${FILENAME}" >> $GITHUB_ENV
-          
+
           # Call the API with the secret key header
           # -f fails on HTTP errors
-          echo "Initiating backup from $APP_URL..."
-          curl -f -v "$APP_URL/api/settings/export" \
+          echo "Initiating backup from $NEXT_PUBLIC_APP_URL..."
+          curl -f -v "$NEXT_PUBLIC_APP_URL/api/settings/export" \
             -H "x-backup-key: $BACKUP_SECRET_KEY" \
             -o "$FILENAME"
           
