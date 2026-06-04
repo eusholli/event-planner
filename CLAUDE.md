@@ -306,6 +306,7 @@ CRON_SECRET_KEY            # Bearer token for machine-to-machine intelligence AP
 8. **ROI sparkle idempotency**: `generate-plan` returns `{skipped: true}` (not an error) if a marketing plan already exists. The event card sparkle uses this to show a `planWarning` banner instead of regenerating.
 9. **Import/export preserves `marketingPlan`**: Both V5 and V4 import paths include `marketingPlan` in the ROI upsert. Ensure any new ROI fields are added to both import handlers.
 10. **Event settings user list**: Uses server-side pagination (`/api/admin/users?page=X&limit=10&search=term`) with 500ms debounced search — not a single full fetch. The first page may not contain the user you expect; use search.
+11. **Date display (UTC shift)**: Prisma `DateTime` fields stored from a date-only input (e.g. `new Date("2026-06-06")`) arrive as `"2026-06-06T00:00:00.000Z"`. Using `new Date(v).toLocaleDateString()` or `new Date(v)` for calendar positioning shifts the date one day earlier in CST (UTC-5/6). Always parse date-only values with: `const [y, m, d] = v.slice(0, 10).split('-').map(Number); new Date(y, m-1, d)` — this creates a local-midnight Date with no UTC shift. See `parseLocalDate` in `app/events/page.tsx` and `components/LinkedContentPanel.tsx` for the established pattern.
 
 ## Expert Best Practice Rules
 

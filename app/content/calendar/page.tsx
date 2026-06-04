@@ -44,6 +44,11 @@ type CalEvent = {
 type ContentTypeOption = { name: string; color: string | null }
 const NEUTRAL_COLOR = '#94a3b8'
 
+const parseLocalDate = (s: string): Date => {
+    const [y, m, d] = s.slice(0, 10).split('-').map(Number)
+    return new Date(y, m - 1, d)
+}
+
 const FILTER_DEFAULTS = {
     search: '',
     status: [] as string[],
@@ -116,7 +121,7 @@ export default function ContentCalendarPage() {
                 return true
             })
             .map(t => {
-                const d = new Date(t.dueDate as string)
+                const d = parseLocalDate(t.dueDate as string)
                 return { id: t.id, title: t.title, start: d, end: d, allDay: true, kind: 'task' as const, resource: t }
             })
         const confEvents: CalEvent[] = conferenceEvents
@@ -132,8 +137,8 @@ export default function ContentCalendarPage() {
             .map(e => ({
                 id: `conf-${e.id}`,
                 title: e.name,
-                start: new Date(e.startDate),
-                end: new Date(e.endDate),
+                start: parseLocalDate(e.startDate),
+                end: parseLocalDate(e.endDate),
                 allDay: true,
                 kind: 'conference' as const,
                 resource: e,
