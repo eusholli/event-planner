@@ -83,6 +83,8 @@ export default function Navigation() {
 
     // Admin Links (Global)
     const adminLinks = [
+        { href: '/admin/attendees', label: 'Attendees' },
+        { href: '/admin/companies', label: 'Companies' },
         { href: '/admin/users', label: 'Users', roles: [Roles.Root, Roles.Marketing] },
         { href: '/admin/system', label: 'System', roles: [Roles.Root] },
         { href: '/admin/ai-logs', label: 'AI Usage Report', roles: [Roles.Root] },

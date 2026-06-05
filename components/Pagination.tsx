@@ -1,5 +1,20 @@
 'use client'
 
+function getPageNumbers(page: number, totalPages: number): (number | '...')[] {
+    const delta = 2
+    const left = Math.max(2, page - delta)
+    const right = Math.min(totalPages - 1, page + delta)
+    const middle: (number | '...')[] = []
+
+    for (let i = left; i <= right; i++) middle.push(i)
+    if (left > 2) middle.unshift('...')
+    if (right < totalPages - 1) middle.push('...')
+
+    const result: (number | '...')[] = [1]
+    if (totalPages > 1) { result.push(...middle); result.push(totalPages) }
+    return result
+}
+
 interface PaginationProps {
     page: number
     limit: number
@@ -49,18 +64,20 @@ export default function Pagination({ page, limit, totalCount, onPageChange }: Pa
                                 <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                         </button>
-                        {Array.from({ length: totalPages }).map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => onPageChange(i + 1)}
-                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === i + 1
-                                    ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                    }`}
-                            >
-                                {i + 1}
-                            </button>
-                        ))}
+                        {getPageNumbers(page, totalPages).map((p, i) =>
+                            p === '...'
+                                ? <span key={`dots-${i}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500">…</span>
+                                : <button
+                                    key={p}
+                                    onClick={() => onPageChange(p as number)}
+                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    {p}
+                                </button>
+                        )}
                         <button
                             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
                             disabled={page === totalPages}
