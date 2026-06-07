@@ -207,7 +207,7 @@ JSON format:
 }`
 
     const result = await generateContentWithLog(
-        'gemini-2.0-flash',
+        'gemini-3-flash-preview',
         prompt,
         { functionName: 'ROIGenerate-ExtractPhase' }
     )

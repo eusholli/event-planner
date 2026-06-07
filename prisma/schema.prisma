@@ -16,6 +16,7 @@ model SystemSettings {
   defaultContentTypes  String[] @default([])
   contentTypeColors    Json?
   maintenanceMode      Boolean  @default(false)
+  brandVoice           String?  @db.Text // Rakuten Symphony brand voice/tone spec, injected into content-draft prompts
 }
 
 model Event {
@@ -52,6 +53,7 @@ model Event {
   attendeeReports   AttendeeEventReport[]
   pitches           Pitch[]
   contentTasks      ContentTask[]
+  campaignProposals CampaignProposal[]
 }
 
 model Company {
@@ -172,10 +174,71 @@ model ContentTaskAttachment {
 }
 
 enum ContentTaskStatus {
+  DRAFT
   TODO
   IN_PROGRESS
   DONE
   CANCELED
+}
+
+// System-level "themes Rakuten Symphony wants to own". Single living doc (one row),
+// edited by root/marketing and ingested by the marketing agent.
+model MarketingStrategy {
+  id        String   @id @default(cuid())
+  themes    Json     @default("[]") // [{ name, description, priority }]
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Agent-generated marketing campaign proposal. Planning layer: on activation it
+// spawns ContentTask(s) and (when an event is set) LinkedInDraft(s) for execution.
+// Idempotent on (runId, theme) so the agent can re-POST without duplicating.
+model CampaignProposal {
+  id                        String    @id @default(cuid())
+  runId                     String
+  theme                     String
+  title                     String
+  rationale                 String    @db.Text
+  proposalContent           String    @db.Text
+  status                    String    @default("PENDING_REVIEW") // PENDING_REVIEW | APPROVED | ACTIVATED | REJECTED
+  eventId                   String?
+  event                     Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdBy                 String?
+  reviewedBy                String?
+  reviewedAt                DateTime?
+  rejectedReason            String?
+  activatedBy               String?
+  activatedAt               DateTime?
+  reusedAssets              Json? // [{ kind, id?, url?, title? }] existing content the agent reused
+  suggestedContentTasks     Json? // [{ title, description?, contentType?, tags? }] materialized on activate
+  suggestedLinkedInArticles Json? // [{ title, content, angle, tone, articleType? }] materialized on activate (needs eventId)
+  generatedContentTaskIds   String[]  @default([])
+  generatedLinkedInDraftIds String[]  @default([])
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@unique([runId, theme])
+  @@index([status])
+  @@index([eventId])
+}
+
+// On-demand "Generate Campaign" job queue. The browser enqueues a PENDING request
+// (one theme); the sales-recon marketing-runner.py polls, runs the agent, and marks
+// it DONE/FAILED. Phase-3 cron enqueues one request per theme using the same runner.
+model CampaignRunRequest {
+  id          String    @id @default(cuid())
+  theme       String
+  status      String    @default("PENDING") // PENDING | RUNNING | DONE | FAILED
+  requestedBy String?
+  requestedAt DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  runId       String?
+  proposalId  String?
+  error       String?   @db.Text
+
+  @@index([status])
 }
 
 model EventROITargets {

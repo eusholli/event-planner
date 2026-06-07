@@ -145,7 +145,7 @@ const { filters, setFilter, setFilters, isFiltered, resetFilters } = useFilterPa
 System-level `ContentTask` model for managing editorial deliverables (newsletters, podcasts, articles, social posts, event recaps, awards, web updates) — replaces Asana for the marketing team.
 
 - **Scope**: System-level (not event-scoped). `eventId` is optional — tasks linked to an event also surface in that event's dashboard via `<LinkedContentPanel>`.
-- **Status workflow**: `TODO` → `IN_PROGRESS` → `DONE` / `CANCELED` (simple, no approval step).
+- **Status workflow**: `DRAFT` → `TODO` → `IN_PROGRESS` → `DONE` / `CANCELED` (simple, no approval step). `DRAFT` is the entry state for **agent-generated** campaign content (set by `campaigns/[id]/activate`); a content leader promotes `DRAFT` → `TODO` then assigns. Manually-created tasks default to `TODO`.
 - **Assignee**: Single Clerk user (`assigneeId` stores Clerk userId).
 - **Categorization**: `contentType` (drives calendar color, populated from `SystemSettings.defaultContentTypes`) + free-form `tags[]`.
 - **Pages**: `/content` (list with filters) and `/content/calendar` (react-big-calendar month view, drag to reschedule).

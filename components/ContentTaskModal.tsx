@@ -11,7 +11,7 @@ export type ContentTaskInput = {
     description?: string | null
     notes?: string | null
     contentType?: string | null
-    status: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
+    status: 'DRAFT' | 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
     dueDate?: string | null
     tags: string[]
     assigneeId?: string | null
@@ -37,7 +37,7 @@ interface Props {
     onDeleted?: (id: string) => void
 }
 
-const STATUSES: ContentTaskInput['status'][] = ['TODO', 'IN_PROGRESS', 'DONE', 'CANCELED']
+const STATUSES: ContentTaskInput['status'][] = ['DRAFT', 'TODO', 'IN_PROGRESS', 'DONE', 'CANCELED']
 
 function toDateInput(v?: string | null): string {
     if (!v) return ''

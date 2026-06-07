@@ -31,6 +31,8 @@ const isBearerTokenRoute = createRouteMatcher([
     '/api/intelligence/session(.*)',
     '/api/intelligence/actions(.*)',
     '/api/webhooks/intel-report(.*)',
+    '/api/webhooks/campaign-proposal(.*)',
+    '/api/marketing(.*)',
     '/api/viber/lookup(.*)',
     '/api/viber/link/redeem(.*)',
     '/api/mcp(.*)',

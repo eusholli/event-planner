@@ -191,7 +191,7 @@ function drawTextWithLinks(doc: jsPDF, paragraph: string, startX: number, startY
     return currentY + lineHeight + 1;
 }
 
-function addHeaderFooter(doc: jsPDF) {
+function addHeaderFooter(doc: jsPDF, headerLabel: string = "OpenClaw Insights") {
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -200,7 +200,7 @@ function addHeaderFooter(doc: jsPDF) {
         doc.setFontSize(FONT_SIZES.footer);
         doc.setTextColor(160, 160, 160);
         doc.setFont("helvetica", "normal");
-        doc.text("OpenClaw Insights", MARGIN_LEFT, 12);
+        doc.text(headerLabel, MARGIN_LEFT, 12);
 
         // Footer — page number
         const pageText = `Page ${i} of ${pageCount}`;
@@ -256,7 +256,7 @@ function parseMarkdownTable(lines: string[], startIdx: number): { table: ParsedT
 
 // ── Main export ──────────────────────────────────────────────────────────────
 
-export function downloadMarkdownAsPdf(markdown: string, filename: string = "openclaw-insights.pdf") {
+export function downloadMarkdownAsPdf(markdown: string, filename: string = "openclaw-insights.pdf", headerLabel: string = "OpenClaw Insights") {
     // 1. Replace smart punctuation so it isn't stripped
     markdown = markdown.replace(/[“”]/g, '"')
         .replace(/[‘’]/g, "'")
@@ -480,7 +480,7 @@ export function downloadMarkdownAsPdf(markdown: string, filename: string = "open
     }
 
     // Add header/footer to all pages
-    addHeaderFooter(doc);
+    addHeaderFooter(doc, headerLabel);
 
     doc.save(filename);
 }

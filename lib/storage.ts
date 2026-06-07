@@ -123,6 +123,38 @@ export async function uploadFileToR2(fileBuffer: Buffer, contentType: string, or
 }
 
 /**
+ * Uploads a file buffer to the content attachments bucket under an explicit key
+ * (e.g. `my-draft-20260606-191500.md`) instead of a random UUID. The key is
+ * sanitized and a short random suffix is appended to avoid collisions/overwrites.
+ * Returns the public URL.
+ */
+export async function uploadNamedFileToR2(fileBuffer: Buffer, contentType: string, desiredKey: string): Promise<string> {
+    // Split extension, sanitize the base, re-attach ext, add a short uniqueness suffix.
+    const lastDot = desiredKey.lastIndexOf('.')
+    const rawBase = lastDot > 0 ? desiredKey.slice(0, lastDot) : desiredKey
+    const ext = lastDot > 0 ? desiredKey.slice(lastDot + 1) : 'bin'
+    const base = rawBase.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'file'
+    const suffix = uuidv4().slice(0, 8)
+    const key = `${base}-${suffix}.${ext}`
+
+    const command = new PutObjectCommand({
+        Bucket: R2_CONTENT_BUCKET_NAME,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: contentType,
+    })
+
+    try {
+        await r2Client.send(command)
+        const baseUrl = R2_CONTENT_PUBLIC_URL?.replace(/\/$/, '')
+        return `${baseUrl}/${key}`
+    } catch (error) {
+        console.error("Error uploading named file to R2 content bucket:", error)
+        throw new Error("Failed to upload file to storage")
+    }
+}
+
+/**
  * Deletes a file from the content attachments bucket given its full public URL.
  */
 export async function deleteFileFromR2(fileUrl: string): Promise<void> {

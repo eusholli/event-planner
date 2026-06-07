@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Trash2, Paperclip } from 'lucide-react'
 import ContentTaskModal from '@/components/ContentTaskModal'
 import useFilterParams from '@/hooks/useFilterParams'
 
@@ -12,7 +13,7 @@ type ContentTask = {
     description?: string | null
     notes?: string | null
     contentType?: string | null
-    status: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
+    status: 'DRAFT' | 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
     dueDate?: string | null
     tags: string[]
     assigneeId?: string | null
@@ -26,6 +27,7 @@ type ContentTask = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
+    DRAFT: 'bg-violet-100 text-violet-700',
     TODO: 'bg-zinc-100 text-zinc-700',
     IN_PROGRESS: 'bg-amber-100 text-amber-700',
     DONE: 'bg-green-100 text-green-700',
@@ -154,6 +156,14 @@ function ContentListPage() {
     function openNew() { setEditing(null); setModalOpen(true) }
     function openEdit(t: ContentTask) { setEditing(t); setModalOpen(true) }
 
+    async function handleDelete(e: React.MouseEvent, t: ContentTask) {
+        e.stopPropagation()
+        if (!window.confirm(`Delete content task "${t.title}"? This removes the task and any generated draft files. This cannot be undone.`)) return
+        const res = await fetch(`/api/content-tasks/${t.id}`, { method: 'DELETE' })
+        if (res.ok) setTasks(cur => cur.filter(x => x.id !== t.id))
+        else alert('Failed to delete content task')
+    }
+
     function toggleMulti(key: 'status' | 'contentType' | 'tags', value: string) {
         const current = filters[key]
         setFilter(key, current.includes(value) ? current.filter(x => x !== value) : [...current, value])
@@ -186,7 +196,7 @@ function ContentListPage() {
                     )}
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs">
-                    <FilterGroup label="Status" options={['TODO', 'IN_PROGRESS', 'DONE', 'CANCELED']} selected={filters.status} onToggle={v => toggleMulti('status', v)} />
+                    <FilterGroup label="Status" options={['DRAFT', 'TODO', 'IN_PROGRESS', 'DONE', 'CANCELED']} selected={filters.status} onToggle={v => toggleMulti('status', v)} />
                     {contentTypes.length > 0 && (
                         <FilterGroup label="Type" options={contentTypes.map(c => c.name)} selected={filters.contentType} onToggle={v => toggleMulti('contentType', v)} />
                     )}
@@ -214,18 +224,28 @@ function ContentListPage() {
                                     </span>
                                 </th>
                             ))}
+                            <th className="px-4 py-3 w-10" />
                         </tr>
                     </thead>
                     <tbody>
                         {loading && (
-                            <tr><td colSpan={7} className="px-4 py-8 text-center text-zinc-400">Loading…</td></tr>
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-zinc-400">Loading…</td></tr>
                         )}
                         {!loading && filtered.length === 0 && (
-                            <tr><td colSpan={7} className="px-4 py-8 text-center text-zinc-400">No content tasks. Click + New Task to add one.</td></tr>
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-zinc-400">No content tasks. Click + New Task to add one.</td></tr>
                         )}
                         {!loading && filtered.map(t => (
                             <tr key={t.id} onClick={() => openEdit(t)} className="border-t border-zinc-100 hover:bg-zinc-50 cursor-pointer">
-                                <td className="px-4 py-3 font-medium text-zinc-900">{t.title}</td>
+                                <td className="px-4 py-3 font-medium text-zinc-900">
+                                    <span className="inline-flex items-center gap-2">
+                                        {t.title}
+                                        {t.attachments && t.attachments.length > 0 && (
+                                            <span title={`${t.attachments.length} draft file(s) attached`} className="inline-flex items-center gap-0.5 text-xs text-zinc-400">
+                                                <Paperclip className="w-3 h-3" />{t.attachments.length}
+                                            </span>
+                                        )}
+                                    </span>
+                                </td>
                                 <td className="px-4 py-3 text-zinc-600">
                                     {t.contentType ? (
                                         <span className="inline-flex items-center gap-1.5">
@@ -250,6 +270,15 @@ function ContentListPage() {
                                     ) : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-zinc-500 text-xs">{t.tags.join(', ') || '—'}</td>
+                                <td className="px-4 py-3 text-right">
+                                    <button
+                                        onClick={e => handleDelete(e, t)}
+                                        title="Delete content task"
+                                        className="text-zinc-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

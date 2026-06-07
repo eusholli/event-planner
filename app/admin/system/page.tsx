@@ -14,6 +14,7 @@ export default function SystemAdminPage() {
         defaultContentTypes: string[]
         contentTypeColors: Record<string, string>
         maintenanceMode: boolean
+        brandVoice: string
     } | null>(null)
 
     // Local state for list inputs
@@ -47,7 +48,8 @@ export default function SystemAdminPage() {
                     defaultRegionTypes: data.defaultRegionTypes || [],
                     defaultContentTypes: data.defaultContentTypes || [],
                     contentTypeColors: data.contentTypeColors || {},
-                    maintenanceMode: data.maintenanceMode ?? false
+                    maintenanceMode: data.maintenanceMode ?? false,
+                    brandVoice: data.brandVoice || ''
                 }
                 setSettings(loadedSettings)
 
@@ -392,6 +394,18 @@ export default function SystemAdminPage() {
                                         className="text-sm text-blue-600 hover:text-blue-800"
                                     >+ Add content type</button>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700">Brand Voice</label>
+                                <p className="text-xs text-neutral-500 mt-1 mb-2">Rakuten Symphony voice, tone, and style. Injected into every AI-generated campaign content draft. Leave blank to use the built-in default.</p>
+                                <textarea
+                                    value={settings?.brandVoice ?? ''}
+                                    onChange={e => setSettings(prev => ({ ...prev!, brandVoice: e.target.value }))}
+                                    rows={12}
+                                    placeholder="# Rakuten Symphony Brand Voice…"
+                                    className="w-full rounded-md border border-neutral-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 font-mono"
+                                />
                             </div>
                         </div>
                         <div className="flex justify-end">

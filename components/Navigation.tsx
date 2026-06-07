@@ -100,6 +100,7 @@ export default function Navigation() {
     const contentLinks = [
         { href: '/content', label: 'List' },
         { href: '/content/calendar', label: 'Calendar' },
+        { href: '/campaigns', label: 'Campaigns', roles: [Roles.Root, Roles.Marketing] },
     ]
 
     // Event Groups (Scoped)
@@ -141,6 +142,9 @@ export default function Navigation() {
         if (!item.roles) return true
         return userRole && item.roles.includes(userRole)
     }
+
+    // Content group: List/Calendar are global; Campaigns is root/marketing only.
+    const visibleContentLinks = contentLinks.filter(filterItem)
 
     const isActive = (path: string) => pathname === path || pathname?.startsWith(`${path}/`)
     const isGroupActive = (items: any[]) => items.some(item => isActive(item.href))
@@ -210,8 +214,8 @@ export default function Navigation() {
 
                                 <NavDropdown
                                     label="Content"
-                                    items={contentLinks}
-                                    isActive={isGroupActive(contentLinks)}
+                                    items={visibleContentLinks}
+                                    isActive={isGroupActive(visibleContentLinks)}
                                 />
 
                                 {!eventId && adminLinks.filter(filterItem).length > 0 && (
@@ -336,7 +340,7 @@ export default function Navigation() {
                                 <div className="space-y-1">
                                     <button
                                         onClick={() => setOpenGroup(contentGroupExpanded ? null : 'Content')}
-                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${contentLinks.some(l => isActive(l.href))
+                                        className={`w-full flex justify-between items-center pl-3 pr-4 py-2 rounded-lg text-base font-medium transition-colors ${visibleContentLinks.some(l => isActive(l.href))
                                             ? 'text-zinc-900'
                                             : 'text-zinc-500'
                                             }`}
@@ -346,7 +350,7 @@ export default function Navigation() {
                                     </button>
                                     {contentGroupExpanded && (
                                         <div className="pl-6 space-y-1">
-                                            {contentLinks.map(link => (
+                                            {visibleContentLinks.map(link => (
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
