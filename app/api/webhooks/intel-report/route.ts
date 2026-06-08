@@ -328,7 +328,7 @@ export async function POST(req: Request) {
       })
       const recipientName = attendee?.name ?? subscriber.email
 
-      const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
       const reportToken = signReportToken(subscriber.userId, subscriber.email)
       const { subject, html } = await composeIntelligenceEmail(
         recipientName,
@@ -368,7 +368,7 @@ export async function POST(req: Request) {
   }
   if (isFirstOrUnsliced && updatedTargets.length > 0) {
     try {
-      const appUrl = process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
       // 5a. Load in-scope companies (subscribed OR user-subscribed) with their region.
       const scopedCompanies = await prisma.company.findMany({

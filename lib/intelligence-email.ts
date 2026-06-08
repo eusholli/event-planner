@@ -30,7 +30,7 @@ export async function composeIntelligenceEmail(
   reportToken?: string
 ): Promise<{ subject: string; html: string }> {
 
-  const baseUrl = appUrl ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+  const baseUrl = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const highlighted = matchedTargets.filter(t => t.highlighted)
   const eventLinked = matchedTargets.filter(t => !t.highlighted && t.linkedEventName)
@@ -119,7 +119,7 @@ export async function composeAggregateEmail(
   reportToken?: string
 ): Promise<{ subject: string; html: string }> {
 
-  const baseUrl = appUrl ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+  const baseUrl = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const byType = {
     company: allTargets.filter(t => t.type === 'company'),
@@ -204,7 +204,7 @@ export async function composeRegionalEmail(
   reportToken?: string
 ): Promise<{ subject: string; html: string }> {
 
-  const baseUrl = appUrl ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
+  const baseUrl = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? process.env.CRON_EVENT_PLANNER_DNS ?? 'http://localhost:3000'
 
   const byType = {
     company: regionalTargets.filter(t => t.type === 'company'),
