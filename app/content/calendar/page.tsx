@@ -22,7 +22,7 @@ type ContentTask = {
     title: string
     description?: string | null
     contentType?: string | null
-    status: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
+    status: 'DRAFT' | 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
     dueDate?: string | null
     tags: string[]
     assigneeId?: string | null
@@ -76,9 +76,13 @@ export default function ContentCalendarPage() {
     const { filters, setFilter, isFiltered, resetFilters } = useFilterParams('content-calendar', FILTER_DEFAULTS)
 
     async function reload() {
-        const res = await fetch('/api/content-tasks')
-        const data = res.ok ? await res.json() : []
-        setTasks(Array.isArray(data) ? data : [])
+        try {
+            const res = await fetch('/api/content-tasks')
+            const data = res.ok ? await res.json() : []
+            setTasks(Array.isArray(data) ? data : [])
+        } catch {
+            // Network error — leave existing tasks in place
+        }
     }
 
     useEffect(() => {
