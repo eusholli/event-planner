@@ -87,7 +87,7 @@ const resolvedEventId = event.id
 
 **Role initialization**: New Clerk users get `user` role via `/api/user/init`. The `RoleSynchronizer` component triggers this on first load.
 
-**Middleware** (`middleware.ts`): Protects `/events/*`, `/dashboard/*`, `/admin/*`, `/api/*`. `/settings` requires root. `/admin/users` requires root or marketing.
+**Middleware** (`proxy.ts`): Protects `/events/*`, `/dashboard/*`, `/admin/*`, `/api/*`. `/settings` requires root. `/admin/users` requires root or marketing.
 
 ### AI Chat System (`app/api/chat/route.ts`)
 

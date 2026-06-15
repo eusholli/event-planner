@@ -25,15 +25,20 @@ export default async function RootLayout({
 }) {
   let showMaintenance = false
 
-  if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
-    const { userId, sessionClaims } = await auth()
-    if (userId) {
-      const role = (sessionClaims?.metadata as Record<string, unknown>)?.role as string ?? ''
-      if (role !== 'root') {
-        const settings = await prisma.systemSettings.findFirst({ select: { maintenanceMode: true } })
-        showMaintenance = settings?.maintenanceMode ?? false
+  try {
+    if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH !== 'true') {
+      const { userId, sessionClaims } = await auth()
+      if (userId) {
+        const role = (sessionClaims?.metadata as Record<string, unknown>)?.role as string ?? ''
+        if (role !== 'root') {
+          const settings = await prisma.systemSettings.findFirst({ select: { maintenanceMode: true } })
+          showMaintenance = settings?.maintenanceMode ?? false
+        }
       }
     }
+  } catch {
+    // No Clerk middleware context (e.g. 404/excluded static asset paths that
+    // still render the root layout). Treat as not-in-maintenance.
   }
 
   return (
