@@ -13,148 +13,160 @@ export default function ManualPage() {
                 <h1 className="text-4xl font-bold text-zinc-900 mb-8">Event Planner User Manual</h1>
 
                 <p className="text-xl text-zinc-600 mb-8">
-                    Welcome to the Event Planner application! This guide will help you navigate the features and manage your event effectively.
+                    Event Planner helps you run multiple events end to end — attendees,
+                    companies, meetings, rooms, and ROI — with built-in AI for chat,
+                    market intelligence, and content.
                 </p>
 
                 <div className="bg-zinc-50 rounded-xl p-6 mb-12 border border-zinc-200">
                     <h2 className="text-lg font-semibold text-zinc-900 mb-4">Table of Contents</h2>
                     <ul className="space-y-2">
-                        <li><a href="#meeting-tracker" className="text-indigo-600 hover:underline">1. Meeting Tracker</a></li>
-                        <li><a href="#managing-attendees" className="text-indigo-600 hover:underline">2. Managing Attendees</a></li>
-                        <li><a href="#auto-complete-feature" className="text-indigo-600 hover:underline">3. Auto Complete Feature</a></li>
-                        <li><a href="#scheduling-meetings" className="text-indigo-600 hover:underline">4. Scheduling Meetings</a></li>
-                        <li><a href="#settings-data-management" className="text-indigo-600 hover:underline">5. Settings & Data Management</a></li>
+                        <li><a href="#quick-start" className="text-indigo-600 hover:underline">1. Quick Start</a></li>
+                        <li><a href="#roles" className="text-indigo-600 hover:underline">2. Roles & Permissions</a></li>
+                        <li><a href="#portfolio" className="text-indigo-600 hover:underline">3. Events Portfolio</a></li>
+                        <li><a href="#dashboard" className="text-indigo-600 hover:underline">4. Event Dashboard</a></li>
+                        <li><a href="#roi" className="text-indigo-600 hover:underline">5. ROI Management</a></li>
+                        <li><a href="#audience" className="text-indigo-600 hover:underline">6. Companies & Attendees</a></li>
+                        <li><a href="#meetings" className="text-indigo-600 hover:underline">7. Rooms & Meetings</a></li>
+                        <li><a href="#ai" className="text-indigo-600 hover:underline">8. AI Chat & OpenClaw Insights</a></li>
+                        <li><a href="#reports" className="text-indigo-600 hover:underline">9. Reports</a></li>
+                        <li><a href="#settings" className="text-indigo-600 hover:underline">10. Event Settings</a></li>
+                        <li><a href="#admin" className="text-indigo-600 hover:underline">11. Administration</a></li>
                     </ul>
                 </div>
 
-                <section id="meeting-tracker" className="mb-12 scroll-mt-20">
-                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Meeting Tracker</h2>
-                    <p className="text-zinc-600 mb-4">
-                        The <strong>Meeting Tracker</strong> is your landing page. It provides a quick overview of your event status, including:
-                    </p>
-                    <ul className="list-disc pl-6 space-y-2 text-zinc-600">
-                        <li><strong>Total Attendees</strong>: The number of people registered.</li>
-                        <li><strong>Total Meetings</strong>: The number of scheduled sessions.</li>
-                        <li><strong>Room Utilization</strong>: How effectively your venue space is being used.</li>
-                    </ul>
-                </section>
-
-                <section id="managing-attendees" className="mb-12 scroll-mt-20">
-                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Managing Attendees</h2>
-                    <p className="text-zinc-600 mb-4">
-                        Navigate to the <strong>Attendees</strong> page to view and manage your guest list.
-                    </p>
-
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Adding an Attendee</h3>
-                    <ol className="list-decimal pl-6 space-y-2 text-zinc-600 mb-6">
-                        <li>Click the <strong>Add Attendee</strong> button.</li>
-                        <li>Fill in the details manually, or use the <a href="#auto-complete-feature" className="text-indigo-600 hover:underline">Auto Complete</a> feature.</li>
-                        <li>Click <strong>Save</strong> to add them to the list.</li>
-                    </ol>
-
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Editing an Attendee</h3>
+                <section id="quick-start" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Quick Start</h2>
+                    <p className="text-zinc-600 mb-4">A typical flow for running an event:</p>
                     <ol className="list-decimal pl-6 space-y-2 text-zinc-600">
-                        <li>Click on an attendee's card in the list.</li>
-                        <li>Update their information in the form.</li>
-                        <li>Click <strong>Save Changes</strong>.</li>
+                        <li><strong>Create the event</strong> on the Events Portfolio (<code>+</code> button). It starts in <strong>Pipeline</strong> status; set dates and location in Event Settings.</li>
+                        <li><strong>Build your audience</strong> — add Companies (with pipeline values) and Attendees. Use <strong>Auto Complete</strong> to fill attendee details from a name and company.</li>
+                        <li><strong>Set ROI targets</strong> — budget, expected pipeline, engagement targets, and the target companies you want to meet. The <strong>✦ sparkle</strong> buttons can draft a marketing plan and auto-fill these.</li>
+                        <li><strong>Add rooms and schedule meetings</strong> via New Meeting or the drag-and-drop Calendar.</li>
+                        <li><strong>Move the event to Committed</strong> when confirmed; the Dashboard and ROI tracker update automatically as you log meetings.</li>
+                        <li><strong>After the event</strong>, enter manual results on the ROI <strong>Event Results</strong> tab, then set the event to <strong>Occurred</strong> to lock it read-only.</li>
                     </ol>
                 </section>
 
-                <section id="auto-complete-feature" className="mb-12 scroll-mt-20">
-                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Auto Complete Feature</h2>
-                    <p className="text-zinc-600 mb-4">
-                        The application integrates with Google Gemini to help you quickly fill in professional details.
-                    </p>
+                <section id="roles" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Roles & Permissions</h2>
+                    <ul className="list-disc pl-6 space-y-2 text-zinc-600">
+                        <li><strong>Root</strong> — full system access: system settings, users, and all events.</li>
+                        <li><strong>Marketing</strong> — event and user management; access to all events. No system settings.</li>
+                        <li><strong>Admin</strong> — create/edit meetings, attendees, and rooms within <em>authorized</em> events. Cannot create or delete events.</li>
+                        <li><strong>User</strong> — read-only access within <em>authorized</em> events.</li>
+                    </ul>
+                    <p className="text-zinc-600 mt-4">Root and Marketing reach every event automatically; Admin and User must be authorized per event (in Event Settings). New users start as <strong>User</strong>.</p>
+                </section>
 
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">How to use:</h3>
-                    <ol className="list-decimal pl-6 space-y-2 text-zinc-600 mb-6">
-                        <li>In the "Add Attendee" form, enter a <strong>Name</strong> and <strong>Company</strong>.</li>
-                        <li>Click the <strong>Auto Complete</strong> button.</li>
-                        <li>The AI will search for the person and suggest their <strong>Title</strong>, <strong>Bio</strong>, <strong>LinkedIn URL</strong>, and <strong>Company Description</strong>.</li>
-                        <li>Review the suggestions in the modal and click <strong>Accept & Fill</strong> to populate the form.</li>
-                    </ol>
+                <section id="portfolio" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Events Portfolio</h2>
+                    <p className="text-zinc-600 mb-4">The Events Portfolio is your hub, with <strong>List</strong>, <strong>Calendar</strong>, and <strong>Map</strong> views. Events are color-coded by status:</p>
+                    <ul className="list-disc pl-6 space-y-2 text-zinc-600 mb-4">
+                        <li><strong>Pipeline</strong> (amber) — early planning.</li>
+                        <li><strong>Committed</strong> (green) — confirmed and active.</li>
+                        <li><strong>Occurred</strong> (grey) — past; all data becomes read-only.</li>
+                        <li><strong>Canceled</strong> (red).</li>
+                    </ul>
+                    <p className="text-zinc-600">Root/Marketing users create events with <code>+</code>, and can edit, delete, or click the <strong>✦</strong> icon to generate an AI marketing plan. Deleting an event auto-backs-up first; meetings and rooms cascade-delete while attendees (system-level) are preserved.</p>
+                </section>
+
+                <section id="dashboard" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Event Dashboard</h2>
+                    <p className="text-zinc-600 mb-4">The Dashboard shows real-time stats (attendees, meetings, room utilization), a filterable meeting list, and a status breakdown. Export options include <strong>CSV</strong>, a <strong>Briefing Book PDF</strong>, and a <strong>Calendar View PDF</strong>.</p>
+                </section>
+
+                <section id="roi" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">ROI Management</h2>
+                    <p className="text-zinc-600 mb-4">The ROI page tracks investment targets vs. actual results across three tabs.</p>
+
+                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Tab 1 — Targets & Approval</h3>
+                    <ul className="list-disc pl-6 space-y-2 text-zinc-600 mb-6">
+                        <li><strong>Financial Targets</strong>: Requester Email, Budget, Expected Pipeline, Win Rate (Expected Revenue auto-calculates as Pipeline × Win Rate).</li>
+                        <li><strong>Event Targets</strong>: Event Scans, External Leads, Speaking, Media/PR.</li>
+                        <li><strong>Target Companies</strong>: the companies you want to meet.</li>
+                        <li><strong>Approval</strong>: Draft → Submit for Approval → Approved (a Root/Marketing user approves).</li>
+                    </ul>
+
+                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Tab 2 — Event Results</h3>
+                    <p className="text-zinc-600 mb-6">Enter results that cannot be derived from meetings: <strong>Actual Cost</strong> (used as the investment figure if set), <strong>Event Scans</strong>, <strong>Speaking</strong>, and <strong>Media/PR</strong>. External Leads are computed automatically from confirmed/occurred meetings. LinkedIn campaign metrics also appear here.</p>
+
+                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Tab 3 — Performance Tracker</h3>
+                    <p className="text-zinc-600 mb-4">A live comparison of targets vs. actuals. Pipeline and Revenue progress rings, engagement gauges, a target-company checklist (plus any Additional Companies met), and a LinkedIn campaign summary. Pipeline is summed from the unique companies in confirmed/occurred meetings.</p>
 
                     <div className="bg-amber-50 border-l-4 border-amber-400 p-4">
                         <p className="text-amber-700">
-                            <strong>Note</strong>: This feature requires a valid Google Gemini API Key to be configured in <a href="#settings-data-management" className="text-indigo-600 hover:underline">Settings</a>.
+                            <strong>✦ Sparkle buttons</strong> auto-fill empty Financial Targets, Event Targets, and Target Companies from the event marketing plan. They require a Google Gemini API key configured in System Administration.
                         </p>
                     </div>
                 </section>
 
-                <section id="scheduling-meetings" className="mb-12 scroll-mt-20">
-                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Scheduling Meetings</h2>
-                    <p className="text-zinc-600 mb-4">
-                        Navigate to the <strong>Schedule</strong> page to organize your event agenda.
-                    </p>
+                <section id="audience" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Companies & Attendees</h2>
+                    <p className="text-zinc-600 mb-4"><strong>Companies</strong> are a shared, system-wide directory. Each company holds a single <strong>Pipeline Value</strong> used in ROI; duplicate names are prevented.</p>
+                    <p className="text-zinc-600 mb-4"><strong>Attendees</strong> are also system-level (unique email) and shared across events. Add a name, email, company, and title, plus optional bio, LinkedIn, type, seniority, and photo.</p>
 
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Creating a Meeting</h3>
+                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">AI Auto Complete</h3>
                     <ol className="list-decimal pl-6 space-y-2 text-zinc-600 mb-6">
-                        <li>Click <strong>New Meeting</strong> in the navigation or <strong>Schedule Meeting</strong> on the Meeting Tracker.</li>
-                        <li>Enter a <strong>Title</strong> and <strong>Purpose</strong>.</li>
-                        <li>(Optional) Select <strong>Tags</strong> to categorize the meeting.</li>
-                        <li>Select a <strong>Room</strong>.</li>
-                        <li>Choose <strong>Attendees</strong> from the list.</li>
-                        <li>Set the <strong>Date</strong>, <strong>Start Time</strong>, and <strong>Duration</strong>.</li>
-                        <li>Select the <strong>Status</strong> (Pipeline, Confirmed, Occurred, Canceled).</li>
-                        <li>Click <strong>Book Meeting</strong>.</li>
+                        <li>Enter a <strong>Name</strong> and <strong>Company</strong>.</li>
+                        <li>Click <strong>Auto Complete</strong> (✦).</li>
+                        <li>Gemini suggests title, bio, LinkedIn URL, and company description — review, then accept.</li>
                     </ol>
-
-                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-                        <p className="text-blue-700">
-                            <strong>Note</strong>: After booking, you will stay on the page to easily book another meeting. A success message will appear at the top.
-                        </p>
-                    </div>
-
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Meeting Tags</h3>
-                    <p className="text-zinc-600 mb-4">You can categorize your meetings using tags.</p>
-                    <ul className="list-disc pl-6 space-y-2 text-zinc-600 mb-6">
-                        <li><strong>Managing Tags</strong>: Go to <a href="#settings-data-management" className="text-indigo-600 hover:underline">Settings</a> to add or remove tags.</li>
-                        <li><strong>Assigning Tags</strong>: When creating or editing a meeting, select one or more tags from the dropdown.</li>
-                    </ul>
-
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Managing the Schedule</h3>
-                    <ul className="list-disc pl-6 space-y-2 text-zinc-600">
-                        <li><strong>Drag and Drop</strong>: You can drag meetings around the calendar to reschedule them.</li>
-                        <li><strong>Resize</strong>: Drag the bottom edge of a meeting block to change its duration.</li>
-                        <li><strong>View Details</strong>: Click on a meeting to view its details or delete it.</li>
-                    </ul>
-
+                    <p className="text-zinc-600">Each attendee card can also generate a <strong>Briefing Book PDF</strong> or jump to <strong>OpenClaw Insights</strong> for company research.</p>
                 </section>
 
-                <section id="settings-data-management" className="mb-12 scroll-mt-20">
-                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Settings & Data Management</h2>
-                    <p className="text-zinc-600 mb-4">
-                        The <strong>Settings</strong> page is the control center for your event configuration.
-                    </p>
+                <section id="meetings" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Rooms & Meetings</h2>
+                    <p className="text-zinc-600 mb-4">Create <strong>Rooms</strong> with a name and capacity; each room can produce a briefing-book PDF.</p>
 
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Event Configuration</h3>
+                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Scheduling</h3>
                     <ul className="list-disc pl-6 space-y-2 text-zinc-600 mb-6">
-                        <li><strong>Event Name</strong>: The title of your event.</li>
-                        <li><strong>Date Range</strong>: The start and end dates for the event.</li>
-                        <li><strong>Meeting Tags</strong>: Define tags (e.g., "Internal", "Client", "Urgent") to categorize meetings.</li>
-                        <li><strong>Gemini API Key</strong>: Enter your Google Gemini API key here to enable the Auto Complete feature.</li>
+                        <li><strong>New Meeting</strong>: set title, purpose, date/time, room, attendees, type, tags, and status.</li>
+                        <li><strong>Calendar</strong>: day/week/month views with drag-and-drop rescheduling. Click a meeting for read-only details, then Edit.</li>
+                        <li><strong>Status</strong>: Pipeline → Confirmed → Occurred → Canceled.</li>
                     </ul>
 
-                    <h3 className="text-xl font-semibold text-zinc-900 mb-3">Data Management</h3>
-                    <p className="text-zinc-600 mb-4">Use these tools to backup, restore, or reset your application data.</p>
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <p className="text-blue-700">
+                            <strong>Read-only mode</strong>: when an event reaches <strong>Occurred</strong> status, all meeting and calendar editing is disabled to preserve historical data.
+                        </p>
+                    </div>
+                </section>
 
-                    <div className="space-y-4">
-                        <div>
-                            <h4 className="font-semibold text-zinc-900">Import / Update</h4>
-                            <p className="text-zinc-600">Upload a JSON configuration file (e.g., <code>event-config.json</code>) to add new data or update existing entries. This supports importing Settings, Attendees, Rooms, and Meetings.</p>
-                        </div>
+                <section id="ai" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">AI Chat & OpenClaw Insights</h2>
+                    <p className="text-zinc-600 mb-4"><strong>AI Chat Assistant</strong> (per event) is a Gemini-powered chat that knows your event meetings, attendees, and rooms. Ask it to find meetings, look up attendees, or generate navigation links. History is saved per event.</p>
+                    <p className="text-zinc-600"><strong>OpenClaw Insights</strong> is a system-wide market-intelligence agent named Kenji. It streams real-time research, runs scheduled intelligence reports, supports follow-up questions, and lets you download each response as a PDF.</p>
+                </section>
 
-                        <div>
-                            <h4 className="font-semibold text-zinc-900">Export Database</h4>
-                            <p className="text-zinc-600">Download a full backup of your current database as a JSON file. The filename will include a timestamp for easy versioning.</p>
-                        </div>
+                <section id="reports" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Reports</h2>
+                    <p className="text-zinc-600">The Reports page provides meeting breakdowns by status and per-attendee engagement counts, with filtering, sorting, and CSV/PDF export.</p>
+                </section>
 
-                        <div>
-                            <h4 className="font-semibold text-zinc-900">Delete Database</h4>
-                            <p className="text-zinc-600">
-                                <span className="text-red-600 font-bold">Warning</span>: This action permanently removes all Attendees, Rooms, and Meetings from the database. It can also optionally delete Event Settings if configured. Use this feature with caution, preferably after creating an Export.
-                            </p>
-                        </div>
+                <section id="settings" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Event Settings</h2>
+                    <p className="text-zinc-600 mb-4"><em>Root and Marketing only.</em> Configure event details (name, slug, dates, timezone, region, address, booth location, URL, description, status, password) and per-event Tags, Meeting Types, and Attendee Types.</p>
+                    <ul className="list-disc pl-6 space-y-2 text-zinc-600">
+                        <li><strong>Authorized Users</strong>: grant or revoke Admin/User access with searchable, paginated selection.</li>
+                        <li><strong>AI Event Scraper</strong>: auto-fill event details from a URL.</li>
+                        <li><strong>Data Management</strong>: export, import, reset, or delete the event (a backup is taken before destructive actions).</li>
+                    </ul>
+                </section>
+
+                <section id="admin" className="mb-12 scroll-mt-20">
+                    <h2 className="text-2xl font-bold text-zinc-900 mb-4">Administration</h2>
+                    <ul className="list-disc pl-6 space-y-2 text-zinc-600">
+                        <li><strong>System Administration</strong> (Root): Gemini API key, default tags/types, full backup/restore, and factory reset.</li>
+                        <li><strong>User Administration</strong> (Root/Marketing): manage roles with search and pagination; delete users.</li>
+                        <li><strong>AI Usage Report</strong> (Root): aggregated Gemini usage by function and user, with full prompt histories.</li>
+                        <li><strong>Data Ingestion</strong> (Root/Marketing): upload documents (PDF/DOCX/CSV/XLSX) and let Gemini extract Companies, Attendees, and Meetings, with diffing against existing records before saving.</li>
+                    </ul>
+
+                    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mt-6">
+                        <p className="text-amber-700">
+                            <strong>Note</strong>: AI features require a valid Google Gemini API key configured in System Administration.
+                        </p>
                     </div>
                 </section>
             </article>

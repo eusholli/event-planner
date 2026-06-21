@@ -3,21 +3,50 @@
 Welcome to the Executive Meeting Coordinator! This guide covers every feature of the application.
 
 ## Table of Contents
-1. [User Roles & Permissions](#user-roles--permissions)
-2. [Events Portfolio](#events-portfolio)
-3. [Event Dashboard](#event-dashboard)
-4. [Event ROI Management](#event-roi-management)
-5. [Managing Attendees](#managing-attendees)
-6. [Rooms](#rooms)
-7. [Scheduling Meetings](#scheduling-meetings)
-8. [AI Chat Assistant](#ai-chat-assistant)
-9. [OpenClaw Insights](#openclaw-insights)
-10. [Reports](#reports)
-11. [Event Settings](#event-settings)
-12. [System Administration](#system-administration)
-13. [User Administration](#user-administration)
-14. [AI Usage Report](#ai-usage-report)
-15. [Data Ingestion](#data-ingestion)
+1. [Quick Start](#quick-start)
+2. [User Roles & Permissions](#user-roles--permissions)
+3. [Events Portfolio](#events-portfolio)
+4. [Event Dashboard](#event-dashboard)
+5. [Event ROI Management](#event-roi-management)
+6. [Companies](#companies)
+7. [Managing Attendees](#managing-attendees)
+8. [Rooms](#rooms)
+9. [Scheduling Meetings](#scheduling-meetings)
+10. [AI Chat Assistant](#ai-chat-assistant)
+11. [OpenClaw Insights](#openclaw-insights)
+12. [Reports](#reports)
+13. [Event Settings](#event-settings)
+14. [System Administration](#system-administration)
+15. [User Administration](#user-administration)
+16. [AI Usage Report](#ai-usage-report)
+17. [Data Ingestion](#data-ingestion)
+
+---
+
+## Quick Start
+
+A typical end-to-end flow for running an event:
+
+1. **Create the event** — On the Events Portfolio (`/events`), click **+** and
+   enter a name. The event starts in **Pipeline** status. Open **Event Settings**
+   to set the dates, location, and (optionally) a custom slug.
+2. **Build your audience** — Add **Companies** (with pipeline values) and
+   **Attendees**. Use **AI Auto Complete** to fill in attendee titles, bios, and
+   LinkedIn URLs from just a name and company.
+3. **Set ROI targets** — On the **ROI** page, set your budget, expected pipeline,
+   and engagement targets, and list the **target companies** you want to meet.
+   The **✦ sparkle** buttons can draft a marketing plan and auto-fill these.
+4. **Add rooms and schedule meetings** — Create **Rooms**, then use **New Meeting**
+   or the drag-and-drop **Calendar** to schedule. Meetings move
+   Pipeline → Confirmed → Occurred.
+5. **Move the event to Committed** — In Event Settings, set the status to
+   **Committed** once the event is confirmed.
+6. **Track during/after the event** — The **Dashboard** and **ROI Performance
+   Tracker** update automatically from your meeting and company data. Enter
+   manual results (event scans, speaking, media/PR) on the ROI **Event Results**
+   tab. When done, set the event to **Occurred** to lock it read-only.
+
+The rest of this manual covers each area in detail.
 
 ---
 
@@ -110,7 +139,7 @@ Three sparkle (✦) buttons on the Targets & Approval tab let you auto-populate 
 | Button | Fields Filled |
 | :--- | :--- |
 | **Financial Targets ✦** | Budget, Expected Pipeline, Win Rate |
-| **Event Targets ✦** | Booth Meetings, C-Level range, Other Meetings, ERTA, Speaking, Media/PR |
+| **Event Targets ✦** | Event Scans, External Leads, Speaking, Media/PR |
 | **Target Companies ✦** | Suggests 10–15 companies; creates new records or links to existing ones |
 
 **How it works**:
@@ -133,15 +162,13 @@ Use this tab to define what success looks like for the event.
 | **Win Rate** | Expected conversion rate (enter as decimal, e.g., 0.15 for 15%). |
 | **Expected Revenue** | Auto-calculated: Pipeline × Win Rate. |
 
-#### Meeting KPI Targets
+#### Event Targets
 | Field | Description |
 | :--- | :--- |
-| **Booth Meetings** | Target number of meetings at your booth. |
-| **C-Level Meetings (Min/Max)** | Target range for meetings with C-level executives. |
-| **Other Meetings** | Target for non-booth, non-C-level meetings. |
-
-#### Engagement Targets
-Set numeric targets for: **Social Reach**, **Target ERTA** (Engagement Rate by Target Account), **Keynotes**, **Seminars**, **Media/PR**, and **Booth Sessions**.
+| **Event Scans** | Target number of badge scans / leads captured at the event. |
+| **External Leads** | Target number of external companies you meet with (auto-tracked from confirmed/occurred meetings). |
+| **Speaking** | Target number of speaking slots (keynotes, sessions, panels) secured. |
+| **Media / PR** | Target number of media mentions or press activities. |
 
 #### Target Companies
 Type company names and press Enter (or click **Add**) to build a target list. These are companies you want to ensure you meet with at the event. The Performance Tracker will show which ones you actually met.
@@ -152,18 +179,25 @@ Targets go through a three-step approval process:
 2. **Submitted** → Click **Submit for Approval** to lock targets and request sign-off.
 3. **Approved** → A Root or Marketing user clicks **Approve** to finalize.
 
-### Tab 2: Event Execution
+### Tab 2: Event Results
 
-Engagement metrics like social reach, keynotes, and media coverage can't be derived from meeting data. Enter them here after the event:
+Results that can't be derived from meeting data are entered here. Enter them
+during or after the event:
 
-- **Social Reach**: Total social media impressions/reach.
-- **Actual ERTA**: The achieved Engagement Rate by Target Account at the event.
-- **Keynotes**: Number of keynote presentations delivered.
-- **Seminars**: Number of seminars or panels participated in.
-- **Media / PR**: Number of media mentions or PR activities.
-- **Booth Sessions**: Number of booth demonstration sessions conducted.
+- **Actual Cost**: The real spend on the event. If set, this is used as the
+  investment figure in the ROI Ratio instead of the budgeted target.
+- **Event Scans**: Actual number of badge scans / leads captured.
+- **Speaking**: Actual number of speaking slots delivered.
+- **Media / PR**: Actual number of media mentions or PR activities.
 
-Click **Save Actuals** to persist these values. They immediately appear in the Performance Tracker.
+> **External Leads** are calculated automatically from your confirmed/occurred
+> meetings — you don't enter them here.
+
+This tab also surfaces your **LinkedIn campaign** metrics (ad spend, impressions,
+click-through and engagement rates) for any campaigns linked to the event.
+
+Click **Save** to persist these values. They immediately appear in the
+Performance Tracker.
 
 ### Tab 3: Performance Tracker
 
@@ -176,17 +210,17 @@ The following metrics are computed in real time from your meeting and attendee d
 | :--- | :--- |
 | **Actual Pipeline** | Sum of pipeline values across unique companies from confirmed/occurred meetings. |
 | **Actual Revenue** | Actual Pipeline × Win Rate. |
-| **Booth Meetings** | Count of meetings with type "Booth". |
-| **C-Level Meetings** | Count of meetings that include at least one attendee with seniority level "C-Level". |
-| **Other Meetings** | Total meetings minus Booth and C-Level meetings. |
+| **External Leads** | Count of unique external companies met in confirmed/occurred meetings. |
 | **Target Companies Hit** | Companies from your target list that appear in at least one confirmed/occurred meeting. |
-| **Investment** | Pulled from the event's budgeted target. |
+| **Additional Companies** | Companies you met that were *not* on your target list (unplanned/opportunistic). |
+| **Investment** | The **Actual Cost** if entered, otherwise the budgeted target. |
 | **ROI Ratio** | Pipeline ÷ Investment, shown as a percentage. |
 
 #### Visual Elements
 - **Progress Rings**: Large donut charts for Pipeline and Revenue show percentage completion with color coding.
-- **Progress Bars**: Horizontal bars for meeting KPIs.
-- **Company Checklist**: Each target company shown with a ✅ (met) or ✖ (not met) indicator and overall hit rate.
+- **Gauges**: Target-vs-actual gauges for engagement KPIs (Event Scans, External Leads, Speaking, Media/PR).
+- **Company Checklist**: Each target company shown with a ✅ (met) or ✖ (not met) indicator and overall hit rate, plus a list of **Additional Companies** met that weren't targeted.
+- **LinkedIn Campaign Summary**: Aggregate ad spend, impressions, click-through and engagement metrics for the event's LinkedIn campaigns.
 - **Color Coding**: 🟢 Green (≥100%), 🟡 Amber (≥50%), 🔴 Rose (<50%).
 
 ### Pipeline Value — How It Works
@@ -200,10 +234,6 @@ Pipeline value is centralized at the **Company level**. This keeps things simple
    - Sums the pipeline value of those unique companies.
 
 > **Tip**: You only need to set the pipeline value once per company in the global directory.
-
-### Seniority Level — C-Level Tracking
-
-When adding attendees, you can set their **Seniority Level** (C-Level, VP, Director, Manager, or IC). The ROI system uses this to automatically count C-Level meetings — any meeting with at least one C-Level attendee counts.
 
 ### Import & Export
 
@@ -229,7 +259,7 @@ Navigate to **Attendees** (`/events/[id]/attendees`) to manage your guest list.
 ### Adding Attendees
 Fill in the form with name, email, company, title, and optionally bio, LinkedIn URL, attendee type, seniority level, and profile image.
 
-- **Seniority Level**: Select from C-Level, VP, Director, Manager, or IC. Used by the ROI system to track C-Level meetings.
+- **Seniority Level**: Select from C-Level, VP, Director, Manager, or IC. Used to profile attendees and inform market intelligence.
 
 ### AI Auto Complete
 1. Enter a **Name** and **Company** in the form.

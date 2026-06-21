@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:main": "node scripts/switch-env.js main",
-    "db:multi": "node scripts/switch-env.js multi"
+    "db:main": "node scripts/switch-env.js main"
   },
   "engines": {
     "node": ">=24.0.0"

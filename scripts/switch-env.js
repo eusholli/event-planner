@@ -2,12 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const envType = process.argv[2]; // 'main' or 'multi'
-
-if (!envType || (envType !== 'main' && envType !== 'multi')) {
-    console.error('Please specify environment: "main" or "multi"');
-    process.exit(1);
-}
+// The project uses a single database configuration: `.env.main` is the default.
+const envType = 'main';
 
 const rootDir = process.cwd();
 const sourceEnv = path.join(rootDir, `.env.${envType}`);
@@ -18,7 +14,7 @@ if (!fs.existsSync(sourceEnv)) {
     process.exit(1);
 }
 
-console.log(`\n🔄 Switching to ${envType.toUpperCase()} environment...`);
+console.log(`\n🔄 Applying ${envType.toUpperCase()} environment...`);
 
 try {
     // 1. Copy the .env file
@@ -30,8 +26,8 @@ try {
     execSync('npx prisma generate', { stdio: 'inherit' });
     console.log('✅ Prisma client updated.');
 
-    console.log(`\n🎉 Successfully switched to ${envType} database configuration.\n`);
+    console.log(`\n🎉 Successfully applied ${envType} database configuration.\n`);
 } catch (error) {
-    console.error('❌ Error switching environment:', error);
+    console.error('❌ Error applying environment:', error);
     process.exit(1);
 }

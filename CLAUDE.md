@@ -14,24 +14,14 @@ npm run build            # Build for production (DB check + migrate + build)
 npm run lint             # Run ESLint
 npx prisma studio        # Open Prisma Studio GUI
 npx prisma migrate dev   # Create and apply migration
-npm run db:main          # Switch to main branch database (.env.main -> .env)
-npm run db:multi         # Switch to multi-event database (.env.multi -> .env)
+npm run db:main          # Apply the default database config (.env.main -> .env)
 ```
 
 ## Required Post-Change Checks
 
 - **After adding any new feature or API route that may be role-restricted**: run `/rbac-check` to verify RBAC correctness — withAuth coverage, permission helper usage, and per-route policy conformance.
 
-**Database switching**: `npm run db:main/multi` copies the specified `.env.*` file to `.env` and regenerates the Prisma client. Use `db:main` on the `main` branch and `db:multi` on the `multi-event` branch.
-
-## Branch & Database Strategy
-
-Two branches with divergent schemas use separate databases:
-
-- `main` branch → `npm run db:main` (V1, single event)
-- `multi-event` branch → `npm run db:multi` (V2, multi event)
-
-**Critical migration rule**: You may merge `main` into `multi-event`, but NEVER merge `multi-event` into `main`. When merging `main` into `multi-event`, delete any new migration folders that came from `main` (they're invalid for V2 schema) and re-run `npx prisma migrate dev --name <feature>` to generate a V2-compatible migration. See `DB_WORKFLOW.md` for details.
+**Database**: The project uses a single PostgreSQL database configured via `.env`. `npm run db:main` copies `.env.main` to `.env` and regenerates the Prisma client.
 
 ## Architecture
 
@@ -107,7 +97,7 @@ const resolvedEventId = event.id
 - WebSocket connection to `ws-proxy` → OpenClaw agent "Kenji"; system-wide, not event-scoped
 - `eventId` is passed as a breadcrumb only (helps Kenji orient to context); does not scope tools
 - History persisted server-side in ws-proxy per userId
-- See `OPENCLAW_INTEGRATION.md` for full architecture details
+- See `DEVELOPER.md` for full architecture details
 
 ### ROI Sparkle Intelligence
 
@@ -164,7 +154,7 @@ System-level `ContentTask` model for managing editorial deliverables (newsletter
 
 **Sentry** (`instrumentation.ts`, `sentry.*.config.ts`): Error tracking on client, server, and edge runtimes.
 
-**OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent with two modes — real-time chat and scheduled intelligence reports. Runs as a 3-container Docker stack (see `OPENCLAW_INTEGRATION.md`):
+**OpenClaw Insights** (`components/IntelligenceChat.tsx`): Market intelligence agent with two modes — real-time chat and scheduled intelligence reports. Runs as a 3-container Docker stack (see `DEVELOPER.md`):
 
 - `ws-proxy` (Node.js, port 8080): Authenticates Clerk JWTs, exchanges them for action tokens via `POST /api/intelligence/session`, persists chat history per userId, proxies messages to OpenClaw
 - `sales-recon-openclaw` (OpenClaw + Python + Crawl4AI, port 50045): Hosts agent "Kenji"; MCP tools include web search (Brave/Tavily), Crawl4AI web scraping, and event-planner DB operations via `/api/intelligence/actions`; runs scheduled cron cycles
